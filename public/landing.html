@@ -103,19 +103,16 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;height:58px;display:flex;ali
 #story{position:relative}
 .sp{height:400vh}
 .ss{position:sticky;top:0;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:none}
-.sc{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;max-width:1100px;width:100%;padding:0 60px}
+.sc{display:grid;grid-template-columns:5fr 6fr;gap:80px;align-items:center;max-width:1060px;width:100%;padding:0 60px}
 .sl{pointer-events:auto;position:relative;min-height:320px}
-.step{position:absolute;top:0;left:0;opacity:0;transform:translateY(18px);transition:opacity .55s ease,transform .55s ease}
+.step{position:absolute;top:0;left:0;opacity:0;transform:translateY(14px);transition:opacity .75s cubic-bezier(.4,0,.2,1),transform .75s cubic-bezier(.4,0,.2,1)}
 .step.on{opacity:1;transform:none}
-.step-n{font-size:11px;font-weight:700;color:var(--g);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px}
-.step-h{font-size:clamp(28px,3.5vw,44px);font-weight:700;letter-spacing:-.035em;line-height:1.08;color:var(--t);margin-bottom:13px}
+.step-n{font-size:10px;font-weight:600;color:var(--g);letter-spacing:.14em;text-transform:uppercase;margin-bottom:20px;opacity:.7}
+.step-h{font-size:clamp(32px,4vw,52px);font-weight:600;letter-spacing:-.04em;line-height:1.06;color:var(--t);margin-bottom:16px}
 .step-h em{font-style:italic;font-weight:300;color:var(--g)}
-.step-p{font-size:16px;font-weight:300;line-height:1.75;color:var(--t2);max-width:420px;margin-bottom:20px}
-.step-ul{list-style:none;display:flex;flex-direction:column;gap:9px}
-.step-ul li{font-size:13.5px;color:var(--t2);display:flex;align-items:flex-start;gap:10px;line-height:1.5}
-.step-ul li::before{content:'';width:18px;height:18px;border-radius:50%;flex-shrink:0;margin-top:1px;background:var(--gs) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8' viewBox='0 0 10 8'%3E%3Cpath d='M1 4l2.5 3L9 1' stroke='%232d7a4f' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center;border:1px solid var(--gb)}
+.step-p{font-size:clamp(16px,1.6vw,18px);font-weight:300;line-height:1.7;color:var(--t3);max-width:380px}
 .sr{position:relative;height:400px;pointer-events:auto}
-.wf{position:absolute;top:0;left:0;right:0;bottom:0;opacity:0;transform:scale(.97);transition:opacity .5s ease,transform .5s ease}
+.wf{position:absolute;top:0;left:0;right:0;bottom:0;opacity:0;transform:translateY(12px);transition:opacity .7s cubic-bezier(.4,0,.2,1),transform .7s cubic-bezier(.4,0,.2,1)}
 .wf.on{opacity:1;transform:none}
 .wfb{background:#fff;border-radius:12px;overflow:hidden;border:1px solid rgba(0,0,0,.08);box-shadow:0 8px 30px rgba(0,0,0,.08)}
 
@@ -125,8 +122,11 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;height:58px;display:flex;ali
 .mob-hdr-label{font-size:11px;font-weight:700;color:var(--g);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
 .mob-hdr-h{font-size:clamp(28px,8vw,38px);font-weight:700;letter-spacing:-.035em;line-height:1.1;color:var(--t)}
 .mob-hdr-h em{font-style:italic;font-weight:300;color:var(--g)}
-.mob-card{padding:40px 24px;border-top:1px solid rgba(0,0,0,.06)}
+.mob-card{padding:48px 24px 40px;border-top:1px solid rgba(0,0,0,.06);position:relative}
 .mob-card:nth-child(even){background:#f9f9f7}
+.mob-tap-card{cursor:pointer}
+.mob-tap-card::after{content:'Scroll to continue';position:absolute;bottom:16px;right:24px;font-size:10px;color:var(--t4);letter-spacing:.04em}
+.mob-tap-card:last-of-type::after{display:none}
 .mob-cn{font-size:11px;font-weight:700;color:var(--g);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
 .mob-icon{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px;border:1px solid var(--gb);background:var(--gs)}
 .mob-h{font-size:clamp(24px,7vw,34px);font-weight:700;letter-spacing:-.03em;line-height:1.1;color:var(--t);margin-bottom:10px}
@@ -245,7 +245,7 @@ footer{padding:56px 56px 36px;border-top:1px solid var(--border);background:#fff
 <section id="hero">
   <div class="h-badge"><span class="h-dot"></span>AI-powered &middot; Free to start</div>
   <h1 class="h1">Your work,<br><em>finally</em> organised.</h1>
-  <p class="h-sub">Paste anything. AI structures your tasks, schedules your week, and tells you what to do right now.</p>
+  <p class="h-sub">Too many tasks. No clear order. Acreonix Tasks cuts through the noise — so you always know exactly what to do next.</p>
   <div class="h-acts">
     <a href="/dashboard/extract" class="btn btn-p">Start for free &#8594;</a>
     <a href="#pricing" class="btn btn-s">See pricing</a>
@@ -301,39 +301,40 @@ footer{padding:56px 56px 36px;border-top:1px solid var(--border);background:#fff
 
 <!-- EMOTION BREAK 1 -->
 <div class="em reveal">
-  <h2 class="em-h">Most people lose 2 hours a day<br><em>deciding what to work on.</em></h2>
-  <p class="em-p">Not because they're lazy. Because no tool has ever made it obvious. Until now.</p>
+  <h2 class="em-h">The to-do list isn't broken.<br><em>The missing piece is order.</em></h2>
+  <p class="em-p">Knowing what to do is easy. Knowing what to do first — right now, today — is what no one has solved. Until now.</p>
 </div>
 
 <!-- DESKTOP SCROLL STORY -->
 <section id="story">
-  <div class="sp">
+  <div class="sp" style="height:500vh">
     <div class="ss">
       <div class="sc">
         <div class="sl">
           <div class="step on" id="s1">
-            <div class="step-n">01 &mdash; Capture</div>
-            <h3 class="step-h">Paste anything.<br><em>AI structures it.</em></h3>
-            <p class="step-p">Brain dump, email thread, WhatsApp notes &mdash; paste it all. AI extracts every task, assigns priorities, estimates times, and groups into projects.</p>
-            <ul class="step-ul"><li>Natural language &mdash; no forms or templates</li><li>AI creates projects from context automatically</li><li>Full preview and edit before saving</li></ul>
+            <div class="step-n">The problem</div>
+            <h3 class="step-h">You know what<br>to do. <em>But not when.</em></h3>
+            <p class="step-p">Every day starts with too many tasks and no clear order. That uncertainty is what exhausts you — not the work itself.</p>
           </div>
           <div class="step" id="s2">
-            <div class="step-n">02 &mdash; Organise</div>
-            <h3 class="step-h">Every project.<br><em>Mapped visually.</em></h3>
-            <p class="step-p">Switch between list and mind map at any time. See every project, every task, every connection on one interactive canvas.</p>
-            <ul class="step-ul"><li>Interactive mind map with live task status</li><li>Colour-coded by project and priority</li><li>Click any node to edit instantly</li></ul>
+            <div class="step-n">Capture</div>
+            <h3 class="step-h">Paste anything.<br><em>It disappears.</em></h3>
+            <p class="step-p">Drop in a brain dump, email, or voice note. Everything is extracted, named, and grouped before you see it.</p>
           </div>
           <div class="step" id="s3">
-            <div class="step-n">03 &mdash; Schedule</div>
-            <h3 class="step-h">One click.<br><em>Your week, built.</em></h3>
-            <p class="step-p">AI reads your deadlines, priorities, and time estimates, then builds an optimal week &mdash; grouping tasks by project to protect your flow state.</p>
-            <ul class="step-ul"><li>Week, day, month views</li><li>Groups tasks by project</li><li>Drag-drop with confirmation</li></ul>
+            <div class="step-n">Clarity</div>
+            <h3 class="step-h">Every task.<br><em>In its place.</em></h3>
+            <p class="step-p">Projects, priorities, deadlines — all organised automatically. A visual map of everything you're carrying.</p>
           </div>
           <div class="step" id="s4">
-            <div class="step-n">04 &mdash; Improve</div>
-            <h3 class="step-h">Track time.<br><em>Get smarter.</em></h3>
-            <p class="step-p">Log time with a live timer or in plain English. Each week AI tells you where your time went, what patterns it spotted, and three changes to make.</p>
-            <ul class="step-ul"><li>Live timer from anywhere on the app</li><li>Weekly insight score with actionable tips</li><li>Gets smarter every week you use it</li></ul>
+            <div class="step-n">Control</div>
+            <h3 class="step-h">Your week,<br><em>already planned.</em></h3>
+            <p class="step-p">One tap. AI builds your week — grouping work by project so your mind stays in one place at a time.</p>
+          </div>
+          <div class="step" id="s5">
+            <div class="step-n">Calm</div>
+            <h3 class="step-h">Open the app.<br><em>Know exactly what to do.</em></h3>
+            <p class="step-p">No decisions. No friction. Just the one thing you should work on right now.</p>
           </div>
         </div>
         <div class="sr">
@@ -451,6 +452,31 @@ footer{padding:56px 56px 36px;border-top:1px solid var(--border);background:#fff
               </div>
             </div>
           </div>
+          <!-- WF5: Calm — single task, minimal -->
+          <div class="wf" id="wf5">
+            <div class="wfb" style="padding:28px 24px;background:#fff;min-height:240px;display:flex;flex-direction:column;justify-content:center">
+              <div style="font-size:11px;font-weight:600;color:var(--g);letter-spacing:.1em;text-transform:uppercase;margin-bottom:24px;opacity:.6">Right now</div>
+              <div style="display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid rgba(0,0,0,.05)">
+                <div style="width:20px;height:20px;border-radius:50%;border:1.5px solid #2d7a4f;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 3L9 1" stroke="#2d7a4f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div>
+                  <div style="font-size:14px;font-weight:500;color:#111;margin-bottom:2px">Fix login bug on staging</div>
+                  <div style="font-size:11px;color:#aaa">Acreonix Tasks &middot; 45 min</div>
+                </div>
+                <div style="margin-left:auto;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;background:#fff0f0;color:#b91c1c;flex-shrink:0">Urgent</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid rgba(0,0,0,.04);opacity:.35">
+                <div style="width:20px;height:20px;border-radius:50%;border:1.5px solid #ddd;flex-shrink:0"></div>
+                <div style="font-size:14px;color:#888">Design landing page hero</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px;padding:16px 0;opacity:.2">
+                <div style="width:20px;height:20px;border-radius:50%;border:1.5px solid #ddd;flex-shrink:0"></div>
+                <div style="font-size:14px;color:#888">Review Q3 roadmap</div>
+              </div>
+              <div style="margin-top:24px;font-size:12px;color:#bbb;text-align:center;letter-spacing:.04em">Everything else can wait.</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -460,20 +486,15 @@ footer{padding:56px 56px 36px;border-top:1px solid var(--border);background:#fff
 <!-- MOBILE STORY (only on mobile) -->
 <section class="mob-story">
   <div class="mob-hdr">
-    <div class="mob-hdr-label">How it works</div>
-    <h2 class="mob-hdr-h">From chaos<br>to <em>clarity</em></h2>
+    <div class="mob-hdr-label">The journey</div>
+    <h2 class="mob-hdr-h">Overwhelm<br>to <em>calm.</em></h2>
   </div>
 
-  <div class="mob-card">
-    <div class="mob-cn">01 &mdash; Capture</div>
-    <div class="mob-icon">✦</div>
-    <h3 class="mob-h">Paste anything.<br><em>AI structures it.</em></h3>
-    <p class="mob-p">Brain dump, email, WhatsApp &mdash; paste it all. AI extracts every task, groups into projects, and shows a preview before anything saves.</p>
-    <ul class="mob-ul">
-      <li>Natural language &mdash; no forms or templates</li>
-      <li>AI creates projects from context automatically</li>
-      <li>Full preview and edit before saving</li>
-    </ul>
+  <div class="mob-card mob-tap-card" id="mc1">
+    <div class="mob-cn">The problem</div>
+    <div class="mob-icon">&#8767;</div>
+    <h3 class="mob-h">You know what to do.<br><em>But not when.</em></h3>
+    <p class="mob-p">That uncertainty — not the work itself — is what drains you every day.</p>
     <div class="mob-screen">
       <div class="mob-screen-bar"><div class="mob-sc-dot" style="background:#ff5f57"></div><div class="mob-sc-dot" style="background:#febc2e"></div><div class="mob-sc-dot" style="background:#28c840"></div><div class="mob-sc-url">…/extract</div></div>
       <div style="padding:14px">
@@ -489,28 +510,11 @@ footer{padding:56px 56px 36px;border-top:1px solid var(--border);background:#fff
     </div>
   </div>
 
-  <div class="mob-card">
-    <div class="mob-cn">02 &mdash; Organise</div>
-    <div class="mob-icon">🗺</div>
-    <h3 class="mob-h">Every project.<br><em>Mapped visually.</em></h3>
-    <p class="mob-p">Switch between list and mind map at any time. See every project and task on one interactive canvas that updates in real time.</p>
-    <ul class="mob-ul">
-      <li>Colour-coded by project and priority</li>
-      <li>Click any node to edit instantly</li>
-      <li>Live task status always visible</li>
-    </ul>
-  </div>
-
-  <div class="mob-card">
-    <div class="mob-cn">03 &mdash; Schedule</div>
-    <div class="mob-icon">📅</div>
-    <h3 class="mob-h">One click.<br><em>Your week, built.</em></h3>
-    <p class="mob-p">AI reads your deadlines and priorities, then builds an optimised week &mdash; grouping tasks by project so you stay in flow.</p>
-    <ul class="mob-ul">
-      <li>Week, day, month views</li>
-      <li>Groups tasks by project to protect focus</li>
-      <li>Drag and drop to adjust</li>
-    </ul>
+  <div class="mob-card mob-tap-card" id="mc2">
+    <div class="mob-cn">Capture</div>
+    <div class="mob-icon">✦</div>
+    <h3 class="mob-h">Paste anything.<br><em>It disappears.</em></h3>
+    <p class="mob-p">Drop in a brain dump, email, or note. Everything is extracted and grouped before you see it.</p>
     <div class="mob-screen">
       <div style="display:grid;grid-template-columns:repeat(5,1fr);background:#f9f9f7;padding:10px 8px;gap:3px">
         <div><div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:4px;text-transform:uppercase">Mon</div><div style="background:rgba(45,122,79,.1);border-left:2px solid #2d7a4f;border-radius:3px;padding:3px 5px;font-size:8px;color:#1a5c35;margin-bottom:2px">Fix bug<br><span style="font-size:7px;color:#888">9am</span></div><div style="background:rgba(201,168,76,.1);border-left:2px solid #c9a84c;border-radius:3px;padding:3px 5px;font-size:8px;color:#7a5e1a">Proposal<br><span style="font-size:7px;color:#888">11am</span></div></div>
@@ -523,16 +527,43 @@ footer{padding:56px 56px 36px;border-top:1px solid var(--border);background:#fff
     </div>
   </div>
 
-  <div class="mob-card">
-    <div class="mob-cn">04 &mdash; Improve</div>
-    <div class="mob-icon">📊</div>
-    <h3 class="mob-h">Track time.<br><em>Get smarter.</em></h3>
-    <p class="mob-p">Log time with a live timer or in plain English. Each week AI tells you where your time went and what to change.</p>
-    <ul class="mob-ul">
-      <li>Tap the timer from anywhere in the app</li>
-      <li>Weekly AI insight score</li>
-      <li>Three specific tips every Monday</li>
-    </ul>
+  <div class="mob-card mob-tap-card" id="mc3">
+    <div class="mob-cn">Clarity</div>
+    <div class="mob-icon">&#9783;</div>
+    <h3 class="mob-h">Every task.<br><em>In its place.</em></h3>
+    <p class="mob-p">Projects, priorities, deadlines — organised automatically. A visual map of everything you're carrying.</p>
+  </div>
+
+  <div class="mob-card mob-tap-card" id="mc4">
+    <div class="mob-cn">Control</div>
+    <div class="mob-icon">&#128336;</div>
+    <h3 class="mob-h">Your week,<br><em>already planned.</em></h3>
+    <p class="mob-p">One tap. AI builds your week so your mind stays in one place at a time.</p>
+  </div>
+
+  <div class="mob-card mob-tap-card" id="mc5" style="background:#fff">
+    <div class="mob-cn">Calm</div>
+    <div class="mob-icon" style="font-size:28px">&#9675;</div>
+    <h3 class="mob-h">Open the app.<br><em>Know exactly what to do.</em></h3>
+    <p class="mob-p">No decisions. No friction. Just the one thing you should work on right now.</p>
+    <!-- Calm minimal task list -->
+    <div style="background:#f9f9f7;border-radius:12px;padding:16px 18px;margin-top:20px">
+      <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#2d7a4f;margin-bottom:14px;opacity:.7">Right now</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.05)">
+        <div style="width:18px;height:18px;border-radius:50%;border:1.5px solid #2d7a4f;flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg width="9" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 3L9 1" stroke="#2d7a4f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <span style="font-size:13px;font-weight:500;color:#111;flex:1">Fix login bug on staging</span>
+        <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;background:#fff0f0;color:#b91c1c">Urgent</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;opacity:.3">
+        <div style="width:18px;height:18px;border-radius:50%;border:1.5px solid #ccc;flex-shrink:0"></div>
+        <span style="font-size:13px;color:#888">Design landing page</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;opacity:.15">
+        <div style="width:18px;height:18px;border-radius:50%;border:1.5px solid #ccc;flex-shrink:0"></div>
+        <span style="font-size:13px;color:#888">Review Q3 roadmap</span>
+      </div>
+      <div style="margin-top:14px;font-size:11px;color:#bbb;text-align:center;letter-spacing:.04em">Everything else can wait.</div>
+    </div>
   </div>
 
   <div style="padding:40px 24px;text-align:center">
@@ -622,29 +653,56 @@ footer{padding:56px 56px 36px;border-top:1px solid var(--border);background:#fff
 </footer>
 
 <script>
-// Reveal on scroll
-const obs = new IntersectionObserver(e => e.forEach(x => { if(x.isIntersecting){x.target.classList.add('vis');obs.unobserve(x.target)} }),{threshold:.1})
+// ── Scroll reveal ────────────────────────────────────────────
+const obs = new IntersectionObserver(e => e.forEach(x => {
+  if(x.isIntersecting){ x.target.classList.add('vis'); obs.unobserve(x.target) }
+}),{threshold:.08})
 document.querySelectorAll('.reveal').forEach(el => obs.observe(el))
 
-// Desktop scroll story
-const steps = ['s1','s2','s3','s4'], wfs = ['wf1','wf2','wf3','wf4']
-let cur = 0
+// ── Desktop scroll story (5 steps) ──────────────────────────
+const STEPS = ['s1','s2','s3','s4','s5']
+const WFS   = ['wf1','wf2','wf3','wf4','wf5']
+let cur = 0, ticking = false
+
 function setStep(i){
-  if(i===cur) return
-  document.getElementById(steps[cur]).classList.remove('on')
-  document.getElementById(wfs[cur]).classList.remove('on')
-  cur = i
-  document.getElementById(steps[cur]).classList.add('on')
-  document.getElementById(wfs[cur]).classList.add('on')
+  if(i === cur) return
+  const prev = cur; cur = i
+  document.getElementById(STEPS[prev]).classList.remove('on')
+  document.getElementById(WFS[prev]).classList.remove('on')
+  // Small delay before showing next — lets previous finish fading
+  setTimeout(() => {
+    document.getElementById(STEPS[cur]).classList.add('on')
+    document.getElementById(WFS[cur]).classList.add('on')
+  }, 60)
 }
-window.addEventListener('scroll', () => {
+
+function onScroll(){
   if(window.innerWidth <= 768) return
   const track = document.getElementById('story')
   if(!track) return
   const r = track.getBoundingClientRect()
-  const p = Math.max(0,Math.min(1,-r.top/(r.height-window.innerHeight)))
-  setStep(Math.min(steps.length-1,Math.floor(p*steps.length)))
+  const total = r.height - window.innerHeight
+  if(total <= 0) return
+  const p = Math.max(0, Math.min(1, -r.top / total))
+  // Each step occupies an equal band; last step holds for final 20%
+  const idx = p >= 0.9 ? STEPS.length - 1 : Math.floor(p * STEPS.length)
+  setStep(Math.min(STEPS.length - 1, idx))
+}
+
+window.addEventListener('scroll', () => {
+  if(ticking) return
+  ticking = true
+  requestAnimationFrame(() => { onScroll(); ticking = false })
 }, {passive:true})
+
+// ── Mobile: tap to advance ───────────────────────────────────
+const mobCards = document.querySelectorAll('.mob-tap-card')
+mobCards.forEach((card, idx) => {
+  card.addEventListener('click', () => {
+    const next = mobCards[idx + 1]
+    if(next) next.scrollIntoView({behavior:'smooth', block:'start'})
+  })
+})
 </script>
 </body>
 </html>
