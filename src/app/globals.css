@@ -4,25 +4,47 @@
 
 :root {
   --green: #2d7a4f;
+  --green-light: #3a9962;
+  --green-muted: #e8f5ee;
   --gold: #c9a84c;
+  --sidebar-bg: #0f1117;
+  --sidebar-border: #1e2330;
+  --sidebar-text: #8b92a5;
+  --sidebar-text-active: #ffffff;
+  --sidebar-active-bg: #1a2035;
+  --surface: #f4f6f9;
+  --card-bg: #ffffff;
+  --border: #e8edf3;
 }
 
-body { background: #f8faf9; color: #1a1a1a; }
+* { box-sizing: border-box; }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-thumb { background: #d0ddd5; border-radius: 3px; }
+body {
+  background: var(--surface);
+  color: #1a1f2e;
+  font-family: 'system-ui', -apple-system, sans-serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d0d8e4; border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--green); }
 
+/* Task card */
 .task-card { transition: all 0.15s ease; }
-.task-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(45,122,79,0.1); }
+.task-card:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
 
+/* Checkbox */
 input[type="checkbox"].task-check {
   appearance: none; width: 18px; height: 18px;
-  border: 2px solid #d0ddd5; border-radius: 50%;
+  border: 2px solid #d0d8e4; border-radius: 50%;
   cursor: pointer; transition: all 0.15s ease;
   flex-shrink: 0; position: relative;
 }
-input[type="checkbox"].task-check:checked { background: var(--green); border-color: var(--green); }
+input[type="checkbox"].task-check:checked {
+  background: var(--green); border-color: var(--green);
+}
 input[type="checkbox"].task-check:checked::after {
   content: ''; position: absolute; left: 3px; top: 1px;
   width: 8px; height: 5px; border: 2px solid white;
@@ -30,8 +52,18 @@ input[type="checkbox"].task-check:checked::after {
 }
 input[type="checkbox"].task-check:hover { border-color: var(--green); }
 
+/* Gold accent */
 .gold-underline { position: relative; }
 .gold-underline::after {
   content: ''; position: absolute; bottom: -3px; left: 0;
-  width: 32px; height: 2px; background: var(--gold); border-radius: 1px;
+  width: 28px; height: 2px; background: var(--gold); border-radius: 1px;
+}
+
+/* Sidebar nav active indicator */
+.nav-active-bar {
+  position: absolute;
+  left: 0; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 60%;
+  background: var(--green);
+  border-radius: 0 2px 2px 0;
 }
