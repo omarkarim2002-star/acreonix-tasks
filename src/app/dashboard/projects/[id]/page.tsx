@@ -5,10 +5,11 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, Plus, Sparkles, Loader2, Pencil, Check, X,
-  GitFork, Trash2, Copy, GripVertical, ChevronDown
+  GitFork, Trash2, Copy, GripVertical
 } from 'lucide-react'
-import { cn, formatDeadline, deadlineColour, PRIORITY_COLOURS, STATUS_LABELS, STATUS_COLOURS } from '@/lib/utils'
+import { cn, formatDeadline, deadlineColour, PRIORITY_COLOURS, STATUS_LABELS } from '@/lib/utils'
 import { ProjectColourPicker } from '@/components/projects/ProjectColourPicker'
+import { ShareProjectButton } from '@/components/ui/ShareProjectButton'
 import type { Project, Task } from '@/types'
 
 const STATUSES = ['todo', 'in_progress', 'done', 'blocked'] as const
@@ -34,12 +35,11 @@ export default function ProjectDetailPage() {
     ]).then(([proj, t]) => {
       setProject(proj)
       setNameValue(proj.name)
-      setTasks(t)
+      setTasks(Array.isArray(t) ? t : [])
       setLoading(false)
     })
   }, [id])
 
-  // Close picker on outside click
   useEffect(() => {
     function handle(e: MouseEvent) {
       if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
@@ -104,7 +104,6 @@ export default function ProjectDetailPage() {
     setTasks(prev => prev.filter(t => t.id !== taskId))
   }
 
-  // Drag to reorder
   function handleDragStart(e: React.DragEvent, taskId: string) {
     setDragId(taskId)
     e.dataTransfer.effectAllowed = 'move'
@@ -118,19 +117,15 @@ export default function ProjectDetailPage() {
   async function handleDrop(e: React.DragEvent, targetId: string) {
     e.preventDefault()
     if (!dragId || dragId === targetId) { setDragId(null); setDragOver(null); return }
-
     const reordered = [...tasks]
     const fromIdx = reordered.findIndex(t => t.id === dragId)
     const toIdx = reordered.findIndex(t => t.id === targetId)
     const [moved] = reordered.splice(fromIdx, 1)
     reordered.splice(toIdx, 0, moved)
-
     const updated = reordered.map((t, i) => ({ ...t, position: i }))
     setTasks(updated)
     setDragId(null)
     setDragOver(null)
-
-    // Persist positions
     await Promise.all(
       updated.map(t => fetch(`/api/tasks/${t.id}`, {
         method: 'PATCH',
@@ -199,28 +194,32 @@ export default function ProjectDetailPage() {
               </div>
             ) : (
               <button onClick={() => setEditingName(true)} className="group flex items-center gap-2">
-                <h1 className="text-xl font-bold text-gray-900" style={{ fontFamily: 'Georgia, serif' }}>{project.name}</h1>
+                <h1 className="text-xl font-bold text-gray-900">{project.name}</h1>
                 <Pencil size={14} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
               </button>
             )}
           </div>
 
+          {/* Share button — only shows on team plan */}
+          <ShareProjectButton
+            projectId={id as string}
+            isShared={!!(project as any).shared_with_team}
+            isOwn={(project as any).isOwn !== false}
+            onToggle={(shared) => setProject(prev => prev ? { ...prev, shared_with_team: shared } as any : prev)}
+          />
+
           {/* Mind map button */}
           <Link
             href={`/dashboard/projects/${id}/mindmap`}
-            className="flex items-center gap-1.5 text-xs border border-gray-200 text-gray-600 px-3 py-2 rounded-lg hover:bg-gray-50 hover:border-[#2d7a4f]/40 transition-all"
+            className="flex items-center gap-1.5 text-xs border border-gray-200 text-gray-600 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all"
           >
-            <GitFork size={13} />
-            Mind map
+            <GitFork size={13} />Mind map
           </Link>
         </div>
 
         {/* Progress */}
         <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-1.5">
-          <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{ width: `${pct}%`, background: project.colour }}
-          />
+          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: project.colour }} />
         </div>
         <div className="flex justify-between text-xs text-gray-400">
           <span>{done} of {tasks.length} tasks done</span>
@@ -235,7 +234,8 @@ export default function ProjectDetailPage() {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={cn('text-xs font-medium px-2.5 py-1 rounded-lg whitespace-nowrap transition-all', statusFilter === s ? 'bg-white text-[#2d7a4f] shadow-sm' : 'text-gray-500 hover:text-gray-700')}
+              className={cn('text-xs font-medium px-2.5 py-1 rounded-lg whitespace-nowrap transition-all',
+                statusFilter === s ? 'bg-white text-[#2d7a4f] shadow-sm' : 'text-gray-500 hover:text-gray-700')}
             >
               {s === 'all' ? `All (${tasks.length})` : `${STATUS_LABELS[s]} (${tasks.filter(t => t.status === s).length})`}
             </button>
@@ -270,7 +270,6 @@ export default function ProjectDetailPage() {
               dragId === task.id ? 'opacity-40' : 'opacity-100'
             )}
           >
-            {/* Drag handle */}
             <div className="cursor-grab opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity shrink-0">
               <GripVertical size={14} className="text-gray-400" />
             </div>
@@ -283,35 +282,23 @@ export default function ProjectDetailPage() {
               </span>
             </Link>
 
-            {/* Meta — visible on hover */}
             <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
               <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-medium', PRIORITY_COLOURS[task.priority])}>
                 {task.priority}
               </span>
               {task.deadline && (
-                <span className={cn('text-xs', deadlineColour(task.deadline))}>
-                  {formatDeadline(task.deadline)}
-                </span>
+                <span className={cn('text-xs', deadlineColour(task.deadline))}>{formatDeadline(task.deadline)}</span>
               )}
               {task.estimated_minutes && (
                 <span className="text-xs text-gray-400">{task.estimated_minutes}m</span>
               )}
             </div>
 
-            {/* Action menu */}
             <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 shrink-0">
-              <button
-                onClick={() => duplicateTask(task)}
-                className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-                title="Duplicate"
-              >
+              <button onClick={() => duplicateTask(task)} className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors" title="Duplicate">
                 <Copy size={12} />
               </button>
-              <button
-                onClick={() => deleteTask(task.id)}
-                className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                title="Delete"
-              >
+              <button onClick={() => deleteTask(task.id)} className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
                 <Trash2 size={12} />
               </button>
             </div>
