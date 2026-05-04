@@ -11,21 +11,21 @@ import {
 import { NotificationBell } from './NotificationBell'
 import { usePlan } from '@/lib/plan-context'
 
-const nav = [
-  { href: '/dashboard',          label: 'Dashboard',    icon: LayoutDashboard, sub: 'Overview',        exact: true },
-  { href: '/dashboard/extract',  label: 'AI Extract',   icon: Sparkles,        sub: 'Add tasks' },
-  { href: '/dashboard/projects', label: 'Projects',     icon: FolderKanban,    sub: 'All projects' },
-  { href: '/dashboard/tasks',    label: 'Tasks',        icon: CheckSquare,     sub: 'All tasks' },
-  { href: '/dashboard/calendar', label: 'Calendar',     icon: Calendar,        sub: 'Smart schedule' },
-  { href: '/dashboard/tracker',  label: 'Time tracker', icon: Timer,           sub: 'Log time',        proOnly: true },
-  { href: '/dashboard/mindmap',  label: 'Mind map',     icon: GitFork,         sub: 'All projects' },
-  { href: '/dashboard/insights', label: 'Insights',     icon: BarChart2,       sub: 'Weekly summary',  proOnly: true },
+const NAV = [
+  { href: '/dashboard',          label: 'Dashboard',    icon: LayoutDashboard, exact: true },
+  { href: '/dashboard/extract',  label: 'AI Extract',   icon: Sparkles },
+  { href: '/dashboard/projects', label: 'Projects',     icon: FolderKanban },
+  { href: '/dashboard/tasks',    label: 'Tasks',        icon: CheckSquare },
+  { href: '/dashboard/calendar', label: 'Calendar',     icon: Calendar },
+  { href: '/dashboard/tracker',  label: 'Time tracker', icon: Timer,   proOnly: true },
+  { href: '/dashboard/mindmap',  label: 'Mind map',     icon: GitFork },
+  { href: '/dashboard/insights', label: 'Insights',     icon: BarChart2, proOnly: true },
 ]
 
 const PLAN_BADGE: Record<string, { label: string; bg: string; color: string }> = {
-  free: { label: 'Free',  bg: '#f1f3f5',       color: '#6b7280' },
-  pro:  { label: 'Pro',   bg: '#f0faf4',        color: '#2d7a4f' },
-  team: { label: 'Team',  bg: '#fdf8ee',        color: '#92700a' },
+  free: { label: 'Free', bg: '#f3f3f1',      color: '#888' },
+  pro:  { label: 'Pro',  bg: '#f0faf4',       color: '#1a5c35' },
+  team: { label: 'Team', bg: '#fdf8ee',       color: '#7a5e1a' },
 }
 
 export function Sidebar() {
@@ -35,97 +35,92 @@ export function Sidebar() {
 
   return (
     <aside style={{
-      width: 220,
-      height: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      background: '#ffffff',
-      borderRight: '1px solid #e5e7eb',
+      width: 220, height: '100vh',
+      display: 'flex', flexDirection: 'column',
+      background: '#fbfbfa',
+      borderRight: '1px solid rgba(0,0,0,0.07)',
       flexShrink: 0,
-      overflow: 'hidden',
     }}>
 
       {/* Logo */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '14px 16px 13px',
-        borderBottom: '1px solid #e5e7eb',
+        display: 'flex', alignItems: 'center', gap: 9,
+        padding: '14px 14px 12px',
+        borderBottom: '1px solid rgba(0,0,0,0.06)',
         flexShrink: 0,
       }}>
         <div style={{
-          width: 28, height: 28, borderRadius: 6, overflow: 'hidden',
-          background: '#f0faf4', border: '1px solid #bbddc9',
+          width: 28, height: 28, borderRadius: 7,
+          background: '#f0faf4', border: '1px solid #c6e6d4',
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          overflow: 'hidden',
         }}>
-          <Image src="/logo.png" alt="Acreonix" width={22} height={22} style={{ objectFit: 'contain' }} />
+          <Image src="/logo.png" alt="" width={22} height={22} style={{ objectFit: 'contain' }} />
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', letterSpacing: '-0.01em', lineHeight: 1 }}>Acreonix</div>
-          <div style={{ fontSize: 10, fontWeight: 500, color: '#c9a84c', letterSpacing: '0.12em', textTransform: 'uppercase', marginTop: 2 }}>Tasks</div>
+        <div style={{ flex: 1, minWidth: 0, lineHeight: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.01em' }}>Acreonix</div>
+          <div style={{ fontSize: 9.5, fontWeight: 500, color: '#c9a84c', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 1 }}>Tasks</div>
         </div>
         <NotificationBell />
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, overflowY: 'auto', padding: '6px 8px', minHeight: 0 }}>
-        {nav.map(({ href, label, icon: Icon, sub, exact, proOnly }) => {
+      <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px 4px', minHeight: 0 }}>
+        {NAV.map(({ href, label, icon: Icon, exact, proOnly }) => {
           const active = exact ? path === href : (path === href || path.startsWith(href + '/'))
           const locked = proOnly && plan === 'free' && !loading
+
           return (
             <Link
               key={href}
               href={locked ? '/dashboard/billing' : href}
-              className="nav-active"
               style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 9,
-                padding: '6px 8px',
-                borderRadius: 6,
-                marginBottom: 1,
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '6px 8px', borderRadius: 7, marginBottom: 1,
                 textDecoration: 'none',
-                background: active ? '#f0faf4' : 'transparent',
-                transition: 'background 0.1s',
+                background: active ? 'rgba(45,122,79,0.09)' : 'transparent',
+                transition: 'background 0.12s',
               }}
-              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = '#f8f9fa' }}
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.04)' }}
               onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
             >
               <Icon
                 size={15}
-                style={{ color: active ? '#2d7a4f' : locked ? '#d1d5db' : '#6b7280', flexShrink: 0 }}
+                style={{
+                  color: active ? '#2d7a4f' : locked ? '#ccc' : '#888',
+                  flexShrink: 0, transition: 'color 0.12s',
+                }}
               />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontSize: 13, fontWeight: active ? 500 : 400,
-                  color: active ? '#2d7a4f' : locked ? '#d1d5db' : '#374151',
-                  lineHeight: 1.2,
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                }}>
-                  {label}
-                </div>
-              </div>
+              <span style={{
+                fontSize: 13.5, fontWeight: active ? 500 : 400,
+                color: active ? '#1f5537' : locked ? '#ccc' : '#3a3a3a',
+                flex: 1, lineHeight: 1.2, transition: 'color 0.12s',
+              }}>
+                {label}
+              </span>
               {locked && <Zap size={11} style={{ color: '#c9a84c', flexShrink: 0 }} />}
             </Link>
           )
         })}
       </nav>
 
-      {/* Plan + billing */}
-      <div style={{ flexShrink: 0, borderTop: '1px solid #e5e7eb' }}>
+      {/* Bottom section */}
+      <div style={{ flexShrink: 0, borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+
+        {/* Plan */}
         <Link href="/dashboard/billing" style={{
           display: 'flex', alignItems: 'center', gap: 8,
-          padding: '10px 16px', textDecoration: 'none',
-          transition: 'background 0.1s',
+          padding: '9px 14px', textDecoration: 'none',
+          transition: 'background 0.12s',
         }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#f8f9fa' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.03)'}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
         >
-          <CreditCard size={14} style={{ color: '#9ca3af', flexShrink: 0 }} />
-          <span style={{ fontSize: 12, color: '#6b7280', flex: 1 }}>Plan</span>
+          <CreditCard size={14} style={{ color: '#bbb', flexShrink: 0 }} />
+          <span style={{ fontSize: 12.5, color: '#888', flex: 1 }}>Plan</span>
           {!loading && (
             <span style={{
-              fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 4,
+              fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 5,
               background: badge.bg, color: badge.color,
             }}>
               {badge.label}
@@ -136,10 +131,10 @@ export function Sidebar() {
         {/* User */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 9,
-          padding: '10px 16px', borderTop: '1px solid #e5e7eb',
+          padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,0.06)',
         }}>
           <UserButton afterSignOutUrl="/" />
-          <span style={{ fontSize: 12, color: '#9ca3af' }}>Account</span>
+          <span style={{ fontSize: 12.5, color: '#bbb' }}>Account</span>
         </div>
       </div>
     </aside>
