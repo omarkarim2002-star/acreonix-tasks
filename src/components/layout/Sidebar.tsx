@@ -9,6 +9,7 @@ import {
   FolderKanban, CheckSquare, Sparkles,
   Calendar, GitFork, BarChart2, Timer,
 } from 'lucide-react'
+import { NotificationBell } from './NotificationBell'
 
 const nav = [
   { href: '/dashboard/extract', label: 'AI Extract', icon: Sparkles, sub: 'Add tasks' },
@@ -17,24 +18,23 @@ const nav = [
   { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar, sub: 'Smart schedule' },
   { href: '/dashboard/tracker', label: 'Time tracker', icon: Timer, sub: 'Log time' },
   { href: '/dashboard/mindmap', label: 'Mind map', icon: GitFork, sub: 'All projects view' },
-]
-
-const comingSoon = [
-  { label: 'Insights', icon: BarChart2, sub: 'Weekly summary' },
+  { href: '/dashboard/insights', label: 'Insights', icon: BarChart2, sub: 'Weekly summary' },
 ]
 
 export function Sidebar() {
   const path = usePathname()
   return (
     <aside className="w-56 h-screen flex flex-col shrink-0 bg-white border-r border-gray-100">
-      <div className="px-5 py-5 flex items-center gap-3 border-b border-gray-100">
+      {/* Logo + bell */}
+      <div className="px-5 py-4 flex items-center gap-3 border-b border-gray-100">
         <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shrink-0 bg-[#e8f5ee]">
           <Image src="/logo.png" alt="Acreonix" width={28} height={28} className="object-contain" />
         </div>
-        <div className="flex flex-col leading-none">
+        <div className="flex flex-col leading-none flex-1">
           <span className="text-[#1a1f2e] text-sm font-semibold tracking-wide" style={{ fontFamily: 'Georgia, serif' }}>Acreonix</span>
           <span className="text-[10px] tracking-widest uppercase font-medium" style={{ color: '#c9a84c' }}>Tasks</span>
         </div>
+        <NotificationBell />
       </div>
 
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-0.5">
@@ -51,19 +51,6 @@ export function Sidebar() {
             </Link>
           )
         })}
-
-        <div className="my-3 border-t border-gray-100" />
-        <p className="text-[9px] text-gray-400 uppercase tracking-widest px-3 mb-2 font-medium">Coming soon</p>
-        {comingSoon.map(({ label, icon: Icon, sub }) => (
-          <div key={label} className="flex items-center gap-3 px-3 py-2.5 rounded-xl opacity-40 cursor-not-allowed">
-            <Icon size={16} className="text-gray-400 shrink-0" />
-            <div className="flex flex-col leading-none">
-              <span className="text-xs font-medium text-gray-700">{label}</span>
-              <span className="text-[10px] text-gray-400 mt-0.5">{sub}</span>
-            </div>
-            <span className="ml-auto text-[9px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded font-medium">P5</span>
-          </div>
-        ))}
       </nav>
 
       <div className="px-4 py-4 border-t border-gray-100 flex items-center gap-3">
