@@ -1,93 +1,242 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Sparkles } from 'lucide-react'
-import { cn, formatDeadline, deadlineColour, PRIORITY_COLOURS, STATUS_LABELS } from '@/lib/utils'
-import type { Task } from '@/types'
+import { Plus, Filter, Search, Sparkles } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { TaskCheckbox } from '@/components/ui/TaskCheckbox'
+import { useToast } from '@/components/ui/Toast'
 
-const STATUSES = ['all','todo','in_progress','done','blocked'] as const
+type Task = {
+  id: string
+  title: string
+  status: string
+  priority: string
+  deadline?: string
+  project?: { name: string; colour: string }
+}
+
+const PRIORITY_STYLES: Record<string, { bg: string; text: string; label: string }> = {
+  urgent: { bg: '#fef2f2', text: '#dc2626', label: 'Urgent' },
+  high:   { bg: '#fff3e8', text: '#c2610f', label: 'High' },
+  medium: { bg: '#e8f0fb', text: '#2563eb', label: 'Medium' },
+  low:    { bg: '#f1f3f6', text: '#5a6478', label: 'Low' },
+}
+
+function formatDeadline(d: string): string {
+  const date = new Date(d)
+  const now = new Date()
+  const diffDays = Math.ceil((date.getTime() - now.getTime()) / 86400000)
+  if (diffDays < 0) return `${Math.abs(diffDays)}d overdue`
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return 'Tomorrow'
+  if (diffDays < 7) return `${diffDays}d`
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
+
+function deadlineColour(d: string): string {
+  const diffDays = Math.ceil((new Date(d).getTime() - new Date().getTime()) / 86400000)
+  if (diffDays < 0) return '#dc2626'
+  if (diffDays <= 1) return '#c2610f'
+  return '#9aa3b4'
+}
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<typeof STATUSES[number]>('all')
+  const [filter, setFilter] = useState<'all' | 'todo' | 'in_progress' | 'done'>('all')
+  const [search, setSearch] = useState('')
+  const { toast } = useToast()
 
-  const fetchTasks = useCallback(async () => {
-    setLoading(true)
-    const res = await fetch(filter === 'all' ? '/api/tasks' : `/api/tasks?status=${filter}`)
-    setTasks(await res.json())
-    setLoading(false)
-  }, [filter])
+  useEffect(() => {
+    fetch('/api/tasks')
+      .then(r => r.json())
+      .then(d => { setTasks(Array.isArray(d) ? d : []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
 
-  useEffect(()=>{ fetchTasks() },[fetchTasks])
-
-  async function toggleDone(task: Task) {
+  async function toggleComplete(task: Task) {
     const newStatus = task.status === 'done' ? 'todo' : 'done'
-    setTasks(prev=>prev.map(t=>t.id===task.id?{...t,status:newStatus}:t))
-    await fetch(`/api/tasks/${task.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:newStatus})})
+    // Optimistic update
+    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t))
+    try {
+      await fetch(`/api/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      if (newStatus === 'done') {
+        toast(`"${task.title}" marked complete ✓`)
+      }
+    } catch {
+      // Rollback on error
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: task.status } : t))
+      toast('Failed to update task', 'error')
+    }
   }
 
-  const grouped = tasks.reduce<Record<string,Task[]>>((acc,task)=>{
-    const key=(task as any).project?.name ?? 'No project'
-    if(!acc[key]) acc[key]=[]
-    acc[key].push(task)
-    return acc
-  },{})
+  const filtered = tasks
+    .filter(t => filter === 'all' || t.status === filter)
+    .filter(t => !search || t.title.toLowerCase().includes(search.toLowerCase()))
+
+  const pending = tasks.filter(t => t.status !== 'done').length
+  const done = tasks.filter(t => t.status === 'done').length
+
+  const groupedDone = filtered.filter(t => t.status === 'done')
+  const groupedPending = filtered.filter(t => t.status !== 'done')
 
   return (
-    <div className="px-6 py-8 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 gold-underline" style={{fontFamily:'Georgia,serif'}}>All tasks</h1>
-        <div className="flex items-center gap-2">
-          <Link href="/dashboard/extract" className="flex items-center gap-1.5 text-sm text-[#2d7a4f] border border-[#2d7a4f]/30 px-3 py-1.5 rounded-lg hover:bg-[#e8f5ee] transition-colors">
-            <Sparkles size={14}/>AI add
+    <div style={{ padding: '32px 32px 40px', maxWidth: 800, margin: '0 auto', fontFamily: 'DM Sans, sans-serif' }}>
+      <PageHeader
+        title="Tasks"
+        subtitle={`${pending} pending · ${done} completed`}
+        action={
+          <Link href="/dashboard/tasks/new" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: '#2d7a4f', color: '#fff', borderRadius: 8,
+            padding: '8px 16px', fontSize: 13, fontWeight: 600,
+            textDecoration: 'none', fontFamily: 'DM Sans, sans-serif',
+          }}>
+            <Plus size={14} />New task
           </Link>
-          <Link href="/dashboard/tasks/new" className="flex items-center gap-1.5 text-sm bg-[#2d7a4f] text-white px-3 py-1.5 rounded-lg hover:bg-[#1f5537] transition-colors">
-            <Plus size={14}/>New task
-          </Link>
+        }
+      />
+
+      {/* Search + filter */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
+          <Search size={14} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#9aa3b4', pointerEvents: 'none' }} />
+          <input
+            value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search tasks…"
+            style={{ width: '100%', paddingLeft: 32, paddingRight: 12, height: 36, border: '1px solid #e8edf2', borderRadius: 8, fontSize: 13, color: '#141b2d', background: '#fff', outline: 'none', boxSizing: 'border-box' }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {(['all','todo','in_progress','done'] as const).map(f => (
+            <button key={f} onClick={() => setFilter(f)} style={{
+              padding: '7px 12px', fontSize: 12, fontWeight: 500, borderRadius: 7,
+              border: '1px solid', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+              background: filter === f ? '#2d7a4f' : '#fff',
+              color: filter === f ? '#fff' : '#5a6478',
+              borderColor: filter === f ? '#2d7a4f' : '#e8edf2',
+            }}>
+              {f === 'all' ? 'All' : f === 'in_progress' ? 'Active' : f === 'todo' ? 'To do' : 'Done'}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-6 overflow-x-auto">
-        {STATUSES.map(s=>(
-          <button key={s} onClick={()=>setFilter(s)} className={cn('text-xs font-medium px-3 py-1.5 rounded-lg whitespace-nowrap transition-all', filter===s?'bg-white text-[#2d7a4f] shadow-sm':'text-gray-500 hover:text-gray-700')}>
-            {s==='all'?'All':STATUS_LABELS[s]}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <div className="space-y-2">{[...Array(5)].map((_,i)=><div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse"/>)}</div>
-      ) : tasks.length===0 ? (
-        <div className="text-center py-16">
-          <p className="text-gray-400 text-sm mb-4">No tasks yet</p>
-          <Link href="/dashboard/extract" className="inline-flex items-center gap-2 text-sm text-[#2d7a4f] bg-[#e8f5ee] px-4 py-2 rounded-lg hover:bg-[#d0e8da] transition-colors">
-            <Sparkles size={14}/>Add your first tasks with AI
-          </Link>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {Object.entries(grouped).map(([projectName,projectTasks])=>(
-            <div key={projectName}>
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">{projectName}</h2>
-              <div className="space-y-2">
-                {projectTasks.map(task=>(
-                  <div key={task.id} className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 border border-gray-100 hover:border-[#2d7a4f]/20 task-card group">
-                    <input type="checkbox" className="task-check" checked={task.status==='done'} onChange={()=>toggleDone(task)}/>
-                    <Link href={`/dashboard/tasks/${task.id}`} className="flex-1 flex items-center gap-3 min-w-0">
-                      <span className={cn('text-sm flex-1 truncate',task.status==='done'&&'line-through text-gray-400')}>{task.title}</span>
-                      <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-medium',PRIORITY_COLOURS[task.priority])}>{task.priority}</span>
-                        {task.deadline&&<span className={cn('text-xs',deadlineColour(task.deadline))}>{formatDeadline(task.deadline)}</span>}
-                      </div>
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            </div>
+      {loading && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[...Array(5)].map((_, i) => (
+            <div key={i} style={{ height: 56, borderRadius: 10, background: '#f0f2f5', animation: 'shimmer 1.4s ease infinite', backgroundSize: '400px 100%', backgroundImage: 'linear-gradient(90deg, #f0f2f5 25%, #e8edf2 50%, #f0f2f5 75%)' }} />
           ))}
         </div>
       )}
+
+      {!loading && tasks.length === 0 && (
+        <EmptyState
+          icon="✅"
+          title="No tasks yet"
+          description="Add your first tasks using AI extraction — paste any notes, emails or brain dump and AI organises everything."
+          action={
+            <Link href="/dashboard/extract" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: '#2d7a4f', color: '#fff', borderRadius: 8,
+              padding: '9px 18px', fontSize: 13, fontWeight: 600,
+              textDecoration: 'none',
+            }}>
+              <Sparkles size={13} />Add tasks with AI
+            </Link>
+          }
+        />
+      )}
+
+      {!loading && tasks.length > 0 && filtered.length === 0 && (
+        <EmptyState
+          icon="🔍"
+          title="No tasks match"
+          description="Try a different search or filter."
+          compact
+        />
+      )}
+
+      {/* Pending tasks */}
+      {groupedPending.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: groupedDone.length ? 20 : 0 }}>
+          {groupedPending.map(task => (
+            <TaskRow key={task.id} task={task} onToggle={() => toggleComplete(task)} />
+          ))}
+        </div>
+      )}
+
+      {/* Completed section */}
+      {groupedDone.length > 0 && (filter === 'all' || filter === 'done') && (
+        <div>
+          <p style={{ fontSize: 11, fontWeight: 600, color: '#9aa3b4', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+            Completed ({groupedDone.length})
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {groupedDone.map(task => (
+              <TaskRow key={task.id} task={task} onToggle={() => toggleComplete(task)} done />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TaskRow({ task, onToggle, done }: { task: Task; onToggle: () => void; done?: boolean }) {
+  const p = PRIORITY_STYLES[task.priority] ?? PRIORITY_STYLES.low
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      background: done ? '#fafafa' : '#fff',
+      border: '1px solid #e8edf2', borderRadius: 10,
+      padding: '11px 14px',
+      transition: 'border-color 0.15s, transform 0.15s',
+      opacity: done ? 0.65 : 1,
+      fontFamily: 'DM Sans, sans-serif',
+    }}
+      onMouseEnter={e => { if (!done) { (e.currentTarget as HTMLElement).style.borderColor = '#c8d4de'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)' } }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#e8edf2'; (e.currentTarget as HTMLElement).style.transform = 'translateY(0)' }}
+    >
+      <TaskCheckbox
+        done={task.status === 'done'}
+        onChange={onToggle}
+        colour={task.project?.colour ?? '#2d7a4f'}
+      />
+      <Link href={`/dashboard/tasks/${task.id}`} style={{ flex: 1, minWidth: 0, textDecoration: 'none' }}>
+        <p style={{
+          fontSize: 13, fontWeight: 500, color: done ? '#9aa3b4' : '#141b2d',
+          textDecoration: done ? 'line-through' : 'none', margin: 0,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>
+          {task.title}
+        </p>
+        {task.project && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: task.project.colour, flexShrink: 0 }} />
+            <span style={{ fontSize: 11, color: '#9aa3b4' }}>{task.project.name}</span>
+          </div>
+        )}
+      </Link>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        {task.deadline && (
+          <span style={{ fontSize: 11, fontWeight: 500, color: deadlineColour(task.deadline) }}>
+            {formatDeadline(task.deadline)}
+          </span>
+        )}
+        <span style={{
+          fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 10,
+          background: p.bg, color: p.text,
+        }}>
+          {p.label}
+        </span>
+      </div>
     </div>
   )
 }
