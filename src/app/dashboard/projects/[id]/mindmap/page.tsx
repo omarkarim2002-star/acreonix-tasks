@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import ReactFlow, {
   Node, Edge, Background, Controls, MiniMap,
@@ -26,7 +26,7 @@ function ProjectNode({ data }: NodeProps) {
     <div style={{ background: data.colour + '18', border: `2px solid ${data.colour}`, borderRadius: 16, padding: '14px 20px', textAlign: 'center', minWidth: 160, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
       <Handle type="source" position={Position.Bottom} style={{ background: data.colour, border: 'none', width: 8, height: 8 }} />
       <div style={{ fontSize: 22, marginBottom: 4 }}>{data.icon}</div>
-      <div style={{ fontSize: 13, fontWeight: 700, color: '#141b2d', fontFamily: 'Georgia,serif' }}>{data.label}</div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: '#141b2d' }}>{data.label}</div>
       <div style={{ fontSize: 10, color: '#9aa3b4', marginTop: 2 }}>{data.taskCount} tasks</div>
     </div>
   )
@@ -60,73 +60,77 @@ function TaskNode({ data }: NodeProps) {
 
 const nodeTypes = { projectNode: ProjectNode, groupNode: GroupNode, taskNode: TaskNode }
 
+function buildGraph(project: any, tasks: any[]): { nodes: Node[]; edges: Edge[] } {
+  const nodes: Node[] = []
+  const edges: Edge[] = []
+
+  nodes.push({
+    id: 'project', type: 'projectNode',
+    position: { x: 400, y: 40 },
+    data: { label: project.name, colour: project.colour, icon: project.icon, taskCount: tasks.length },
+  })
+
+  const groups = ['todo', 'in_progress', 'done', 'blocked']
+    .map(s => ({ status: s, tasks: tasks.filter((t: any) => t.status === s) }))
+    .filter(g => g.tasks.length > 0)
+
+  const gSpacing = Math.max(240, 900 / Math.max(groups.length, 1))
+  const gStartX = 400 - ((groups.length - 1) * gSpacing) / 2
+
+  groups.forEach(({ status, tasks: gt }, gi) => {
+    const gx = gStartX + gi * gSpacing
+    const gid = `g-${status}`
+    nodes.push({
+      id: gid, type: 'groupNode',
+      position: { x: gx - 60, y: 200 },
+      data: { label: STATUS_LABELS[status], colour: project.colour, count: gt.length },
+    })
+    edges.push({ id: `eg-${status}`, source: 'project', target: gid, style: { stroke: project.colour + '60', strokeWidth: 2 }, animated: status === 'in_progress' })
+
+    const ts = 185
+    const tx = gx - ((gt.length - 1) * ts) / 2
+    gt.forEach((task: any, ti: number) => {
+      nodes.push({
+        id: `t-${task.id}`, type: 'taskNode',
+        position: { x: tx + ti * ts - 75, y: 340 + (ti % 2 === 0 ? 0 : 28) },
+        data: {
+          label: task.title, status: task.status, taskId: task.id,
+          deadline: task.deadline ? new Date(task.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : null,
+        },
+      })
+      edges.push({ id: `et-${task.id}`, source: gid, target: `t-${task.id}`, style: { stroke: '#e8edf2', strokeWidth: 1.5 } })
+    })
+  })
+  return { nodes, edges }
+}
+
 export default function MindMapPage() {
   const { id } = useParams()
   const router = useRouter()
   const [project, setProject] = useState<any>(null)
-  const [tasks, setTasks] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [nodes, setNodes, onNodesChange] = useNodesState([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState([])
+  const onConnect = useCallback((p: Connection) => setEdges(eds => addEdge(p, eds)), [setEdges])
 
   useEffect(() => {
     Promise.all([
       fetch(`/api/projects/${id}`).then(r => r.json()),
       fetch(`/api/tasks?project_id=${id}`).then(r => r.json()),
     ]).then(([proj, taskData]) => {
+      const tasks = Array.isArray(taskData) ? taskData : []
       setProject(proj)
-      setTasks(Array.isArray(taskData) ? taskData : [])
+      // KEY FIX: call setNodes/setEdges directly after fetch
+      const { nodes: n, edges: e } = buildGraph(proj, tasks)
+      setNodes(n)
+      setEdges(e)
       setLoading(false)
-    })
-  }, [id])
-
-  const { nodes: initNodes, edges: initEdges } = useMemo(() => {
-    if (!project) return { nodes: [], edges: [] }
-    const nodes: Node[] = []
-    const edges: Edge[] = []
-
-    nodes.push({
-      id: 'project', type: 'projectNode',
-      position: { x: 400, y: 40 },
-      data: { label: project.name, colour: project.colour, icon: project.icon, taskCount: tasks.length },
-    })
-
-    const groups = ['todo','in_progress','done','blocked']
-      .map(s => ({ status: s, tasks: tasks.filter((t: any) => t.status === s) }))
-      .filter(g => g.tasks.length > 0)
-
-    const gSpacing = Math.max(240, 900 / Math.max(groups.length, 1))
-    const gStartX = 400 - ((groups.length - 1) * gSpacing) / 2
-
-    groups.forEach(({ status, tasks: gt }, gi) => {
-      const gx = gStartX + gi * gSpacing
-      const gid = `g-${status}`
-      nodes.push({
-        id: gid, type: 'groupNode',
-        position: { x: gx - 60, y: 200 },
-        data: { label: STATUS_LABELS[status], colour: project.colour, count: gt.length },
-      })
-      edges.push({ id: `eg-${status}`, source: 'project', target: gid, style: { stroke: project.colour + '60', strokeWidth: 2 }, animated: status === 'in_progress' })
-
-      const ts = 185
-      const tx = gx - ((gt.length - 1) * ts) / 2
-      gt.forEach((task: any, ti: number) => {
-        nodes.push({
-          id: `t-${task.id}`, type: 'taskNode',
-          position: { x: tx + ti * ts - 75, y: 340 + (ti % 2 === 0 ? 0 : 28) },
-          data: { label: task.title, status: task.status, taskId: task.id, deadline: task.deadline ? new Date(task.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : null },
-        })
-        edges.push({ id: `et-${task.id}`, source: gid, target: `t-${task.id}`, style: { stroke: '#e8edf2', strokeWidth: 1.5 } })
-      })
-    })
-    return { nodes, edges }
-  }, [project, tasks])
-
-  const [nodes, , onNodesChange] = useNodesState(initNodes)
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initEdges)
-  const onConnect = useCallback((p: Connection) => setEdges(eds => addEdge(p, eds)), [setEdges])
+    }).catch(() => setLoading(false))
+  }, [id, setNodes, setEdges])
 
   if (loading) return (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: '#f4f6f8', zIndex: 40 }}>
-      <Loader2 size={22} style={{ color: '#2d7a4f', animation: 'spin 1s linear infinite' }} />
+      <Loader2 size={22} style={{ color: '#2d7a4f' }} className="animate-spin" />
       <p style={{ color: '#9aa3b4', fontSize: 13 }}>Loading mind map…</p>
     </div>
   )
@@ -143,8 +147,8 @@ export default function MindMapPage() {
             <>
               <span style={{ width: 1, height: 16, background: '#e8edf2' }} />
               <span style={{ fontSize: 18 }}>{project.icon}</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#141b2d', fontFamily: 'Georgia,serif' }}>{project.name}</span>
-              <span style={{ fontSize: 12, color: '#9aa3b4' }}>{tasks.length} tasks</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#141b2d' }}>{project.name}</span>
+              <span style={{ fontSize: 12, color: '#9aa3b4' }}>{nodes.filter(n => n.type === 'taskNode').length} tasks</span>
             </>
           )}
         </div>
@@ -171,24 +175,34 @@ export default function MindMapPage() {
 
       {/* ReactFlow */}
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        {tasks.length === 0 ? (
+        {nodes.length === 0 && !loading ? (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
             <div style={{ fontSize: 36 }}>{project?.icon}</div>
             <p style={{ color: '#9aa3b4', fontSize: 14 }}>No tasks in this project yet</p>
-            <Link href="/dashboard/extract" style={{ background: '#2d7a4f', color: '#fff', borderRadius: 10, padding: '8px 20px', textDecoration: 'none', fontSize: 13 }}>Add tasks with AI</Link>
+            <Link href="/dashboard/extract" style={{ background: '#2d7a4f', color: '#fff', borderRadius: 10, padding: '8px 20px', textDecoration: 'none', fontSize: 13 }}>
+              Add tasks with AI
+            </Link>
           </div>
         ) : (
           <ReactFlow
-            nodes={nodes} edges={edges}
-            onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
-            onConnect={onConnect} nodeTypes={nodeTypes}
-            fitView fitViewOptions={{ padding: 0.3 }}
-            minZoom={0.15} maxZoom={2}
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            nodeTypes={nodeTypes}
+            fitView
+            fitViewOptions={{ padding: 0.3 }}
+            minZoom={0.15}
+            maxZoom={2}
             proOptions={{ hideAttribution: true }}
           >
             <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#e8edf2" />
             <Controls showInteractive={false} />
-            <MiniMap nodeColor={(n) => n.type === 'projectNode' ? project?.colour : STATUS_DOT[(n.data as any).status] ?? '#d1d5db'} maskColor="rgba(244,246,248,0.8)" />
+            <MiniMap
+              nodeColor={(n) => n.type === 'projectNode' ? project?.colour : STATUS_DOT[(n.data as any).status] ?? '#d1d5db'}
+              maskColor="rgba(244,246,248,0.8)"
+            />
           </ReactFlow>
         )}
       </div>
