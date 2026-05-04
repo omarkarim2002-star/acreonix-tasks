@@ -6,12 +6,13 @@ import { usePathname } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
 import { cn } from '@/lib/utils'
 import {
-  FolderKanban, CheckSquare, Sparkles,
-  Calendar, GitFork, BarChart2, Timer,
+  LayoutDashboard, FolderKanban, CheckSquare,
+  Sparkles, Calendar, GitFork, BarChart2, Timer,
 } from 'lucide-react'
 import { NotificationBell } from './NotificationBell'
 
 const nav = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, sub: 'Overview', exact: true },
   { href: '/dashboard/extract', label: 'AI Extract', icon: Sparkles, sub: 'Add tasks' },
   { href: '/dashboard/projects', label: 'Projects', icon: FolderKanban, sub: 'All projects' },
   { href: '/dashboard/tasks', label: 'Tasks', icon: CheckSquare, sub: 'All tasks' },
@@ -25,7 +26,6 @@ export function Sidebar() {
   const path = usePathname()
   return (
     <aside className="w-56 h-screen flex flex-col shrink-0 bg-white border-r border-gray-100">
-      {/* Logo + bell */}
       <div className="px-5 py-4 flex items-center gap-3 border-b border-gray-100">
         <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shrink-0 bg-[#e8f5ee]">
           <Image src="/logo.png" alt="Acreonix" width={28} height={28} className="object-contain" />
@@ -38,8 +38,8 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-0.5">
-        {nav.map(({ href, label, icon: Icon, sub }) => {
-          const active = path === href || path.startsWith(href + '/')
+        {nav.map(({ href, label, icon: Icon, sub, exact }) => {
+          const active = exact ? path === href : (path === href || path.startsWith(href + '/'))
           return (
             <Link key={href} href={href} className={cn('relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group', active ? 'bg-[#e8f5ee]' : 'hover:bg-gray-50')}>
               {active && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-[#2d7a4f] rounded-r-full" />}
