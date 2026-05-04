@@ -12,7 +12,6 @@ import {
   Sparkles,
   Calendar,
   BarChart2,
-  Settings,
 } from 'lucide-react'
 
 const nav = [
@@ -23,34 +22,30 @@ const nav = [
 ]
 
 const comingSoon = [
-  { href: '#', label: 'Calendar', icon: Calendar, sub: 'Smart schedule' },
-  { href: '#', label: 'Insights', icon: BarChart2, sub: 'Weekly summary' },
+  { label: 'Calendar', icon: Calendar, sub: 'Smart schedule' },
+  { label: 'Insights', icon: BarChart2, sub: 'Weekly summary' },
 ]
 
 export function Sidebar() {
   const path = usePathname()
-
   return (
-    <aside
-      className="w-56 h-screen flex flex-col shrink-0"
-      style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--sidebar-border)' }}
-    >
+    <aside className="w-56 h-screen flex flex-col shrink-0 bg-white border-r border-gray-100">
       {/* Logo */}
-      <div className="px-5 py-5 flex items-center gap-3" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
-        <div className="w-8 h-8 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center shrink-0">
+      <div className="px-5 py-5 flex items-center gap-3 border-b border-gray-100">
+        <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shrink-0 bg-[#e8f5ee]">
           <Image src="/logo.png" alt="Acreonix" width={28} height={28} className="object-contain" />
         </div>
         <div className="flex flex-col leading-none">
-          <span className="text-white text-sm font-semibold tracking-wide" style={{ fontFamily: 'Georgia, serif' }}>
+          <span className="text-[#1a1f2e] text-sm font-semibold tracking-wide" style={{ fontFamily: 'Georgia, serif' }}>
             Acreonix
           </span>
-          <span className="text-[10px] tracking-widest uppercase" style={{ color: 'var(--gold)' }}>
+          <span className="text-[10px] tracking-widest uppercase font-medium" style={{ color: '#c9a84c' }}>
             Tasks
           </span>
         </div>
       </div>
 
-      {/* Main nav */}
+      {/* Nav */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-0.5">
         {nav.map(({ href, label, icon: Icon, sub }) => {
           const active = href === '/dashboard' ? path === href : path.startsWith(href)
@@ -59,54 +54,46 @@ export function Sidebar() {
               key={href}
               href={href}
               className={cn(
-                'relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group',
-                active
-                  ? 'text-white'
-                  : 'hover:bg-white/5'
+                'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group',
+                active ? 'bg-[#e8f5ee]' : 'hover:bg-gray-50'
               )}
-              style={active ? { background: 'var(--sidebar-active-bg)' } : {}}
             >
-              {active && <div className="nav-active-bar" />}
+              {active && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-[#2d7a4f] rounded-r-full" />
+              )}
               <Icon
                 size={16}
-                className={cn('shrink-0 transition-colors', active ? 'text-white' : 'text-[#8b92a5] group-hover:text-white')}
-                style={active ? { color: 'var(--green-light)' } : {}}
+                className={cn('shrink-0 transition-colors', active ? 'text-[#2d7a4f]' : 'text-gray-400 group-hover:text-gray-600')}
               />
               <div className="flex flex-col leading-none">
-                <span className={cn('text-xs font-medium', active ? 'text-white' : 'text-[#8b92a5] group-hover:text-white')}>
+                <span className={cn('text-xs font-medium', active ? 'text-[#2d7a4f]' : 'text-gray-700 group-hover:text-gray-900')}>
                   {label}
                 </span>
-                <span className="text-[10px] text-[#4a5168] mt-0.5">{sub}</span>
+                <span className="text-[10px] text-gray-400 mt-0.5">{sub}</span>
               </div>
             </Link>
           )
         })}
 
-        {/* Divider */}
-        <div className="my-3" style={{ borderTop: '1px solid var(--sidebar-border)' }} />
-        <p className="text-[9px] text-[#3a4155] uppercase tracking-widest px-3 mb-2 font-medium">Coming soon</p>
+        <div className="my-3 border-t border-gray-100" />
+        <p className="text-[9px] text-gray-400 uppercase tracking-widest px-3 mb-2 font-medium">Coming soon</p>
 
-        {comingSoon.map(({ href, label, icon: Icon, sub }) => (
-          <div
-            key={label}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg opacity-40 cursor-not-allowed"
-          >
-            <Icon size={16} className="text-[#8b92a5] shrink-0" />
+        {comingSoon.map(({ label, icon: Icon, sub }) => (
+          <div key={label} className="flex items-center gap-3 px-3 py-2.5 rounded-xl opacity-40 cursor-not-allowed">
+            <Icon size={16} className="text-gray-400 shrink-0" />
             <div className="flex flex-col leading-none">
-              <span className="text-xs font-medium text-[#8b92a5]">{label}</span>
-              <span className="text-[10px] text-[#4a5168] mt-0.5">{sub}</span>
+              <span className="text-xs font-medium text-gray-700">{label}</span>
+              <span className="text-[10px] text-gray-400 mt-0.5">{sub}</span>
             </div>
-            <span className="ml-auto text-[9px] bg-[#1e2330] text-[#4a5168] px-1.5 py-0.5 rounded font-medium">P3</span>
+            <span className="ml-auto text-[9px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded font-medium">P3</span>
           </div>
         ))}
       </nav>
 
       {/* User */}
-      <div className="px-4 py-4 flex items-center gap-3" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
+      <div className="px-4 py-4 border-t border-gray-100 flex items-center gap-3">
         <UserButton afterSignOutUrl="/" />
-        <div className="flex flex-col leading-none min-w-0">
-          <span className="text-xs text-[#8b92a5] truncate">Account</span>
-        </div>
+        <span className="text-xs text-gray-400">Account</span>
       </div>
     </aside>
   )

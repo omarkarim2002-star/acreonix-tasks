@@ -18,7 +18,7 @@ export function MobileNav() {
   const path = usePathname()
   return (
     <>
-      <header className="md:hidden flex items-center justify-between px-4 py-3 sticky top-0 z-30" style={{ background: 'var(--sidebar-bg)', borderBottom: '1px solid var(--sidebar-border)' }}>
+      <header className="md:hidden flex items-center justify-between px-4 py-3 sticky top-0 z-30" style={{ background: white, borderBottom: "1px solid #f3f4f6" }}>
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-md overflow-hidden bg-white/10 flex items-center justify-center">
             <Image src="/logo.png" alt="Acreonix" width={24} height={24} className="object-contain" />
@@ -29,7 +29,7 @@ export function MobileNav() {
         <UserButton afterSignOutUrl="/" />
       </header>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex" style={{ background: 'var(--sidebar-bg)', borderTop: '1px solid var(--sidebar-border)' }}>
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex" style={{ background: white, borderTop: '1px solid #f3f4f6' }}>
         {nav.map(({ href, label, icon: Icon }) => {
           const active = href === '/dashboard' ? path === href : path.startsWith(href)
           return (
