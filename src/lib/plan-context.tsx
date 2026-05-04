@@ -3,9 +3,11 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import type { Plan } from '@/lib/plans'
 import { PLAN_LIMITS, UPGRADE_REASONS, canUseFeature } from '@/lib/plans'
 
+type Limits = typeof PLAN_LIMITS['free'] | typeof PLAN_LIMITS['pro'] | typeof PLAN_LIMITS['team']
+
 type PlanContext = {
   plan: Plan
-  limits: typeof PLAN_LIMITS['free']
+  limits: Limits
   loading: boolean
   isPro: boolean
   isTeam: boolean
@@ -15,7 +17,7 @@ type PlanContext = {
 
 const Ctx = createContext<PlanContext>({
   plan: 'free',
-  limits: PLAN_LIMITS.free,
+  limits: PLAN_LIMITS.free as Limits,
   loading: true,
   isPro: false,
   isTeam: false,
@@ -41,10 +43,12 @@ export function PlanProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { load() }, [])
 
+  const limits = PLAN_LIMITS[plan] as Limits
+
   return (
     <Ctx.Provider value={{
       plan,
-      limits: PLAN_LIMITS[plan],
+      limits,
       loading,
       isPro: plan === 'pro' || plan === 'team',
       isTeam: plan === 'team',

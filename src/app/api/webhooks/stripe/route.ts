@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/supabase'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
+}
 
 function getPlanFromPriceId(priceId: string): 'pro' | 'team' | 'free' {
   if (priceId === process.env.STRIPE_PRO_PRICE_ID) return 'pro'
@@ -29,6 +30,10 @@ async function upsertSubscription(subscription: Stripe.Subscription, plan?: stri
     paused: 'cancelled',
   }
 
+  const item = subscription.items.data[0]
+  const periodStart = (item as any)?.current_period_start ?? (subscription as any).current_period_start ?? null
+  const periodEnd = (item as any)?.current_period_end ?? (subscription as any).current_period_end ?? null
+
   await supabaseAdmin.from('user_subscriptions').upsert({
     user_id: userId,
     plan: subscription.status === 'canceled' ? 'free' : derivedPlan,
@@ -36,20 +41,21 @@ async function upsertSubscription(subscription: Stripe.Subscription, plan?: stri
     stripe_subscription_id: subscription.id,
     stripe_price_id: priceId,
     status: statusMap[subscription.status] ?? 'active',
-    current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-    current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+    current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
+    current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
     cancel_at_period_end: subscription.cancel_at_period_end,
     trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
   })
 }
 
 export async function POST(req: NextRequest) {
+  const stripe = getStripe()
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')!
 
   let event: Stripe.Event
   try {
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret)
+    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!)
   } catch {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
@@ -58,50 +64,41 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
-        const sub = event.data.object as Stripe.Subscription
-        await upsertSubscription(sub)
+        await upsertSubscription(event.data.object as Stripe.Subscription)
         break
       }
-
       case 'customer.subscription.deleted': {
         const sub = event.data.object as Stripe.Subscription
         const userId = sub.metadata?.userId
         if (userId) {
           await supabaseAdmin.from('user_subscriptions').update({
-            plan: 'free',
-            status: 'cancelled',
-            stripe_subscription_id: null,
-            stripe_price_id: null,
+            plan: 'free', status: 'cancelled',
+            stripe_subscription_id: null, stripe_price_id: null,
           }).eq('user_id', userId)
         }
         break
       }
-
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
         if (session.subscription) {
           const sub = await stripe.subscriptions.retrieve(session.subscription as string)
-          const plan = session.metadata?.plan
-          await upsertSubscription(sub, plan)
+          await upsertSubscription(sub, session.metadata?.plan)
         }
         break
       }
-
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice
-        if (invoice.subscription) {
-          const sub = await stripe.subscriptions.retrieve(invoice.subscription as string)
+        if ((invoice as any).subscription) {
+          const sub = await stripe.subscriptions.retrieve((invoice as any).subscription as string)
           await upsertSubscription(sub)
         }
         break
       }
     }
   } catch (err) {
-    console.error('Webhook handler error:', err)
+    console.error('Webhook error:', err)
     return NextResponse.json({ error: 'Handler failed' }, { status: 500 })
   }
 
   return NextResponse.json({ received: true })
 }
-
-export const config = { api: { bodyParser: false } }

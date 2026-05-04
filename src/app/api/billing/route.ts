@@ -2,17 +2,18 @@ import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/supabase'
-import { PLAN_PRICES, Plan } from '@/lib/plans'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
+}
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
 
   const { action, plan } = await req.json()
+  const stripe = getStripe()
 
-  // Get or create Stripe customer
   const { data: sub } = await supabaseAdmin
     .from('user_subscriptions')
     .select('stripe_customer_id, plan, stripe_subscription_id')
@@ -22,9 +23,7 @@ export async function POST(req: NextRequest) {
   let customerId = sub?.stripe_customer_id
 
   if (!customerId) {
-    const customer = await stripe.customers.create({
-      metadata: { userId },
-    })
+    const customer = await stripe.customers.create({ metadata: { userId } })
     customerId = customer.id
     await supabaseAdmin.from('user_subscriptions').upsert({
       user_id: userId,
@@ -37,7 +36,6 @@ export async function POST(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!
 
   if (action === 'checkout') {
-    // New subscription checkout
     const priceId = plan === 'pro' ? process.env.STRIPE_PRO_PRICE_ID : process.env.STRIPE_TEAM_PRICE_ID
     if (!priceId) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
 
@@ -55,12 +53,10 @@ export async function POST(req: NextRequest) {
       },
       metadata: { userId, plan },
     })
-
     return NextResponse.json({ url: session.url })
   }
 
   if (action === 'portal') {
-    // Customer portal for manage/cancel
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${appUrl}/dashboard/billing`,
