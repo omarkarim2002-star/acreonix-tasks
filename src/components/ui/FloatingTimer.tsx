@@ -1,43 +1,57 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Timer, X, Play, Square, ChevronRight, Loader2 } from 'lucide-react'
+import { Timer, X, Play, Square, ChevronRight, Loader2, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
 
-type Task = { id: string; title: string; project?: { name: string; colour: string } }
+type Project = { id: string; name: string; colour: string; icon: string }
+type Task = { id: string; title: string; project_id: string }
 
 export function FloatingTimer() {
   const [open, setOpen] = useState(false)
+  const [projects, setProjects] = useState<Project[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
+  const [selectedProjectId, setSelectedProjectId] = useState('')
   const [selectedTaskId, setSelectedTaskId] = useState('')
   const [running, setRunning] = useState(false)
   const [startedAt, setStartedAt] = useState<Date | null>(null)
   const [elapsed, setElapsed] = useState(0)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [projectOpen, setProjectOpen] = useState(false)
+  const [taskOpen, setTaskOpen] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Load projects on open
   useEffect(() => {
-    if (open && tasks.length === 0) {
-      fetch('/api/tasks')
-        .then(r => r.json())
-        .then(d => setTasks(Array.isArray(d) ? d.filter((t: any) => t.status !== 'done').slice(0, 20) : []))
-        .catch(() => {})
-    }
-  }, [open, tasks.length])
+    if (!open || projects.length > 0) return
+    fetch('/api/projects')
+      .then(r => r.json())
+      .then(d => setProjects(Array.isArray(d) ? d : []))
+      .catch(() => {})
+  }, [open, projects.length])
 
+  // Load tasks when project selected
+  useEffect(() => {
+    if (!selectedProjectId) { setTasks([]); setSelectedTaskId(''); return }
+    fetch(`/api/tasks?project_id=${selectedProjectId}`)
+      .then(r => r.json())
+      .then(d => setTasks(Array.isArray(d) ? d.filter((t: any) => t.status !== 'done') : []))
+      .catch(() => setTasks([]))
+    setSelectedTaskId('')
+  }, [selectedProjectId])
+
+  // Timer tick
   useEffect(() => {
     if (running) {
-      intervalRef.current = setInterval(() => {
-        setElapsed(s => s + 1)
-      }, 1000)
+      intervalRef.current = setInterval(() => setElapsed(s => s + 1), 1000)
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current)
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [running])
 
-  function formatElapsed(s: number) {
+  function fmt(s: number) {
     const h = Math.floor(s / 3600)
     const m = Math.floor((s % 3600) / 60)
     const sec = s % 60
@@ -67,7 +81,7 @@ export function FloatingTimer() {
         }),
       })
       setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+      setTimeout(() => { setSaved(false); setSelectedProjectId(''); setSelectedTaskId('') }, 3000)
     } finally {
       setSaving(false)
       setStartedAt(null)
@@ -75,24 +89,25 @@ export function FloatingTimer() {
     }
   }
 
+  const selectedProject = projects.find(p => p.id === selectedProjectId)
   const selectedTask = tasks.find(t => t.id === selectedTaskId)
 
   return (
     <>
       {/* Floating button */}
       <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 200 }}>
-        {/* Mini timer badge when running */}
+        {/* Running badge */}
         {running && !open && (
           <div style={{
-            position: 'absolute', bottom: 52, right: 0,
+            position: 'absolute', bottom: 56, right: 0,
             background: '#1a1a1a', color: '#fff',
-            borderRadius: 20, padding: '4px 12px',
+            borderRadius: 20, padding: '5px 13px',
             fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
             boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+            fontFamily: 'monospace',
             animation: 'fadeUp 0.2s ease forwards',
-            fontFamily: 'DM Mono, monospace',
           }}>
-            ⏱ {formatElapsed(elapsed)}
+            ⏱ {fmt(elapsed)}
           </div>
         )}
 
@@ -105,7 +120,6 @@ export function FloatingTimer() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
             transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
-            transform: open ? 'rotate(180deg) scale(0.95)' : 'none',
           }}
           title="Quick timer"
         >
@@ -117,13 +131,13 @@ export function FloatingTimer() {
       {open && (
         <div style={{
           position: 'fixed', bottom: 84, right: 24, zIndex: 199,
-          width: 280, background: '#fff',
+          width: 292, background: '#fff',
           borderRadius: 14, border: '1px solid rgba(0,0,0,0.1)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.04)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
           fontFamily: 'DM Sans, sans-serif',
           animation: 'scaleIn 0.18s cubic-bezier(0.4,0,0.2,1) forwards',
           transformOrigin: 'bottom right',
-          overflow: 'hidden',
+          overflow: 'visible',
         }}>
 
           {/* Header */}
@@ -131,43 +145,161 @@ export function FloatingTimer() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>Quick timer</span>
               {running && (
-                <span style={{
-                  fontSize: 16, fontWeight: 700, color: '#2d7a4f',
-                  fontFamily: 'DM Mono, monospace', letterSpacing: '-0.02em',
-                }}>
-                  {formatElapsed(elapsed)}
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#2d7a4f', fontFamily: 'monospace', letterSpacing: '-0.02em' }}>
+                  {fmt(elapsed)}
                 </span>
               )}
             </div>
-            {running && selectedTask && (
-              <p style={{ fontSize: 11, color: '#888', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {selectedTask.title}
-              </p>
+            {running && selectedProject && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
+                <span style={{ fontSize: 12 }}>{selectedProject.icon}</span>
+                <span style={{ fontSize: 11, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {selectedProject.name}{selectedTask ? ` · ${selectedTask.title}` : ''}
+                </span>
+              </div>
             )}
           </div>
 
-          {/* Task selector */}
+          {/* Selectors — only show when not running */}
           {!running && (
-            <div style={{ padding: '10px 14px' }}>
-              <label style={{ fontSize: 11, fontWeight: 500, color: '#aaa', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Task (optional)</label>
-              <select
-                value={selectedTaskId}
-                onChange={e => setSelectedTaskId(e.target.value)}
-                style={{
-                  width: '100%', padding: '7px 28px 7px 10px',
-                  border: '1px solid rgba(0,0,0,0.1)', borderRadius: 7,
-                  fontSize: 12.5, color: '#1a1a1a', background: '#fff',
-                  appearance: 'none',
-                  backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%23aaa' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")",
-                  backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center',
-                  outline: 'none',
-                }}
-              >
-                <option value="">No task selected</option>
-                {tasks.map(t => (
-                  <option key={t.id} value={t.id}>{t.title}</option>
-                ))}
-              </select>
+            <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+              {/* Project picker */}
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 600, color: '#aaa', display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Project
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => { setProjectOpen(o => !o); setTaskOpen(false) }}
+                    style={{
+                      width: '100%', padding: '7px 10px',
+                      border: '1px solid rgba(0,0,0,0.12)', borderRadius: 7,
+                      background: '#fff', cursor: 'pointer', textAlign: 'left',
+                      display: 'flex', alignItems: 'center', gap: 7,
+                      fontSize: 12.5, color: selectedProject ? '#1a1a1a' : '#aaa',
+                      fontFamily: 'DM Sans, sans-serif',
+                    }}
+                  >
+                    {selectedProject ? (
+                      <>
+                        <span>{selectedProject.icon}</span>
+                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedProject.name}</span>
+                      </>
+                    ) : (
+                      <span style={{ flex: 1 }}>No project selected</span>
+                    )}
+                    <ChevronDown size={12} style={{ color: '#ccc', flexShrink: 0, transform: projectOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+                  </button>
+
+                  {projectOpen && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 300,
+                      background: '#fff', border: '1px solid rgba(0,0,0,0.1)',
+                      borderRadius: 8, boxShadow: '0 6px 20px rgba(0,0,0,0.12)',
+                      marginTop: 3, maxHeight: 200, overflowY: 'auto',
+                    }}>
+                      <button
+                        onClick={() => { setSelectedProjectId(''); setProjectOpen(false) }}
+                        style={{
+                          width: '100%', padding: '8px 12px', textAlign: 'left',
+                          border: 'none', cursor: 'pointer', fontSize: 12.5,
+                          color: '#888', fontFamily: 'DM Sans, sans-serif',
+                          background: !selectedProjectId ? '#f9f9f7' : 'transparent',
+                        }}
+                      >
+                        No project
+                      </button>
+                      {projects.map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => { setSelectedProjectId(p.id); setProjectOpen(false) }}
+                          style={{
+                            width: '100%', padding: '8px 12px', textAlign: 'left',
+                            border: 'none', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            fontSize: 12.5, color: '#1a1a1a', fontFamily: 'DM Sans, sans-serif',
+                            background: selectedProjectId === p.id ? '#f0faf4' : 'transparent',
+                            borderLeft: selectedProjectId === p.id ? `3px solid ${p.colour ?? '#2d7a4f'}` : '3px solid transparent',
+                          }}
+                          onMouseEnter={e => { if (selectedProjectId !== p.id) (e.currentTarget as HTMLElement).style.background = '#f9f9f7' }}
+                          onMouseLeave={e => { if (selectedProjectId !== p.id) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                        >
+                          <span>{p.icon}</span>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Task picker — only shown if project selected */}
+              {selectedProjectId && (
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 600, color: '#aaa', display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Task
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => { setTaskOpen(o => !o); setProjectOpen(false) }}
+                      style={{
+                        width: '100%', padding: '7px 10px',
+                        border: '1px solid rgba(0,0,0,0.12)', borderRadius: 7,
+                        background: '#fff', cursor: 'pointer', textAlign: 'left',
+                        display: 'flex', alignItems: 'center', gap: 7,
+                        fontSize: 12.5, color: selectedTask ? '#1a1a1a' : '#aaa',
+                        fontFamily: 'DM Sans, sans-serif',
+                      }}
+                    >
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {selectedTask ? selectedTask.title : 'No task selected'}
+                      </span>
+                      <ChevronDown size={12} style={{ color: '#ccc', flexShrink: 0, transform: taskOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+                    </button>
+
+                    {taskOpen && (
+                      <div style={{
+                        position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 300,
+                        background: '#fff', border: '1px solid rgba(0,0,0,0.1)',
+                        borderRadius: 8, boxShadow: '0 6px 20px rgba(0,0,0,0.12)',
+                        marginTop: 3, maxHeight: 180, overflowY: 'auto',
+                      }}>
+                        <button
+                          onClick={() => { setSelectedTaskId(''); setTaskOpen(false) }}
+                          style={{
+                            width: '100%', padding: '8px 12px', textAlign: 'left',
+                            border: 'none', cursor: 'pointer', fontSize: 12.5,
+                            color: '#888', fontFamily: 'DM Sans, sans-serif',
+                            background: !selectedTaskId ? '#f9f9f7' : 'transparent',
+                          }}
+                        >
+                          No specific task
+                        </button>
+                        {tasks.length === 0 && (
+                          <div style={{ padding: '8px 12px', fontSize: 12, color: '#bbb' }}>No pending tasks in this project</div>
+                        )}
+                        {tasks.map(t => (
+                          <button
+                            key={t.id}
+                            onClick={() => { setSelectedTaskId(t.id); setTaskOpen(false) }}
+                            style={{
+                              width: '100%', padding: '8px 12px', textAlign: 'left',
+                              border: 'none', cursor: 'pointer',
+                              fontSize: 12.5, color: '#1a1a1a', fontFamily: 'DM Sans, sans-serif',
+                              background: selectedTaskId === t.id ? '#f0faf4' : 'transparent',
+                            }}
+                            onMouseEnter={e => { if (selectedTaskId !== t.id) (e.currentTarget as HTMLElement).style.background = '#f9f9f7' }}
+                            onMouseLeave={e => { if (selectedTaskId !== t.id) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                          >
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{t.title}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -185,7 +317,7 @@ export function FloatingTimer() {
                 onClick={running ? stopTimer : startTimer}
                 disabled={saving}
                 style={{
-                  width: '100%', padding: '9px 0',
+                  width: '100%', padding: '10px 0',
                   background: running ? '#dc2626' : '#2d7a4f',
                   color: '#fff', border: 'none', borderRadius: 8,
                   fontSize: 13, fontWeight: 500, cursor: 'pointer',
@@ -194,24 +326,24 @@ export function FloatingTimer() {
                   fontFamily: 'DM Sans, sans-serif',
                 }}
               >
-                {saving ? (
-                  <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                ) : running ? (
-                  <Square size={14} />
-                ) : (
-                  <Play size={14} />
-                )}
+                {saving
+                  ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                  : running ? <Square size={14} /> : <Play size={14} />
+                }
                 {saving ? 'Saving…' : running ? 'Stop & save' : 'Start timer'}
               </button>
             )}
           </div>
 
-          {/* Footer link */}
-          <Link href="/dashboard/tracker" onClick={() => setOpen(false)} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '9px 14px', borderTop: '1px solid rgba(0,0,0,0.06)',
-            textDecoration: 'none', transition: 'background 0.12s',
-          }}
+          {/* Footer */}
+          <Link
+            href="/dashboard/tracker"
+            onClick={() => setOpen(false)}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '9px 14px', borderTop: '1px solid rgba(0,0,0,0.06)',
+              textDecoration: 'none', transition: 'background 0.12s',
+            }}
             onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#f7f7f5'}
             onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
           >
@@ -220,6 +352,12 @@ export function FloatingTimer() {
           </Link>
         </div>
       )}
+
+      <style>{`
+        @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+        @keyframes scaleIn{from{opacity:0;transform:scale(0.94) translateY(6px)}to{opacity:1;transform:none}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+      `}</style>
     </>
   )
 }
