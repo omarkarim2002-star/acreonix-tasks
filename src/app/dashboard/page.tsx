@@ -7,18 +7,31 @@ import type { Task, Project } from '@/types'
 
 export default async function DashboardPage() {
   const { userId } = await auth()
+  if (!userId) return null
 
-  const [{ data: projects }, { data: tasks }] = await Promise.all([
-    supabaseAdmin.from('projects').select('*, tasks(id,status)').eq('user_id', userId!).eq('status', 'active').order('created_at', { ascending: false }).limit(6),
-    supabaseAdmin.from('tasks').select('*, project:projects(name,colour,icon)').eq('user_id', userId!).neq('status', 'done').order('deadline', { ascending: true, nullsFirst: false }).limit(8),
+  const [projectsRes, tasksRes, allTasksRes] = await Promise.all([
+    supabaseAdmin.from('projects').select('*').eq('user_id', userId).eq('status', 'active').order('created_at', { ascending: false }).limit(6),
+    supabaseAdmin.from('tasks').select('*, project:projects(name,colour,icon)').eq('user_id', userId).neq('status', 'done').order('deadline', { ascending: true, nullsFirst: false }).limit(8),
+    supabaseAdmin.from('tasks').select('id,status,project_id').eq('user_id', userId),
   ])
 
+  const projects = (projectsRes.data ?? []) as Project[]
+  const tasks = (tasksRes.data ?? []) as Task[]
+  const allTasks = allTasksRes.data ?? []
+
   const now = new Date()
-  const todayTasks = (tasks as Task[])?.filter(t => t.deadline && new Date(t.deadline).toDateString() === now.toDateString()) ?? []
-  const overdueTasks = (tasks as Task[])?.filter(t => t.deadline && new Date(t.deadline) < now) ?? []
-  const inProgressTasks = (tasks as Task[])?.filter(t => t.status === 'in_progress') ?? []
+  const todayTasks = tasks.filter(t => t.deadline && new Date(t.deadline).toDateString() === now.toDateString())
+  const overdueTasks = tasks.filter(t => t.deadline && new Date(t.deadline) < now)
+  const inProgressTasks = tasks.filter(t => t.status === 'in_progress')
   const hour = now.getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+
+  // Attach task counts to projects manually
+  const projectsWithStats = projects.map(p => ({
+    ...p,
+    total: allTasks.filter(t => t.project_id === p.id).length,
+    done: allTasks.filter(t => t.project_id === p.id && t.status === 'done').length,
+  }))
 
   return (
     <div className="px-6 py-8 max-w-4xl mx-auto">
@@ -27,25 +40,15 @@ export default async function DashboardPage() {
         <p className="text-gray-400 text-sm mt-3">Here's your day at a glance.</p>
       </div>
 
-      {/* Quick action buttons */}
-      <div className="flex gap-3 mb-6">
-        <Link
-          href="/dashboard/calendar"
-          className="flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-xl border-2 border-[#2d7a4f] text-[#2d7a4f] hover:bg-[#e8f5ee] transition-colors"
-        >
+      {/* Quick actions */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        <Link href="/dashboard/calendar" className="flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-xl border-2 border-[#2d7a4f] text-[#2d7a4f] hover:bg-[#e8f5ee] transition-colors">
           <Calendar size={15} />Schedule my day
         </Link>
-        <Link
-          href="/dashboard/mindmap"
-          className="flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors"
-        >
+        <Link href="/dashboard/mindmap" className="flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-colors">
           <GitFork size={15} />View all projects map
         </Link>
-        <Link
-          href="/dashboard/extract"
-          className="flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-xl text-white transition-colors ml-auto"
-          style={{ background: '#2d7a4f' }}
-        >
+        <Link href="/dashboard/extract" className="flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-xl text-white transition-colors ml-auto" style={{ background: '#2d7a4f' }}>
           <Sparkles size={15} />Add tasks with AI
         </Link>
       </div>
@@ -75,7 +78,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {(!tasks || tasks.length === 0) && (
+      {tasks.length === 0 && (
         <div className="mb-8 bg-gradient-to-br from-[#e8f5ee] to-[#faf5e8] rounded-2xl p-6 border border-[#d0e8da]">
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#2d7a4f' }}>
@@ -93,33 +96,33 @@ export default async function DashboardPage() {
       )}
 
       <div className="grid md:grid-cols-2 gap-6">
+        {/* Tasks */}
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Upcoming tasks</h2>
             <Link href="/dashboard/tasks" className="text-xs text-[#2d7a4f] hover:underline flex items-center gap-1">View all <ArrowRight size={11} /></Link>
           </div>
           <div className="space-y-1.5">
-            {(tasks as Task[])?.slice(0, 6).map(task => (
+            {tasks.slice(0, 6).map(task => (
               <Link key={task.id} href={`/dashboard/tasks/${task.id}`} className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 border border-gray-100 hover:border-[#2d7a4f]/30 task-card">
                 <div className="w-2 h-2 rounded-full shrink-0" style={{ background: (task as any).project?.colour ?? '#2d7a4f' }} />
                 <span className="text-sm text-gray-800 flex-1 truncate">{task.title}</span>
                 {task.deadline && <span className={`text-xs shrink-0 ${deadlineColour(task.deadline)}`}>{formatDeadline(task.deadline)}</span>}
               </Link>
             ))}
-            {(!tasks || tasks.length === 0) && <p className="text-sm text-gray-400 py-4 text-center">No pending tasks</p>}
+            {tasks.length === 0 && <p className="text-sm text-gray-400 py-4 text-center">No pending tasks</p>}
           </div>
         </section>
 
+        {/* Projects */}
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Projects</h2>
             <Link href="/dashboard/projects" className="text-xs text-[#2d7a4f] hover:underline flex items-center gap-1">View all <ArrowRight size={11} /></Link>
           </div>
           <div className="space-y-1.5">
-            {(projects as (Project & { tasks: { id: string; status: string }[] })[])?.map(p => {
-              const total = p.tasks?.length ?? 0
-              const done = p.tasks?.filter(t => t.status === 'done').length ?? 0
-              const pct = total > 0 ? Math.round((done / total) * 100) : 0
+            {projectsWithStats.map(p => {
+              const pct = p.total > 0 ? Math.round((p.done / p.total) * 100) : 0
               return (
                 <div key={p.id} className="bg-white rounded-xl border border-gray-100 hover:border-gray-200 task-card overflow-hidden">
                   <Link href={`/dashboard/projects/${p.id}`} className="flex items-center gap-3 px-4 py-3">
@@ -140,7 +143,7 @@ export default async function DashboardPage() {
                 </div>
               )
             })}
-            {(!projects || projects.length === 0) && <p className="text-sm text-gray-400 py-4 text-center">No projects yet</p>}
+            {projects.length === 0 && <p className="text-sm text-gray-400 py-4 text-center">No projects yet</p>}
           </div>
         </section>
       </div>
