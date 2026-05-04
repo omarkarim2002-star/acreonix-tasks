@@ -3,13 +3,13 @@ import { MobileNav } from '@/components/layout/MobileNav'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--surface)' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f4f6f8' }}>
       <div className="hidden md:flex">
         <Sidebar />
       </div>
       <MobileNav />
-      <main className="flex-1 overflow-y-auto">
-        <div className="pb-20 md:pb-0 min-h-full">
+      <main style={{ flex: 1, overflow: 'auto', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, paddingBottom: 80 }} className="md:pb-0">
           {children}
         </div>
       </main>
