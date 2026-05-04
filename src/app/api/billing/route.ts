@@ -4,7 +4,7 @@ import Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/supabase'
 import { PLAN_PRICES, Plan } from '@/lib/plans'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' })
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' })
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
