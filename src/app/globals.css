@@ -15,12 +15,12 @@
   --gold-border: #e8d5a0;
 
   --bg: #ffffff;
-  --bg-app: #f7f7f5;   /* Notion-style warm white */
+  --bg-app: #f7f7f5;
   --bg-hover: #f0f0ee;
   --bg-active: #e8e8e5;
 
-  --border: rgba(0,0,0,0.08);
-  --border-mid: rgba(0,0,0,0.13);
+  --border: rgba(0,0,0,0.07);
+  --border-mid: rgba(0,0,0,0.12);
   --border-strong: rgba(0,0,0,0.18);
 
   --text: #1a1a1a;
@@ -31,11 +31,9 @@
   --radius-sm: 6px;
   --radius: 8px;
   --radius-lg: 12px;
-  --radius-xl: 16px;
 
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
-  --shadow: 0 2px 8px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -50,13 +48,31 @@ body {
   background: var(--bg-app);
 }
 
+/* ── Sidebar: visible on desktop, hidden on mobile ── */
+.app-sidebar {
+  display: flex !important;
+}
+
+/* ── Mobile header: hidden on desktop, shown on mobile ── */
+.mobile-header {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .app-sidebar {
+    display: none !important;
+  }
+  .mobile-header {
+    display: flex !important;
+  }
+}
+
 /* ── Scrollbar ── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.22); }
 
-/* ── Base transitions ── */
 a { text-decoration: none; color: inherit; }
 button { font-family: inherit; cursor: pointer; }
 
@@ -86,7 +102,7 @@ select {
   cursor: pointer;
 }
 
-/* ── Card ── */
+/* ── Cards ── */
 .card {
   background: var(--bg);
   border: 1px solid var(--border);
@@ -101,47 +117,52 @@ select {
 
 /* ── Buttons ── */
 .btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 13.5px; font-weight: 500; font-family: inherit;
-  border-radius: var(--radius); padding: 7px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 500;
+  font-family: inherit;
+  border-radius: var(--radius);
+  padding: 8px 16px;
   border: 1px solid transparent;
   transition: all 0.15s cubic-bezier(0.4,0,0.2,1);
-  cursor: pointer; white-space: nowrap; line-height: 1.4;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.4;
+  text-decoration: none;
   user-select: none;
 }
 .btn:active { transform: scale(0.97); }
 
 .btn-primary {
-  background: var(--green); color: white;
+  background: var(--green);
+  color: white;
+  border-color: var(--green-dark);
   box-shadow: 0 1px 3px rgba(45,122,79,0.3);
 }
-.btn-primary:hover { background: var(--green-mid); box-shadow: 0 3px 8px rgba(45,122,79,0.35); transform: translateY(-1px); }
-.btn-primary:active { transform: scale(0.97) translateY(0); box-shadow: none; }
+.btn-primary:hover {
+  background: var(--green-mid);
+  box-shadow: 0 3px 8px rgba(45,122,79,0.3);
+  transform: translateY(-1px);
+}
+.btn-primary:active { transform: scale(0.97); box-shadow: none; }
 
 .btn-secondary {
-  background: var(--bg); color: var(--text-sub);
+  background: var(--bg);
+  color: var(--text-sub);
   border-color: var(--border-mid);
 }
 .btn-secondary:hover { background: var(--bg-hover); border-color: var(--border-strong); }
 
 .btn-ghost {
-  background: transparent; color: var(--text-muted); border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+  border-color: transparent;
 }
 .btn-ghost:hover { background: var(--bg-hover); color: var(--text); }
 
-/* ── Badge ── */
-.badge {
-  display: inline-flex; align-items: center;
-  font-size: 11px; font-weight: 500;
-  padding: 2px 7px; border-radius: 5px; line-height: 1.4;
-}
-.badge-green { background: var(--green-bg); color: #1a5c35; }
-.badge-gold  { background: var(--gold-bg);  color: #7a5e1a; }
-.badge-red   { background: #fef2f2; color: #b91c1c; }
-.badge-gray  { background: #f3f3f1; color: #666; }
-.badge-blue  { background: #eff6ff; color: #1d4ed8; }
-
-/* ── Task row ── */
+/* ── Task rows ── */
 .task-row {
   background: var(--bg);
   border: 1px solid var(--border);
@@ -154,21 +175,24 @@ select {
   transform: translateY(-1px);
 }
 
+/* ── Gold accent ── */
+.gold-line::after {
+  content: '';
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: var(--gold);
+  border-radius: 2px;
+  margin-top: 7px;
+}
+
 /* ── Animations ── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: none; }
 }
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.96) translateY(4px); }
-  to   { opacity: 1; transform: none; }
-}
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-6px); }
   to   { opacity: 1; transform: none; }
 }
 @keyframes shimmer {
@@ -177,6 +201,10 @@ select {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
 
 .fade-up   { animation: fadeUp 0.3s cubic-bezier(0.4,0,0.2,1) forwards; }
 .fade-up-1 { opacity:0; animation: fadeUp 0.3s 0.05s cubic-bezier(0.4,0,0.2,1) forwards; }
@@ -188,14 +216,18 @@ select {
 .pulse     { animation: pulse 2s ease-in-out infinite; }
 
 .skeleton {
-  background: linear-gradient(90deg,#f0f0ee 25%,#e8e8e5 50%,#f0f0ee 75%);
+  background: linear-gradient(90deg, #f0f0ee 25%, #e8e8e5 50%, #f0f0ee 75%);
   background-size: 600px 100%;
   animation: shimmer 1.4s ease infinite;
   border-radius: var(--radius-sm);
 }
 
 /* ── Focus ring ── */
-:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; border-radius: 5px; }
+:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+  border-radius: 5px;
+}
 
 /* ── Priority ── */
 .p-urgent { background:#fff0f0; color:#b91c1c; }
@@ -203,10 +235,19 @@ select {
 .p-medium { background:#eff6ff; color:#1d4ed8; }
 .p-low    { background:#f3f3f1; color:#666;    }
 
-/* ── Gold accent line ── */
-.gold-line::after {
-  content:''; display:block;
-  width:24px; height:2px;
-  background:var(--gold); border-radius:2px;
-  margin-top:6px;
+/* ── Status ── */
+.s-todo       { background: #f3f3f1; color: #666; }
+.s-in_progress{ background: var(--green-bg); color: var(--green-dark); }
+.s-done       { background: #f0fdf4; color: #15803d; }
+.s-blocked    { background: #fff0f0; color: #b91c1c; }
+
+/* ── Badge ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 5px;
+  line-height: 1.4;
 }

@@ -29,97 +29,173 @@ const PLAN_BADGE: Record<string, { label: string; bg: string; color: string }> =
   team: { label: 'Team', bg: '#fdf8ee',  color: '#7a5e1a' },
 }
 
+const S = {
+  aside: {
+    width: 240,
+    minWidth: 240,
+    height: '100vh',
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    background: '#fbfbfa',
+    borderRight: '1px solid rgba(0,0,0,0.07)',
+    flexShrink: 0,
+    // Hide on mobile via media query handled in globals.css
+  } as React.CSSProperties,
+}
+
 export function Sidebar() {
   const path = usePathname()
   const { plan, loading } = usePlan()
   const badge = PLAN_BADGE[plan] ?? PLAN_BADGE.free
 
   return (
-    <aside style={{
-      width: 220, height: '100vh',
-      display: 'flex', flexDirection: 'column',
-      background: '#fbfbfa',
-      borderRight: '1px solid rgba(0,0,0,0.07)',
-      flexShrink: 0,
-    }}>
+    <aside className="app-sidebar" style={S.aside}>
 
-      {/* Logo */}
+      {/* ── Logo ── */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 9,
-        padding: '14px 14px 12px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '16px 18px 14px',
         borderBottom: '1px solid rgba(0,0,0,0.06)',
         flexShrink: 0,
       }}>
         <div style={{
-          width: 28, height: 28, borderRadius: 7,
-          background: '#f0faf4', border: '1px solid #c6e6d4',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          width: 32,
+          height: 32,
+          borderRadius: 8,
+          background: '#f0faf4',
+          border: '1px solid #c6e6d4',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
           overflow: 'hidden',
         }}>
-          <Image src="/logo.png" alt="" width={22} height={22} style={{ objectFit: 'contain' }} />
+          <Image src="/logo.png" alt="" width={26} height={26} style={{ objectFit: 'contain' }} />
         </div>
-        <div style={{ flex: 1, minWidth: 0, lineHeight: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.01em' }}>Acreonix</div>
-          <div style={{ fontSize: 9.5, fontWeight: 500, color: '#c9a84c', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 1 }}>Tasks</div>
+        <div style={{ flex: 1, minWidth: 0, lineHeight: 1.2 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.01em' }}>
+            Acreonix
+          </div>
+          <div style={{ fontSize: 10, fontWeight: 500, color: '#c9a84c', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 1 }}>
+            Tasks
+          </div>
         </div>
         <NotificationBell />
       </div>
 
-      {/* Nav */}
-      <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px 4px', minHeight: 0 }}>
+      {/* ── Nav ── */}
+      <nav style={{
+        flex: 1,
+        overflowY: 'auto',
+        padding: '10px 10px 6px',
+        minHeight: 0,
+      }}>
         {NAV.map(({ href, label, icon: Icon, exact, proOnly, teamOnly }) => {
-          const active = exact ? path === href : (path === href || path.startsWith(href + '/'))
+          const active = exact
+            ? path === href
+            : (path === href || path.startsWith(href + '/'))
+
           const locked = (proOnly && plan === 'free') || (teamOnly && plan !== 'team')
-          if (!loading && locked && teamOnly) return null // hide team link if not on team plan
+
+          // Hide team link entirely if not on team plan
+          if (!loading && locked && teamOnly) return null
+
+          const isActive = active && !locked
 
           return (
             <Link
               key={href}
               href={locked ? '/dashboard/billing' : href}
               style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '6px 8px', borderRadius: 7, marginBottom: 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '8px 10px',
+                borderRadius: 8,
+                marginBottom: 2,
                 textDecoration: 'none',
-                background: active ? 'rgba(45,122,79,0.09)' : 'transparent',
+                background: isActive ? 'rgba(45,122,79,0.09)' : 'transparent',
                 transition: 'background 0.12s',
               }}
-              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.04)' }}
-              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+              onMouseEnter={e => {
+                if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.04)'
+              }}
+              onMouseLeave={e => {
+                if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'
+              }}
             >
-              <Icon size={15} style={{ color: active ? '#2d7a4f' : locked ? '#ccc' : '#888', flexShrink: 0, transition: 'color 0.12s' }} />
+              <Icon
+                size={16}
+                style={{
+                  color: isActive ? '#2d7a4f' : locked ? '#d1d5db' : '#888',
+                  flexShrink: 0,
+                  transition: 'color 0.12s',
+                }}
+              />
               <span style={{
-                fontSize: 13.5, fontWeight: active ? 500 : 400,
-                color: active ? '#1f5537' : locked ? '#ccc' : '#3a3a3a',
-                flex: 1, lineHeight: 1.2, transition: 'color 0.12s',
+                fontSize: 14,
+                fontWeight: isActive ? 500 : 400,
+                color: isActive ? '#1f5537' : locked ? '#d1d5db' : '#3a3a3a',
+                flex: 1,
+                lineHeight: 1.3,
+                letterSpacing: '-0.01em',
+                transition: 'color 0.12s',
               }}>
                 {label}
               </span>
-              {locked && proOnly && <Zap size={11} style={{ color: '#c9a84c', flexShrink: 0 }} />}
+              {locked && proOnly && (
+                <Zap size={12} style={{ color: '#c9a84c', flexShrink: 0 }} />
+              )}
             </Link>
           )
         })}
       </nav>
 
-      {/* Bottom */}
+      {/* ── Bottom: plan + user ── */}
       <div style={{ flexShrink: 0, borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-        <Link href="/dashboard/billing" style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '9px 14px', textDecoration: 'none', transition: 'background 0.12s',
-        }}
+
+        {/* Plan / billing */}
+        <Link
+          href="/dashboard/billing"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 18px',
+            textDecoration: 'none',
+            transition: 'background 0.12s',
+          }}
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.03)'}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
         >
-          <CreditCard size={14} style={{ color: '#bbb', flexShrink: 0 }} />
-          <span style={{ fontSize: 12.5, color: '#888', flex: 1 }}>Plan</span>
+          <CreditCard size={15} style={{ color: '#bbb', flexShrink: 0 }} />
+          <span style={{ fontSize: 13.5, color: '#888', flex: 1 }}>Plan</span>
           {!loading && (
-            <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 5, background: badge.bg, color: badge.color }}>
+            <span style={{
+              fontSize: 11,
+              fontWeight: 600,
+              padding: '2px 8px',
+              borderRadius: 5,
+              background: badge.bg,
+              color: badge.color,
+            }}>
               {badge.label}
             </span>
           )}
         </Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+
+        {/* User */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '10px 18px',
+          borderTop: '1px solid rgba(0,0,0,0.06)',
+        }}>
           <UserButton afterSignOutUrl="/" />
-          <span style={{ fontSize: 12.5, color: '#bbb' }}>Account</span>
+          <span style={{ fontSize: 13.5, color: '#bbb' }}>Account</span>
         </div>
       </div>
     </aside>
