@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     }, { status: 402 })
   }
 
-  const { rawText } = await req.json()
+  const body = await req.json(); const rawText = body.rawText ?? body.text
   if (!rawText?.trim()) return NextResponse.json({ error: 'No text provided' }, { status: 400 })
 
   // Check project limit before extracting
