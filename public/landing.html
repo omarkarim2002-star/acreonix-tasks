@@ -419,17 +419,107 @@ footer{padding:56px 80px 40px;border-top:1px solid var(--border)}
                   <div style="background:var(--green);color:#fff;border-radius:7px;padding:8px;text-align:center;font-size:10px;font-weight:600">&#10022; Extract tasks with AI</div>
                 </div>
                 <div id="wf-step-2" style="display:none">
-                  <div class="wf-heading">AI grouped your work</div>
-                  <div class="wf-cards">
-                    <div class="wf-card"><div class="wf-card-label">Acreonix Tasks</div><div class="wf-card-val">6</div></div>
-                    <div class="wf-card"><div class="wf-card-label">Client Work</div><div class="wf-card-val" style="color:var(--gold)">3</div></div>
-                  </div>
-                  <div class="wf-list">
-                    <div class="wf-list-hdr">Tasks extracted</div>
-                    <div class="wf-row"><div class="wf-circle fill"></div><div class="wf-line"><div class="wf-fill" style="width:85%"></div></div><div class="wf-ptag tag-high">Urgent</div></div>
-                    <div class="wf-row"><div class="wf-circle fill"></div><div class="wf-line"><div class="wf-fill" style="width:70%"></div></div><div class="wf-ptag tag-med">High</div></div>
-                    <div class="wf-row"><div class="wf-circle"></div><div class="wf-line"><div class="wf-fill" style="width:55%"></div></div><div class="wf-ptag tag-low">Medium</div></div>
-                    <div class="wf-row"><div class="wf-circle"></div><div class="wf-line"><div class="wf-fill" style="width:40%"></div></div><div class="wf-ptag tag-low">Low</div></div>
+                  <div class="wf-heading">Mind map — all projects</div>
+                  <div style="position:relative;width:100%;height:252px;overflow:hidden">
+                    <svg width="100%" height="252" viewBox="0 0 360 252" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0">
+                      <!-- Root node -->
+                      <rect x="130" y="8" width="100" height="30" rx="8" fill="white" stroke="#2d7a4f" stroke-width="1.5"/>
+                      <text x="180" y="28" text-anchor="middle" font-size="9" font-weight="700" fill="#2d7a4f" font-family="Outfit,sans-serif">ACREONIX TASKS</text>
+
+                      <!-- Lines root → projects -->
+                      <line x1="180" y1="38" x2="60" y2="90" stroke="#2d7a4f" stroke-width="1.2" stroke-opacity="0.4"/>
+                      <line x1="180" y1="38" x2="180" y2="90" stroke="#C9A84C" stroke-width="1.2" stroke-opacity="0.4"/>
+                      <line x1="180" y1="38" x2="300" y2="90" stroke="#3b82f6" stroke-width="1.2" stroke-opacity="0.4"/>
+
+                      <!-- Project 1 — green -->
+                      <rect x="16" y="90" width="88" height="28" rx="7" fill="#e8f4ee" stroke="#2d7a4f" stroke-width="1.5"/>
+                      <text x="22" y="102" font-size="7" font-weight="700" fill="#2d7a4f" font-family="Outfit,sans-serif">&#128193;</text>
+                      <text x="33" y="102" font-size="8" font-weight="600" fill="#1f5537" font-family="Outfit,sans-serif">Acreonix Tasks</text>
+                      <text x="22" y="113" font-size="7" fill="#9aa3b4" font-family="Outfit,sans-serif">6 tasks</text>
+
+                      <!-- Project 2 — gold -->
+                      <rect x="136" y="90" width="88" height="28" rx="7" fill="#faf5e8" stroke="#C9A84C" stroke-width="1.5"/>
+                      <text x="142" y="102" font-size="7" font-weight="700" fill="#C9A84C" font-family="Outfit,sans-serif">&#128193;</text>
+                      <text x="153" y="102" font-size="8" font-weight="600" fill="#9e7e33" font-family="Outfit,sans-serif">Client Work</text>
+                      <text x="142" y="113" font-size="7" fill="#9aa3b4" font-family="Outfit,sans-serif">3 tasks</text>
+
+                      <!-- Project 3 — blue -->
+                      <rect x="256" y="90" width="88" height="28" rx="7" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+                      <text x="262" y="102" font-size="7" font-weight="700" fill="#3b82f6" font-family="Outfit,sans-serif">&#128193;</text>
+                      <text x="273" y="102" font-size="8" font-weight="600" fill="#1d4ed8" font-family="Outfit,sans-serif">Admin</text>
+                      <text x="262" y="113" font-size="7" fill="#9aa3b4" font-family="Outfit,sans-serif">2 tasks</text>
+
+                      <!-- Lines project1 → tasks -->
+                      <line x1="60" y1="118" x2="30" y2="152" stroke="#2d7a4f" stroke-width="1" stroke-opacity="0.25"/>
+                      <line x1="60" y1="118" x2="70" y2="152" stroke="#2d7a4f" stroke-width="1" stroke-opacity="0.25"/>
+                      <line x1="60" y1="118" x2="110" y2="152" stroke="#2d7a4f" stroke-width="1" stroke-opacity="0.25"/>
+
+                      <!-- Lines project2 → tasks -->
+                      <line x1="180" y1="118" x2="165" y2="152" stroke="#C9A84C" stroke-width="1" stroke-opacity="0.25"/>
+                      <line x1="180" y1="118" x2="210" y2="152" stroke="#C9A84C" stroke-width="1" stroke-opacity="0.25"/>
+
+                      <!-- Lines project3 → tasks -->
+                      <line x1="300" y1="118" x2="285" y2="152" stroke="#3b82f6" stroke-width="1" stroke-opacity="0.25"/>
+                      <line x1="300" y1="118" x2="330" y2="152" stroke="#3b82f6" stroke-width="1" stroke-opacity="0.25"/>
+
+                      <!-- Tasks — project 1 -->
+                      <rect x="6" y="152" width="48" height="22" rx="5" fill="white" stroke="#e8edf2" stroke-width="1"/>
+                      <circle cx="14" cy="163" r="3" fill="#2d7a4f"/>
+                      <rect x="20" y="159" width="28" height="4" rx="2" fill="#e8f4ee"/>
+                      <rect x="20" y="165" width="20" height="3" rx="1.5" fill="#f0f2f5"/>
+
+                      <rect x="46" y="152" width="48" height="22" rx="5" fill="white" stroke="#e8edf2" stroke-width="1"/>
+                      <circle cx="54" cy="163" r="3" fill="#ef4444" opacity="0.7"/>
+                      <rect x="60" y="159" width="28" height="4" rx="2" fill="#fef2f2"/>
+                      <rect x="60" y="165" width="18" height="3" rx="1.5" fill="#f0f2f5"/>
+
+                      <rect x="86" y="152" width="48" height="22" rx="5" fill="white" stroke="#e8edf2" stroke-width="1"/>
+                      <circle cx="94" cy="163" r="3" fill="#9ca3af"/>
+                      <rect x="100" y="159" width="28" height="4" rx="2" fill="#f0f2f5"/>
+                      <rect x="100" y="165" width="22" height="3" rx="1.5" fill="#f0f2f5"/>
+
+                      <!-- Tasks — project 2 -->
+                      <rect x="141" y="152" width="48" height="22" rx="5" fill="white" stroke="#e8edf2" stroke-width="1"/>
+                      <circle cx="149" cy="163" r="3" fill="#C9A84C"/>
+                      <rect x="155" y="159" width="28" height="4" rx="2" fill="#faf5e8"/>
+                      <rect x="155" y="165" width="24" height="3" rx="1.5" fill="#f0f2f5"/>
+
+                      <rect x="186" y="152" width="48" height="22" rx="5" fill="white" stroke="#e8edf2" stroke-width="1"/>
+                      <circle cx="194" cy="163" r="3" fill="#16a34a"/>
+                      <rect x="200" y="159" width="28" height="4" rx="2" fill="#f0fdf4"/>
+                      <rect x="200" y="165" width="16" height="3" rx="1.5" fill="#f0f2f5"/>
+
+                      <!-- Tasks — project 3 -->
+                      <rect x="261" y="152" width="48" height="22" rx="5" fill="white" stroke="#e8edf2" stroke-width="1"/>
+                      <circle cx="269" cy="163" r="3" fill="#3b82f6"/>
+                      <rect x="275" y="159" width="28" height="4" rx="2" fill="#eff6ff"/>
+                      <rect x="275" y="165" width="20" height="3" rx="1.5" fill="#f0f2f5"/>
+
+                      <rect x="306" y="152" width="48" height="22" rx="5" fill="white" stroke="#e8edf2" stroke-width="1"/>
+                      <circle cx="314" cy="163" r="3" fill="#9ca3af"/>
+                      <rect x="320" y="159" width="28" height="4" rx="2" fill="#f0f2f5"/>
+                      <rect x="320" y="165" width="24" height="3" rx="1.5" fill="#f0f2f5"/>
+
+                      <!-- Legend -->
+                      <circle cx="22" cy="204" r="3" fill="#2d7a4f"/>
+                      <text x="29" y="208" font-size="7" fill="#9aa3b4" font-family="Outfit,sans-serif">In progress</text>
+                      <circle cx="85" cy="204" r="3" fill="#16a34a"/>
+                      <text x="92" y="208" font-size="7" fill="#9aa3b4" font-family="Outfit,sans-serif">Done</text>
+                      <circle cx="122" cy="204" r="3" fill="#ef4444" opacity="0.7"/>
+                      <text x="129" y="208" font-size="7" fill="#9aa3b4" font-family="Outfit,sans-serif">Urgent</text>
+                      <circle cx="163" cy="204" r="3" fill="#9ca3af"/>
+                      <text x="170" y="208" font-size="7" fill="#9aa3b4" font-family="Outfit,sans-serif">To do</text>
+
+                      <!-- Animated pulse on root -->
+                      <circle cx="180" cy="23" r="42" fill="none" stroke="#2d7a4f" stroke-width="1" stroke-opacity="0.15">
+                        <animate attributeName="r" values="38;50;38" dur="3s" repeatCount="indefinite"/>
+                        <animate attributeName="stroke-opacity" values="0.15;0;0.15" dur="3s" repeatCount="indefinite"/>
+                      </circle>
+
+                      <!-- Click hint -->
+                      <rect x="108" y="228" width="144" height="18" rx="9" fill="#e8f4ee"/>
+                      <text x="180" y="241" text-anchor="middle" font-size="8" fill="#2d7a4f" font-weight="600" font-family="Outfit,sans-serif">Click any node to open task</text>
+                    </svg>
                   </div>
                 </div>
                 <div id="wf-step-3" style="display:none">
