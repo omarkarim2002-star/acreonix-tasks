@@ -1,57 +1,59 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Sparkles, Loader2, Zap, Clock, ArrowRight, Coffee, RefreshCw } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, Plus, Trash2, RefreshCw, Zap } from 'lucide-react'
 import Link from 'next/link'
-import { cn, PRIORITY_COLOURS } from '@/lib/utils'
 
-type PriorityTask = {
-  taskId: string
+type ExtractedTask = {
   title: string
-  reason: string
-  estimatedMinutes?: number
+  description?: string | null
+  priority: 'low' | 'medium' | 'high' | 'urgent'
+  estimatedMinutes?: number | null
+  deadline?: string | null
+  tags: string[]
+  suggestedProject: string
 }
 
-type PriorityResult = {
-  doNow: PriorityTask[]
-  doLater: PriorityTask[]
-  insight: string
-  focusTip: string
+type Preview = {
+  tasks: ExtractedTask[]
+  projects: string[]
+  summary: string
+}
+
+const PS: Record<string, { bg: string; color: string }> = {
+  urgent: { bg: '#fff0f0', color: '#b91c1c' },
+  high:   { bg: '#fff4ee', color: '#c2410c' },
+  medium: { bg: '#eff6ff', color: '#1d4ed8' },
+  low:    { bg: '#f3f3f1', color: '#666' },
 }
 
 export default function ExtractPage() {
-  const [priority, setPriority] = useState<PriorityResult | null>(null)
-  const [loading, setLoading] = useState(false)
+  const router = useRouter()
   const [text, setText] = useState('')
-  const [extractLoading, setExtractLoading] = useState(false)
-  const [extractResult, setExtractResult] = useState<any>(null)
-  const [extractError, setExtractError] = useState('')
-  const [preview, setPreview] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [preview, setPreview] = useState<Preview | null>(null)
+  const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
-  const [existingProjects, setExistingProjects] = useState<any[]>([])
+  const [existingProjects, setExistingProjects] = useState<string[]>([])
+  const [extractsRemaining, setExtractsRemaining] = useState<number | null>(null)
 
   useEffect(() => {
-    fetch('/api/projects').then(r => r.json()).then(setExistingProjects)
+    fetch('/api/projects')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setExistingProjects(data.map((p: any) => p.name ?? '').filter(Boolean))
+        }
+      })
+      .catch(() => {})
   }, [])
-
-  async function loadPriority() {
-    setLoading(true)
-    try {
-      const res = await fetch('/api/prioritise')
-      const data = await res.json()
-      setPriority(data)
-    } catch {
-      console.error('Failed to load priority')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   async function handleExtract() {
     if (!text.trim()) return
-    setExtractLoading(true)
-    setExtractError('')
+    setLoading(true)
+    setError('')
     setPreview(null)
     try {
       const res = await fetch('/api/extract-tasks/preview', {
@@ -60,17 +62,26 @@ export default function ExtractPage() {
         body: JSON.stringify({ text }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      setPreview(data)
-    } catch (e: unknown) {
-      setExtractError(e instanceof Error ? e.message : 'Something went wrong')
+      if (!res.ok) {
+        setError(data.message ?? data.error ?? 'Something went wrong')
+        return
+      }
+      // Always treat as arrays — never undefined
+      setPreview({
+        tasks: Array.isArray(data.tasks) ? data.tasks : [],
+        projects: Array.isArray(data.projects) ? data.projects : [],
+        summary: data.summary ?? '',
+      })
+      if (typeof data.extractsRemaining === 'number') setExtractsRemaining(data.extractsRemaining)
+    } catch {
+      setError('Network error — please try again')
     } finally {
-      setExtractLoading(false)
+      setLoading(false)
     }
   }
 
   async function handleConfirm() {
-    if (!preview) return
+    if (!preview || preview.tasks.length === 0) return
     setSaving(true)
     try {
       const res = await fetch('/api/extract-tasks/confirm', {
@@ -78,8 +89,15 @@ export default function ExtractPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tasks: preview.tasks, originalText: text }),
       })
-      if (res.ok) { setSaved(true); setPreview(null); setText('') }
-    } finally { setSaving(false) }
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed to save')
+      setSaved(true)
+      setTimeout(() => router.push('/dashboard/tasks'), 1400)
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   function updateTask(idx: number, field: string, value: unknown) {
@@ -91,218 +109,141 @@ export default function ExtractPage() {
 
   function removeTask(idx: number) {
     if (!preview) return
-    setPreview({ ...preview, tasks: preview.tasks.filter((_: any, i: number) => i !== idx) })
+    setPreview({ ...preview, tasks: preview.tasks.filter((_, i) => i !== idx) })
   }
 
-  function addTask() {
-    if (!preview) return
-    setPreview({ ...preview, tasks: [...preview.tasks, { title: '', priority: 'medium', tags: [], suggestedProject: preview.projects[0] ?? 'General' }] })
-  }
+  const allProjects = [...new Set([...existingProjects, ...(preview?.projects ?? [])])]
 
-  const allProjects = [...new Set([...existingProjects.map((p: any) => p.name), ...(preview?.projects ?? [])])]
+  if (saved) return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'50vh', gap:12, fontFamily:'DM Sans,sans-serif' }}>
+      <div style={{ width:52,height:52,borderRadius:'50%',background:'#f0faf4',display:'flex',alignItems:'center',justifyContent:'center' }}>
+        <CheckCircle2 size={26} style={{ color:'#2d7a4f' }} />
+      </div>
+      <h2 style={{ fontSize:17,fontWeight:600,color:'#1a1a1a' }}>Tasks saved!</h2>
+      <p style={{ fontSize:13,color:'#aaa' }}>Redirecting to your task list…</p>
+    </div>
+  )
 
   return (
-    <div className="px-6 py-8 max-w-3xl mx-auto">
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#2d7a4f' }}>
-            <Sparkles size={16} className="text-white" />
+    <div style={{ padding:'32px 32px 60px',maxWidth:720,margin:'0 auto',fontFamily:'DM Sans,sans-serif' }}>
+
+      <div style={{ marginBottom:24 }}>
+        <div style={{ display:'flex',alignItems:'center',gap:10,marginBottom:6 }}>
+          <div style={{ width:34,height:34,borderRadius:9,background:'#2d7a4f',display:'flex',alignItems:'center',justifyContent:'center' }}>
+            <Sparkles size={16} color="#fff" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 gold-underline" style={{ fontFamily: 'Georgia, serif' }}>
-            AI Task Extraction
-          </h1>
+          <h1 style={{ fontSize:22,fontWeight:600,color:'#1a1a1a',letterSpacing:'-0.02em' }}>AI Extract</h1>
         </div>
-        <p className="text-gray-500 text-sm mt-3">Paste anything. AI extracts tasks, you confirm before saving.</p>
+        <p style={{ fontSize:13,color:'#888',marginLeft:44 }}>Paste anything — notes, emails, a brain dump. AI extracts and organises everything.</p>
+        {extractsRemaining !== null && (
+          <div style={{ display:'inline-flex',alignItems:'center',gap:5,marginTop:8,marginLeft:44,background:'#fdf8ee',border:'1px solid #e8d5a0',borderRadius:6,padding:'3px 9px' }}>
+            <Zap size={11} style={{ color:'#c9a84c' }} />
+            <span style={{ fontSize:11,color:'#7a5e1a',fontWeight:500 }}>{extractsRemaining} extract{extractsRemaining!==1?'s':''} remaining this month</span>
+          </div>
+        )}
       </div>
 
-      {/* Do Now section */}
-      {!priority && !loading && (
-        <div className="bg-white rounded-2xl border border-gray-200 px-5 py-4 mb-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Zap size={16} className="text-[#c9a84c]" />
-              <span className="text-sm font-semibold text-gray-800">What should I work on now?</span>
-            </div>
-            <button onClick={loadPriority} className="flex items-center gap-1.5 text-xs text-[#2d7a4f] border border-[#2d7a4f]/30 px-3 py-1.5 rounded-lg hover:bg-[#e8f5ee] transition-colors">
-              <Sparkles size={12} />Get AI recommendation
-            </button>
-          </div>
-        </div>
-      )}
-
-      {loading && (
-        <div className="flex items-center gap-3 bg-white rounded-2xl border border-gray-200 px-5 py-4 mb-6">
-          <Loader2 size={16} className="animate-spin text-[#2d7a4f]" />
-          <span className="text-sm text-gray-500">Analysing your tasks and habits…</span>
-        </div>
-      )}
-
-      {priority && (
-        <div className="mb-6 space-y-3">
-          {/* Insight */}
-          <div className="bg-[#faf5e8] border border-[#e8d5a0] rounded-2xl px-5 py-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Zap size={14} className="text-[#c9a84c]" />
-                  <span className="text-xs font-semibold text-[#9e7e33] uppercase tracking-wide">AI Insight</span>
-                </div>
-                <p className="text-sm text-gray-700">{priority.insight}</p>
-                <p className="text-xs text-[#c9a84c] mt-1 font-medium">💡 {priority.focusTip}</p>
-              </div>
-              <button onClick={loadPriority} className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors">
-                <RefreshCw size={14} />
-              </button>
-            </div>
-          </div>
-
-          {/* Do Now */}
-          {priority.doNow.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-              <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#2d7a4f] animate-pulse" />
-                <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Do now</span>
-              </div>
-              <div className="divide-y divide-gray-50">
-                {priority.doNow.map((t, i) => (
-                  <Link key={i} href={`/dashboard/tasks/${t.taskId}`} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors group">
-                    <div className="w-2 h-2 rounded-full bg-[#2d7a4f] shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{t.title}</p>
-                      <p className="text-xs text-gray-400">{t.reason}</p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {t.estimatedMinutes && (
-                        <span className="text-xs text-gray-400 flex items-center gap-1"><Clock size={11} />{t.estimatedMinutes}m</span>
-                      )}
-                      <ArrowRight size={14} className="text-gray-300 group-hover:text-[#2d7a4f] transition-colors" />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Do Later */}
-          {priority.doLater.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
-                <Coffee size={13} className="text-gray-400" />
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Leave for later</span>
-              </div>
-              <div className="divide-y divide-gray-50">
-                {priority.doLater.slice(0, 4).map((t, i) => (
-                  <div key={i} className="flex items-center gap-3 px-5 py-2.5 opacity-60">
-                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-600 truncate">{t.title}</p>
-                      <p className="text-xs text-gray-400">{t.reason}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Extract input */}
-      {!preview && !saved && (
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm mb-4">
+      {!preview && (
+        <div style={{ background:'#fff',borderRadius:12,border:'1px solid rgba(0,0,0,0.09)',overflow:'hidden',marginBottom:12 }}>
           <textarea
             value={text}
             onChange={e => setText(e.target.value)}
-            placeholder="Paste anything — notes, emails, a brain dump. AI extracts and organises everything, then you confirm before saving..."
-            className="w-full p-5 text-sm text-gray-800 placeholder:text-gray-400 resize-none focus:outline-none min-h-[160px]"
-            rows={7}
-            disabled={extractLoading}
+            placeholder="e.g. Need to finish the client proposal by Friday, fix the login bug, book a call with James, pay the Supabase invoice..."
+            style={{ width:'100%',padding:'16px 18px',minHeight:180,border:'none',outline:'none',resize:'none',fontSize:14,color:'#1a1a1a',lineHeight:1.6,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box' }}
+            disabled={loading}
           />
-          <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50">
-            <span className="text-xs text-gray-400">{text.length} characters</span>
-            <button
-              onClick={handleExtract}
-              disabled={!text.trim() || extractLoading}
-              className="flex items-center gap-2 text-white text-sm font-medium px-5 py-2 rounded-lg disabled:opacity-50"
-              style={{ background: '#2d7a4f' }}
-            >
-              {extractLoading ? <><Loader2 size={14} className="animate-spin" />Extracting…</> : <><Sparkles size={14} />Extract tasks</>}
+          <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 18px',borderTop:'1px solid rgba(0,0,0,0.06)',background:'#fafaf8' }}>
+            <span style={{ fontSize:12,color:'#bbb' }}>{text.length} characters</span>
+            <button onClick={handleExtract} disabled={!text.trim()||loading} style={{
+              display:'inline-flex',alignItems:'center',gap:6,padding:'8px 18px',borderRadius:8,
+              background:!text.trim()||loading?'#e8e8e5':'#2d7a4f',
+              color:!text.trim()||loading?'#aaa':'#fff',
+              border:'none',cursor:!text.trim()||loading?'not-allowed':'pointer',
+              fontSize:13,fontWeight:500,fontFamily:'DM Sans,sans-serif',transition:'all 0.15s',
+            }}>
+              {loading?<><Loader2 size={14} style={{ animation:'spin 1s linear infinite' }} />Extracting…</>:<><Sparkles size={14} />Extract tasks</>}
             </button>
           </div>
         </div>
       )}
 
-      {extractError && (
-        <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
-          <span className="text-sm text-red-700">{extractError}</span>
+      {error && (
+        <div style={{ display:'flex',alignItems:'flex-start',gap:10,background:'#fff5f5',border:'1px solid #fecaca',borderRadius:10,padding:'12px 14px',marginBottom:14 }}>
+          <AlertCircle size={16} style={{ color:'#ef4444',flexShrink:0,marginTop:1 }} />
+          <div>
+            <p style={{ fontSize:13,color:'#b91c1c',margin:0 }}>{error}</p>
+            {error.toLowerCase().includes('limit') && (
+              <Link href="/dashboard/billing" style={{ fontSize:12,color:'#2d7a4f',marginTop:4,display:'inline-block' }}>Upgrade for unlimited extracts →</Link>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Preview */}
-      {preview && !saved && (
+      {preview && (
         <div>
-          <div className="rounded-2xl px-5 py-4 mb-4 border flex items-center justify-between" style={{ background: '#e8f5ee', borderColor: '#a8d5bc' }}>
+          <div style={{ background:'#f0faf4',border:'1px solid #c6e6d4',borderRadius:10,padding:'12px 16px',marginBottom:16,display:'flex',alignItems:'center',justifyContent:'space-between',gap:12 }}>
             <div>
-              <p className="font-semibold text-sm mb-0.5" style={{ color: '#2d7a4f' }}>✨ {preview.tasks.length} tasks extracted</p>
-              <p className="text-xs text-gray-600">{preview.summary}</p>
+              <p style={{ fontSize:13,fontWeight:600,color:'#1f5537',marginBottom:2 }}>✨ {preview.tasks.length} task{preview.tasks.length!==1?'s':''} extracted</p>
+              <p style={{ fontSize:12,color:'#888' }}>{preview.summary}</p>
             </div>
-            <button onClick={() => setPreview(null)} className="text-xs text-gray-500 border border-gray-300 px-3 py-1.5 rounded-lg bg-white ml-4">Re-extract</button>
+            <button onClick={() => { setPreview(null); setError('') }} style={{ display:'inline-flex',alignItems:'center',gap:5,fontSize:12,color:'#888',background:'#fff',border:'1px solid rgba(0,0,0,0.1)',borderRadius:7,padding:'5px 10px',cursor:'pointer',flexShrink:0,fontFamily:'DM Sans,sans-serif' }}>
+              <RefreshCw size={12} />Re-extract
+            </button>
           </div>
 
-          <div className="space-y-2 mb-4">
-            {preview.tasks.map((task: any, idx: number) => (
-              <div key={idx} className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                <div className="px-4 py-3 flex items-start gap-3">
-                  <input
-                    value={task.title}
-                    onChange={e => updateTask(idx, 'title', e.target.value)}
-                    className="flex-1 text-sm font-medium text-gray-900 focus:outline-none bg-transparent border-b border-transparent focus:border-gray-200 pb-0.5"
-                    placeholder="Task title..."
-                  />
-                  <button onClick={() => removeTask(idx)} className="text-gray-300 hover:text-red-400 transition-colors">✕</button>
+          <div style={{ display:'flex',flexDirection:'column',gap:6,marginBottom:14 }}>
+            {preview.tasks.map((task, idx) => {
+              const ps = PS[task.priority] ?? PS.medium
+              return (
+                <div key={idx} style={{ background:'#fff',border:'1px solid rgba(0,0,0,0.08)',borderRadius:10,overflow:'hidden' }}>
+                  <div style={{ padding:'10px 14px 8px',display:'flex',alignItems:'flex-start',gap:10 }}>
+                    <div style={{ flex:1 }}>
+                      <input value={task.title} onChange={e => updateTask(idx,'title',e.target.value)} placeholder="Task title…"
+                        style={{ width:'100%',border:'none',outline:'none',fontSize:13.5,fontWeight:500,color:'#1a1a1a',fontFamily:'DM Sans,sans-serif',background:'transparent' }} />
+                      {task.description && <p style={{ fontSize:11,color:'#bbb',marginTop:3,lineHeight:1.4 }}>{task.description}</p>}
+                    </div>
+                    <button onClick={() => removeTask(idx)} style={{ background:'none',border:'none',cursor:'pointer',color:'#ccc',padding:2,marginTop:1 }}>
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                  <div style={{ padding:'0 14px 10px',display:'flex',alignItems:'center',gap:6,flexWrap:'wrap' }}>
+                    <select value={task.suggestedProject} onChange={e => updateTask(idx,'suggestedProject',e.target.value)}
+                      style={{ fontSize:11,padding:'3px 22px 3px 8px',border:'1px solid rgba(0,0,0,0.1)',borderRadius:6,background:'#fafafa',color:'#444',fontFamily:'DM Sans,sans-serif',cursor:'pointer',outline:'none',appearance:'none' }}>
+                      {allProjects.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                    <select value={task.priority} onChange={e => updateTask(idx,'priority',e.target.value as any)}
+                      style={{ fontSize:11,padding:'3px 18px 3px 8px',borderRadius:6,border:'none',fontWeight:600,cursor:'pointer',outline:'none',fontFamily:'DM Sans,sans-serif',background:ps.bg,color:ps.color,appearance:'none' }}>
+                      {['low','medium','high','urgent'].map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                    <input type="date" value={task.deadline?task.deadline.split('T')[0]:''} onChange={e => updateTask(idx,'deadline',e.target.value?`${e.target.value}T00:00:00Z`:null)}
+                      style={{ fontSize:11,padding:'3px 7px',border:'1px solid rgba(0,0,0,0.1)',borderRadius:6,color:'#666',fontFamily:'DM Sans,sans-serif',background:'#fafafa',outline:'none' }} />
+                    {task.estimatedMinutes && <span style={{ fontSize:11,color:'#bbb',background:'#f3f3f1',padding:'3px 7px',borderRadius:6 }}>{task.estimatedMinutes}m</span>}
+                  </div>
                 </div>
-                <div className="px-4 pb-3 flex items-center gap-2 flex-wrap">
-                  <select value={task.suggestedProject} onChange={e => updateTask(idx, 'suggestedProject', e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none bg-white text-gray-700 max-w-[160px]">
-                    {allProjects.map((p: string) => <option key={p} value={p}>{p}</option>)}
-                    <option value="__new__">+ New project…</option>
-                  </select>
-                  <select value={task.priority} onChange={e => updateTask(idx, 'priority', e.target.value)} className={cn('text-xs border rounded-lg px-2 py-1.5 focus:outline-none font-medium', PRIORITY_COLOURS[task.priority])} style={{ borderColor: 'transparent' }}>
-                    {['low', 'medium', 'high', 'urgent'].map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                  <input type="date" value={task.deadline ? task.deadline.split('T')[0] : ''} onChange={e => updateTask(idx, 'deadline', e.target.value ? `${e.target.value}T00:00:00Z` : undefined)} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none text-gray-600" />
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
-          <button onClick={addTask} className="w-full flex items-center justify-center gap-2 text-sm text-gray-400 border border-dashed border-gray-300 rounded-xl py-3 mb-4 hover:bg-gray-50 transition-colors bg-white">
-            + Add a task manually
+          <button onClick={() => setPreview(prev => prev ? { ...prev, tasks:[...prev.tasks,{title:'',priority:'medium',tags:[],suggestedProject:allProjects[0]??'General'}] } : prev)}
+            style={{ width:'100%',padding:'10px 0',marginBottom:20,border:'1px dashed rgba(0,0,0,0.15)',borderRadius:10,background:'#fff',color:'#aaa',fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6,fontFamily:'DM Sans,sans-serif' }}>
+            <Plus size={14} />Add a task manually
           </button>
 
-          <div className="sticky bottom-4 bg-white rounded-2xl border border-gray-200 shadow-lg px-5 py-4 flex items-center justify-between gap-4">
+          <div style={{ position:'sticky',bottom:16,background:'#fff',borderRadius:12,border:'1px solid rgba(0,0,0,0.1)',boxShadow:'0 4px 20px rgba(0,0,0,0.1)',padding:'14px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12 }}>
             <div>
-              <p className="text-sm font-semibold text-gray-900">{preview.tasks.length} tasks ready</p>
-              <p className="text-xs text-gray-400">{preview.projects.length} project{preview.projects.length !== 1 ? 's' : ''} · Review then confirm</p>
+              <p style={{ fontSize:13,fontWeight:600,color:'#1a1a1a',margin:0 }}>{preview.tasks.length} task{preview.tasks.length!==1?'s':''} ready to save</p>
+              <p style={{ fontSize:11,color:'#aaa',margin:'2px 0 0' }}>{preview.projects.length} project{preview.projects.length!==1?'s':''} · Review above then confirm</p>
             </div>
-            <div className="flex gap-3">
-              <button onClick={() => setPreview(null)} className="text-sm text-gray-500 px-4 py-2 border border-gray-200 rounded-xl">Cancel</button>
-              <button onClick={handleConfirm} disabled={saving || preview.tasks.length === 0} className="flex items-center gap-2 text-white text-sm font-medium px-6 py-2 rounded-xl disabled:opacity-50" style={{ background: '#2d7a4f' }}>
-                {saving ? <Loader2 size={14} className="animate-spin" /> : null}
-                {saving ? 'Saving…' : 'Confirm & save'}
+            <div style={{ display:'flex',gap:8,flexShrink:0 }}>
+              <button onClick={() => setPreview(null)} style={{ padding:'8px 14px',border:'1px solid rgba(0,0,0,0.1)',borderRadius:8,background:'#fff',cursor:'pointer',fontSize:13,color:'#888',fontFamily:'DM Sans,sans-serif' }}>Cancel</button>
+              <button onClick={handleConfirm} disabled={saving||preview.tasks.length===0} style={{ display:'inline-flex',alignItems:'center',gap:6,padding:'8px 18px',borderRadius:8,background:saving||preview.tasks.length===0?'#e8e8e5':'#2d7a4f',color:saving||preview.tasks.length===0?'#aaa':'#fff',border:'none',cursor:saving||preview.tasks.length===0?'not-allowed':'pointer',fontSize:13,fontWeight:500,fontFamily:'DM Sans,sans-serif' }}>
+                {saving?<><Loader2 size={13} style={{ animation:'spin 1s linear infinite' }} />Saving…</>:<><CheckCircle2 size={13} />Confirm & save</>}
               </button>
             </div>
           </div>
         </div>
       )}
-
-      {saved && (
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="w-14 h-14 rounded-full flex items-center justify-center mb-4" style={{ background: '#e8f5ee' }}>
-            <Sparkles size={28} style={{ color: '#2d7a4f' }} />
-          </div>
-          <h2 className="text-lg font-bold text-gray-900 mb-1">Tasks saved!</h2>
-          <button onClick={() => setSaved(false)} className="text-sm text-[#2d7a4f] mt-3 hover:underline">Add more tasks</button>
-        </div>
-      )}
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )
 }
