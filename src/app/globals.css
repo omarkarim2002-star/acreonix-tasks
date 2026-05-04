@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --green: #2d7a4f;
+  --gold: #c9a84c;
+}
+
+body { background: #f8faf9; color: #1a1a1a; }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { background: #d0ddd5; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--green); }
+
+.task-card { transition: all 0.15s ease; }
+.task-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(45,122,79,0.1); }
+
+input[type="checkbox"].task-check {
+  appearance: none; width: 18px; height: 18px;
+  border: 2px solid #d0ddd5; border-radius: 50%;
+  cursor: pointer; transition: all 0.15s ease;
+  flex-shrink: 0; position: relative;
+}
+input[type="checkbox"].task-check:checked { background: var(--green); border-color: var(--green); }
+input[type="checkbox"].task-check:checked::after {
+  content: ''; position: absolute; left: 3px; top: 1px;
+  width: 8px; height: 5px; border: 2px solid white;
+  border-top: none; border-right: none; transform: rotate(-45deg);
+}
+input[type="checkbox"].task-check:hover { border-color: var(--green); }
+
+.gold-underline { position: relative; }
+.gold-underline::after {
+  content: ''; position: absolute; bottom: -3px; left: 0;
+  width: 32px; height: 2px; background: var(--gold); border-radius: 1px;
+}
