@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import Link from 'next/link'
-import { Sparkles, ArrowRight, Clock, AlertCircle, CheckCircle2, GitFork, Calendar, ChevronRight } from 'lucide-react'
+import { Sparkles, Clock, AlertCircle, CheckCircle2, GitFork, Calendar, ChevronRight } from 'lucide-react'
 
 function formatDeadline(d: string): string {
   const diff = Math.ceil((new Date(d).getTime() - Date.now()) / 86400000)
@@ -32,24 +32,44 @@ export default async function DashboardPage() {
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   const dateStr = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
-  const [projectsRes, tasksRes, allTasksRes] = await Promise.all([
-    supabaseAdmin.from('projects').select('*').eq('user_id', userId).eq('status', 'active').order('created_at', { ascending: false }).limit(5),
-    supabaseAdmin.from('tasks').select('*, project:projects(name,colour)').eq('user_id', userId).neq('status', 'done').order('deadline', { ascending: true, nullsFirst: false }).limit(8),
-    supabaseAdmin.from('tasks').select('id,status,project_id').eq('user_id', userId),
+  // Fetch projects and tasks separately — avoids nested join issues
+  const [projectsRes, tasksRes] = await Promise.all([
+    supabaseAdmin
+      .from('projects')
+      .select('id, name, colour, icon, status')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(6),
+    supabaseAdmin
+      .from('tasks')
+      .select('id, title, status, priority, deadline, project_id, project:projects(name, colour)')
+      .eq('user_id', userId)
+      .neq('status', 'done')
+      .order('deadline', { ascending: true, nullsFirst: false })
+      .limit(8),
   ])
 
   const projects = projectsRes.data ?? []
   const tasks = tasksRes.data ?? []
-  const allTasks = allTasksRes.data ?? []
 
-  const todayCount = tasks.filter(t => t.deadline && new Date(t.deadline).toDateString() === now.toDateString()).length
+  // Get task counts per project
+  const { data: allTasks } = await supabaseAdmin
+    .from('tasks')
+    .select('id, status, project_id')
+    .eq('user_id', userId)
+
+  const allTasksArr = allTasks ?? []
+
+  const todayStr = now.toDateString()
+  const todayCount = tasks.filter(t => t.deadline && new Date(t.deadline).toDateString() === todayStr).length
   const overdueCount = tasks.filter(t => t.deadline && new Date(t.deadline) < now).length
   const inProgressCount = tasks.filter(t => t.status === 'in_progress').length
 
   const projectsWithStats = projects.map(p => ({
     ...p,
-    total: allTasks.filter(t => t.project_id === p.id).length,
-    done:  allTasks.filter(t => t.project_id === p.id && t.status === 'done').length,
+    total: allTasksArr.filter(t => t.project_id === p.id).length,
+    done:  allTasksArr.filter(t => t.project_id === p.id && t.status === 'done').length,
   }))
 
   const isEmpty = tasks.length === 0 && projects.length === 0
@@ -81,9 +101,9 @@ export default async function DashboardPage() {
       {/* Stats */}
       <div className="fade-up-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 32 }}>
         {[
-          { label: 'Due today',   value: todayCount,     bg: '#fdf8ee', border: '#e8d5a0', icon: Clock,         iconColor: '#c9a84c', numColor: '#7a5e1a' },
-          { label: 'Overdue',     value: overdueCount,   bg: '#fff5f5', border: '#fecaca', icon: AlertCircle,   iconColor: '#ef4444', numColor: '#b91c1c' },
-          { label: 'In progress', value: inProgressCount,bg: '#f0faf4', border: '#c6e6d4', icon: CheckCircle2,  iconColor: '#2d7a4f', numColor: '#1f5537' },
+          { label: 'Due today',    value: todayCount,      bg: '#fdf8ee', border: '#e8d5a0', icon: Clock,         iconColor: '#c9a84c', numColor: '#7a5e1a' },
+          { label: 'Overdue',      value: overdueCount,    bg: '#fff5f5', border: '#fecaca', icon: AlertCircle,   iconColor: '#ef4444', numColor: '#b91c1c' },
+          { label: 'In progress',  value: inProgressCount, bg: '#f0faf4', border: '#c6e6d4', icon: CheckCircle2,  iconColor: '#2d7a4f', numColor: '#1f5537' },
         ].map(({ label, value, bg, border, icon: Icon, iconColor, numColor }) => (
           <div key={label} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10, padding: '16px 20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
@@ -133,7 +153,7 @@ export default async function DashboardPage() {
               </Link>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {tasks.slice(0, 6).map(task => (
+              {tasks.slice(0, 6).map((task: any) => (
                 <Link key={task.id} href={`/dashboard/tasks/${task.id}`} className="task-row" style={{
                   display: 'flex', alignItems: 'center', gap: 10,
                   padding: '10px 12px', textDecoration: 'none',
@@ -149,7 +169,9 @@ export default async function DashboardPage() {
                   )}
                 </Link>
               ))}
-              {tasks.length === 0 && <p style={{ fontSize: 13, color: '#bbb', padding: '20px 0', textAlign: 'center' }}>No pending tasks</p>}
+              {tasks.length === 0 && (
+                <p style={{ fontSize: 13, color: '#bbb', padding: '20px 0', textAlign: 'center' }}>No pending tasks</p>
+              )}
             </div>
           </div>
 
@@ -188,7 +210,9 @@ export default async function DashboardPage() {
                   </div>
                 )
               })}
-              {projects.length === 0 && <p style={{ fontSize: 13, color: '#bbb', padding: '20px 0', textAlign: 'center' }}>No projects yet</p>}
+              {projects.length === 0 && (
+                <p style={{ fontSize: 13, color: '#bbb', padding: '20px 0', textAlign: 'center' }}>No projects yet</p>
+              )}
             </div>
           </div>
         </div>

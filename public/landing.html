@@ -6,7 +6,7 @@
 <title>Acreonix Tasks — AI that organises your work</title>
 <meta name="description" content="Paste your tasks. AI structures, schedules and prioritises everything. Start free.">
 <meta property="og:title" content="Acreonix Tasks — AI that organises your work">
-<meta property="og:description" content="Paste anything. AI creates projects, schedules your week, tells you what to do first.">
+<meta property="og:description" content="Drop in your tasks. AI organises, prioritises and schedules everything — so you always know what to do next.">
 <meta property="og:image" content="https://tasks.acreonix.co.uk/og.png">
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -122,11 +122,26 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;height:58px;display:flex;ali
 .mob-hdr-label{font-size:11px;font-weight:700;color:var(--g);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
 .mob-hdr-h{font-size:clamp(28px,8vw,38px);font-weight:700;letter-spacing:-.035em;line-height:1.1;color:var(--t)}
 .mob-hdr-h em{font-style:italic;font-weight:300;color:var(--g)}
-.mob-card{padding:48px 24px 40px;border-top:1px solid rgba(0,0,0,.06);position:relative}
+.mob-card{
+  min-height:100svh;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:80px 28px 60px;
+  position:relative;
+}
+.mob-card:nth-child(odd){background:#fff}
 .mob-card:nth-child(even){background:#f9f9f7}
-.mob-tap-card{cursor:pointer}
-.mob-tap-card::after{content:'Scroll to continue';position:absolute;bottom:16px;right:24px;font-size:10px;color:var(--t4);letter-spacing:.04em}
-.mob-tap-card:last-of-type::after{display:none}
+.mob-card-inner{
+  opacity:0;transform:translateY(20px);
+  transition:opacity .65s cubic-bezier(.4,0,.2,1),transform .65s cubic-bezier(.4,0,.2,1);
+}
+.mob-card-inner.vis{opacity:1;transform:none}
+.mob-scroll-hint{
+  position:absolute;bottom:28px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+}
+.mob-scroll-hint span{font-size:10px;color:var(--t4);letter-spacing:.06em;text-transform:uppercase}
+.mob-scroll-hint svg{animation:scrollBounce 1.8s ease-in-out infinite}
+@keyframes scrollBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
 .mob-cn{font-size:11px;font-weight:700;color:var(--g);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
 .mob-icon{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px;border:1px solid var(--gb);background:var(--gs)}
 .mob-h{font-size:clamp(24px,7vw,34px);font-weight:700;letter-spacing:-.03em;line-height:1.1;color:var(--t);margin-bottom:10px}
@@ -318,8 +333,8 @@ footer{padding:56px 56px 36px;border-top:1px solid var(--border);background:#fff
           </div>
           <div class="step" id="s2">
             <div class="step-n">Capture</div>
-            <h3 class="step-h">Paste anything.<br><em>It disappears.</em></h3>
-            <p class="step-p">Drop in a brain dump, email, or voice note. Everything is extracted, named, and grouped before you see it.</p>
+            <h3 class="step-h">Paste anything.<br><em>AI handles the rest.</em></h3>
+            <p class="step-p">Drop in a brain dump, email, or voice note. Tasks appear — named, prioritised, grouped — ready to review.</p>
           </div>
           <div class="step" id="s3">
             <div class="step-n">Clarity</div>
@@ -485,93 +500,138 @@ footer{padding:56px 56px 36px;border-top:1px solid var(--border);background:#fff
 
 <!-- MOBILE STORY (only on mobile) -->
 <section class="mob-story">
-  <div class="mob-hdr">
-    <div class="mob-hdr-label">The journey</div>
-    <h2 class="mob-hdr-h">Overwhelm<br>to <em>calm.</em></h2>
+
+  <!-- MC1: Problem -->
+  <div class="mob-card" id="mc1">
+    <div class="mob-card-inner">
+      <div class="mob-cn">The problem</div>
+      <h3 class="mob-h" style="font-size:clamp(32px,9vw,48px)">Too many tasks.<br><em>No clear order.</em></h3>
+      <p class="mob-p" style="font-size:16px">That uncertainty — not the work itself — is what exhausts you every day.</p>
+    </div>
+    <div class="mob-scroll-hint">
+      <span>Scroll</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    </div>
   </div>
 
-  <div class="mob-card mob-tap-card" id="mc1">
-    <div class="mob-cn">The problem</div>
-    <div class="mob-icon">&#8767;</div>
-    <h3 class="mob-h">You know what to do.<br><em>But not when.</em></h3>
-    <p class="mob-p">That uncertainty — not the work itself — is what drains you every day.</p>
-    <div class="mob-screen">
-      <div class="mob-screen-bar"><div class="mob-sc-dot" style="background:#ff5f57"></div><div class="mob-sc-dot" style="background:#febc2e"></div><div class="mob-sc-dot" style="background:#28c840"></div><div class="mob-sc-url">…/extract</div></div>
-      <div style="padding:14px">
-        <div style="background:#f9f9f7;border:1px solid rgba(0,0,0,.07);border-radius:8px;padding:10px;font-size:11px;color:#888;line-height:1.6;margin-bottom:10px">&ldquo;Finish proposal by Friday, fix login bug, book call with James...&rdquo;</div>
-        <div style="background:#2d7a4f;color:#fff;border-radius:7px;padding:9px;text-align:center;font-size:11px;font-weight:700;margin-bottom:10px">&#10022; Extract tasks with AI</div>
-        <div style="background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:8px;overflow:hidden">
-          <div style="padding:6px 10px;border-bottom:1px solid rgba(0,0,0,.05);font-size:9px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em;display:flex;justify-content:space-between"><span>3 tasks extracted</span><span style="color:#2d7a4f">Preview &#10003;</span></div>
-          <div style="padding:7px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(0,0,0,.04)"><div class="sm-ck"></div><span style="font-size:11px;flex:1">Finish proposal</span><span class="sm-tag tag-u">Urgent</span></div>
-          <div style="padding:7px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(0,0,0,.04)"><div class="sm-ck"></div><span style="font-size:11px;flex:1">Fix login bug</span><span class="sm-tag tag-h">High</span></div>
-          <div style="padding:7px 10px;display:flex;align-items:center;gap:8px"><div class="sm-ck"></div><span style="font-size:11px;flex:1">Book call with James</span><span class="sm-tag tag-m">Medium</span></div>
+  <!-- MC2: Capture -->
+  <div class="mob-card" id="mc2">
+    <div class="mob-card-inner">
+      <div class="mob-cn">Capture</div>
+      <div style="width:52px;height:52px;border-radius:14px;background:var(--gs);border:1px solid var(--gb);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:20px">✦</div>
+      <h3 class="mob-h">Paste anything.<br><em>AI handles the rest.</em></h3>
+      <p class="mob-p">Drop in a brain dump, email, or note. Tasks appear — named, prioritised, grouped — ready to review.</p>
+      <div style="background:#fff;border-radius:14px;overflow:hidden;border:1px solid rgba(0,0,0,.08);box-shadow:0 4px 20px rgba(0,0,0,.07);margin-top:24px">
+        <div style="background:#f5f5f3;padding:8px 12px;display:flex;align-items:center;gap:5px;border-bottom:1px solid rgba(0,0,0,.07)">
+          <div style="width:8px;height:8px;border-radius:50%;background:#ff5f57"></div>
+          <div style="width:8px;height:8px;border-radius:50%;background:#febc2e"></div>
+          <div style="width:8px;height:8px;border-radius:50%;background:#28c840"></div>
+          <div style="flex:1;background:rgba(0,0,0,.05);border-radius:4px;padding:3px 8px;font-size:9px;color:#aaa;margin:0 8px;font-family:monospace">AI Extract</div>
+        </div>
+        <div style="padding:14px">
+          <div style="background:#f9f9f7;border:1px solid rgba(0,0,0,.07);border-radius:8px;padding:10px;font-size:12px;color:#888;line-height:1.6;margin-bottom:10px;font-style:italic">"Finish proposal Friday, fix login bug, book call with James, pay invoice..."</div>
+          <div style="background:#2d7a4f;color:#fff;border-radius:7px;padding:9px;text-align:center;font-size:11px;font-weight:600;margin-bottom:10px">✦ Extract tasks with AI</div>
+          <div style="background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:8px;overflow:hidden">
+            <div style="padding:6px 10px;border-bottom:1px solid rgba(0,0,0,.05);font-size:9px;font-weight:700;color:#888;letter-spacing:.06em;text-transform:uppercase;display:flex;justify-content:space-between"><span>3 tasks extracted</span><span style="color:#2d7a4f">Preview ✓</span></div>
+            <div style="padding:8px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(0,0,0,.04)"><div style="width:13px;height:13px;border-radius:50%;border:1.5px solid #ddd;flex-shrink:0"></div><span style="font-size:12px;flex:1">Finish proposal</span><span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:4px;background:#fff0f0;color:#b91c1c">Urgent</span></div>
+            <div style="padding:8px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(0,0,0,.04)"><div style="width:13px;height:13px;border-radius:50%;border:1.5px solid #ddd;flex-shrink:0"></div><span style="font-size:12px;flex:1">Fix login bug</span><span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:4px;background:#fff4ee;color:#c2410c">High</span></div>
+            <div style="padding:8px 10px;display:flex;align-items:center;gap:8px"><div style="width:13px;height:13px;border-radius:50%;border:1.5px solid #ddd;flex-shrink:0"></div><span style="font-size:12px;flex:1">Book call with James</span><span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:4px;background:#fdf8ee;color:#7a5e1a">Medium</span></div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-
-  <div class="mob-card mob-tap-card" id="mc2">
-    <div class="mob-cn">Capture</div>
-    <div class="mob-icon">✦</div>
-    <h3 class="mob-h">Paste anything.<br><em>It disappears.</em></h3>
-    <p class="mob-p">Drop in a brain dump, email, or note. Everything is extracted and grouped before you see it.</p>
-    <div class="mob-screen">
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);background:#f9f9f7;padding:10px 8px;gap:3px">
-        <div><div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:4px;text-transform:uppercase">Mon</div><div style="background:rgba(45,122,79,.1);border-left:2px solid #2d7a4f;border-radius:3px;padding:3px 5px;font-size:8px;color:#1a5c35;margin-bottom:2px">Fix bug<br><span style="font-size:7px;color:#888">9am</span></div><div style="background:rgba(201,168,76,.1);border-left:2px solid #c9a84c;border-radius:3px;padding:3px 5px;font-size:8px;color:#7a5e1a">Proposal<br><span style="font-size:7px;color:#888">11am</span></div></div>
-        <div><div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:4px;text-transform:uppercase">Tue</div><div style="background:rgba(45,122,79,.1);border-left:2px solid #2d7a4f;border-radius:3px;padding:3px 5px;font-size:8px;color:#1a5c35">Design<br><span style="font-size:7px;color:#888">9&#8211;11</span></div></div>
-        <div><div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:4px;text-transform:uppercase">Wed</div><div style="background:rgba(201,168,76,.1);border-left:2px solid #c9a84c;border-radius:3px;padding:3px 5px;font-size:8px;color:#7a5e1a">Call<br><span style="font-size:7px;color:#888">10am</span></div></div>
-        <div><div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:4px;text-transform:uppercase">Thu</div><div style="background:rgba(45,122,79,.1);border-left:2px solid #2d7a4f;border-radius:3px;padding:3px 5px;font-size:8px;color:#1a5c35">Deep<br><span style="font-size:7px;color:#888">9&#8211;12</span></div></div>
-        <div><div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:4px;text-transform:uppercase">Fri</div><div style="background:rgba(201,168,76,.1);border-left:2px solid #c9a84c;border-radius:3px;padding:3px 5px;font-size:8px;color:#7a5e1a">Invoice<br><span style="font-size:7px;color:#888">9am</span></div></div>
-      </div>
-      <div style="padding:8px 12px;border-top:1px solid rgba(0,0,0,.06);font-size:9.5px;color:#888;display:flex;align-items:center;gap:6px"><span style="background:#f0faf4;color:#2d7a4f;font-size:8.5px;font-weight:700;padding:2px 7px;border-radius:4px;border:1px solid rgba(45,122,79,.15)">AI scheduled</span>Grouped by project</div>
+    <div class="mob-scroll-hint">
+      <span>Scroll</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
     </div>
   </div>
 
-  <div class="mob-card mob-tap-card" id="mc3">
-    <div class="mob-cn">Clarity</div>
-    <div class="mob-icon">&#9783;</div>
-    <h3 class="mob-h">Every task.<br><em>In its place.</em></h3>
-    <p class="mob-p">Projects, priorities, deadlines — organised automatically. A visual map of everything you're carrying.</p>
-  </div>
-
-  <div class="mob-card mob-tap-card" id="mc4">
-    <div class="mob-cn">Control</div>
-    <div class="mob-icon">&#128336;</div>
-    <h3 class="mob-h">Your week,<br><em>already planned.</em></h3>
-    <p class="mob-p">One tap. AI builds your week so your mind stays in one place at a time.</p>
-  </div>
-
-  <div class="mob-card mob-tap-card" id="mc5" style="background:#fff">
-    <div class="mob-cn">Calm</div>
-    <div class="mob-icon" style="font-size:28px">&#9675;</div>
-    <h3 class="mob-h">Open the app.<br><em>Know exactly what to do.</em></h3>
-    <p class="mob-p">No decisions. No friction. Just the one thing you should work on right now.</p>
-    <!-- Calm minimal task list -->
-    <div style="background:#f9f9f7;border-radius:12px;padding:16px 18px;margin-top:20px">
-      <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#2d7a4f;margin-bottom:14px;opacity:.7">Right now</div>
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.05)">
-        <div style="width:18px;height:18px;border-radius:50%;border:1.5px solid #2d7a4f;flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg width="9" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 3L9 1" stroke="#2d7a4f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <span style="font-size:13px;font-weight:500;color:#111;flex:1">Fix login bug on staging</span>
-        <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;background:#fff0f0;color:#b91c1c">Urgent</span>
+  <!-- MC3: Clarity -->
+  <div class="mob-card" id="mc3">
+    <div class="mob-card-inner">
+      <div class="mob-cn">Clarity</div>
+      <div style="width:52px;height:52px;border-radius:14px;background:var(--gs);border:1px solid var(--gb);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:20px">☰</div>
+      <h3 class="mob-h">Every task.<br><em>In its place.</em></h3>
+      <p class="mob-p">Projects, priorities, deadlines — all organised. A visual map of everything you're carrying, always up to date.</p>
+      <div style="margin-top:24px;display:flex;flex-direction:column;gap:8px">
+        <div style="background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+          <div style="width:28px;height:28px;border-radius:7px;background:#f0faf4;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">📁</div>
+          <div style="flex:1"><div style="font-size:13px;font-weight:500;color:#111">Acreonix Tasks</div><div style="height:3px;background:#f0f0ee;border-radius:2px;margin-top:5px;overflow:hidden"><div style="width:42%;height:100%;background:#2d7a4f;border-radius:2px"></div></div></div>
+          <span style="font-size:11px;color:#bbb">6 tasks</span>
+        </div>
+        <div style="background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+          <div style="width:28px;height:28px;border-radius:7px;background:#fdf8ee;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">💼</div>
+          <div style="flex:1"><div style="font-size:13px;font-weight:500;color:#111">Client Work</div><div style="height:3px;background:#f0f0ee;border-radius:2px;margin-top:5px;overflow:hidden"><div style="width:75%;height:100%;background:#c9a84c;border-radius:2px"></div></div></div>
+          <span style="font-size:11px;color:#bbb">3 tasks</span>
+        </div>
+        <div style="background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;opacity:.5">
+          <div style="width:28px;height:28px;border-radius:7px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">📋</div>
+          <div style="flex:1"><div style="font-size:13px;font-weight:500;color:#111">Admin</div><div style="height:3px;background:#f0f0ee;border-radius:2px;margin-top:5px;overflow:hidden"><div style="width:100%;height:100%;background:#3b82f6;border-radius:2px"></div></div></div>
+          <span style="font-size:11px;color:#bbb">Done</span>
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;opacity:.3">
-        <div style="width:18px;height:18px;border-radius:50%;border:1.5px solid #ccc;flex-shrink:0"></div>
-        <span style="font-size:13px;color:#888">Design landing page</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;opacity:.15">
-        <div style="width:18px;height:18px;border-radius:50%;border:1.5px solid #ccc;flex-shrink:0"></div>
-        <span style="font-size:13px;color:#888">Review Q3 roadmap</span>
-      </div>
-      <div style="margin-top:14px;font-size:11px;color:#bbb;text-align:center;letter-spacing:.04em">Everything else can wait.</div>
+    </div>
+    <div class="mob-scroll-hint">
+      <span>Scroll</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
     </div>
   </div>
 
-  <div style="padding:40px 24px;text-align:center">
-    <a href="/dashboard/extract" class="btn btn-p" style="display:inline-flex;font-size:15px;padding:14px 32px">Start for free &#8594;</a>
-    <p style="font-size:11px;color:#bbb;margin-top:12px;letter-spacing:.04em">FREE &middot; NO CREDIT CARD &middot; 60 SECONDS</p>
+  <!-- MC4: Control -->
+  <div class="mob-card" id="mc4">
+    <div class="mob-card-inner">
+      <div class="mob-cn">Control</div>
+      <div style="width:52px;height:52px;border-radius:14px;background:var(--gs);border:1px solid var(--gb);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:20px">📅</div>
+      <h3 class="mob-h">Your week,<br><em>already planned.</em></h3>
+      <p class="mob-p">One tap. AI schedules everything — grouped by project so your mind stays in one place at a time.</p>
+      <div style="background:#fff;border-radius:14px;overflow:hidden;border:1px solid rgba(0,0,0,.08);box-shadow:0 4px 20px rgba(0,0,0,.06);margin-top:24px">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);background:#f9f9f7;padding:10px 8px;gap:4px">
+          <div><div style="text-align:center;font-size:8px;color:#aaa;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Mon</div><div style="background:rgba(45,122,79,.1);border-left:2px solid #2d7a4f;border-radius:3px;padding:4px 5px;font-size:8px;color:#1a5c35;margin-bottom:3px;line-height:1.3">Fix bug<br><span style="color:#888;font-size:7px">9am</span></div><div style="background:rgba(201,168,76,.1);border-left:2px solid #c9a84c;border-radius:3px;padding:4px 5px;font-size:8px;color:#7a5e1a;line-height:1.3">Proposal<br><span style="color:#888;font-size:7px">11am</span></div></div>
+          <div><div style="text-align:center;font-size:8px;color:#aaa;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Tue</div><div style="background:rgba(45,122,79,.1);border-left:2px solid #2d7a4f;border-radius:3px;padding:4px 5px;font-size:8px;color:#1a5c35;line-height:1.3">Design<br><span style="color:#888;font-size:7px">9–11</span></div></div>
+          <div><div style="text-align:center;font-size:8px;color:#aaa;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Wed</div><div style="background:rgba(201,168,76,.1);border-left:2px solid #c9a84c;border-radius:3px;padding:4px 5px;font-size:8px;color:#7a5e1a;line-height:1.3">Call<br><span style="color:#888;font-size:7px">10am</span></div></div>
+          <div><div style="text-align:center;font-size:8px;color:#aaa;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Thu</div><div style="background:rgba(45,122,79,.1);border-left:2px solid #2d7a4f;border-radius:3px;padding:4px 5px;font-size:8px;color:#1a5c35;line-height:1.3">Deep<br><span style="color:#888;font-size:7px">9–12</span></div></div>
+          <div><div style="text-align:center;font-size:8px;color:#aaa;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Fri</div><div style="background:rgba(201,168,76,.1);border-left:2px solid #c9a84c;border-radius:3px;padding:4px 5px;font-size:8px;color:#7a5e1a;line-height:1.3">Invoice<br><span style="color:#888;font-size:7px">9am</span></div></div>
+        </div>
+        <div style="padding:9px 12px;border-top:1px solid rgba(0,0,0,.06);display:flex;align-items:center;gap:6px"><span style="background:#f0faf4;color:#2d7a4f;font-size:8.5px;font-weight:700;padding:2px 8px;border-radius:4px;border:1px solid rgba(45,122,79,.15)">AI scheduled</span><span style="font-size:10px;color:#888">Grouped by project</span></div>
+      </div>
+    </div>
+    <div class="mob-scroll-hint">
+      <span>Scroll</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    </div>
   </div>
+
+  <!-- MC5: Calm -->
+  <div class="mob-card" id="mc5" style="background:#fff">
+    <div class="mob-card-inner">
+      <div class="mob-cn">Calm</div>
+      <h3 class="mob-h" style="font-size:clamp(32px,9vw,48px)">Open the app.<br><em>Know exactly<br>what to do.</em></h3>
+      <p class="mob-p" style="margin-bottom:28px">No decisions. No friction. Just the one thing to work on right now.</p>
+      <div style="background:#f9f9f7;border-radius:14px;padding:20px;border:1px solid rgba(0,0,0,.06)">
+        <div style="font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#2d7a4f;margin-bottom:18px;opacity:.7">Right now</div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(0,0,0,.05)">
+          <div style="width:20px;height:20px;border-radius:50%;border:1.5px solid #2d7a4f;flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 3L9 1" stroke="#2d7a4f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div style="flex:1"><div style="font-size:14px;font-weight:500;color:#111">Fix login bug on staging</div><div style="font-size:11px;color:#aaa;margin-top:2px">Acreonix Tasks · 45 min</div></div>
+          <span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:5px;background:#fff0f0;color:#b91c1c;flex-shrink:0">Urgent</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(0,0,0,.04);opacity:.3">
+          <div style="width:20px;height:20px;border-radius:50%;border:1.5px solid #ccc;flex-shrink:0"></div>
+          <span style="font-size:14px;color:#888">Design landing page</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 0;opacity:.15">
+          <div style="width:20px;height:20px;border-radius:50%;border:1.5px solid #ccc;flex-shrink:0"></div>
+          <span style="font-size:14px;color:#888">Review Q3 roadmap</span>
+        </div>
+        <div style="margin-top:18px;font-size:12px;color:#bbb;text-align:center;letter-spacing:.04em">Everything else can wait.</div>
+      </div>
+      <div style="margin-top:36px;text-align:center">
+        <a href="/dashboard/extract" style="display:inline-flex;align-items:center;gap:7px;background:#2d7a4f;color:#fff;padding:14px 32px;border-radius:12px;font-size:16px;font-weight:600;text-decoration:none;box-shadow:0 4px 16px rgba(45,122,79,.3)">Start for free →</a>
+        <p style="font-size:11px;color:#bbb;margin-top:12px;letter-spacing:.04em">FREE · NO CREDIT CARD · 60 SECONDS</p>
+      </div>
+    </div>
+  </div>
+
 </section>
-
 <!-- EMOTION BREAK 2 -->
 <div class="em reveal" style="background:#fff">
   <h2 class="em-h">Not another to-do app.<br><em>A system that thinks.</em></h2>
@@ -658,6 +718,12 @@ const obs = new IntersectionObserver(e => e.forEach(x => {
   if(x.isIntersecting){ x.target.classList.add('vis'); obs.unobserve(x.target) }
 }),{threshold:.08})
 document.querySelectorAll('.reveal').forEach(el => obs.observe(el))
+
+// ── Mobile card fade-in on scroll ────────────────────────────
+const mobObs = new IntersectionObserver(e => e.forEach(x => {
+  if(x.isIntersecting){ x.target.classList.add('vis'); mobObs.unobserve(x.target) }
+}),{threshold:.15, rootMargin:'-40px 0px'})
+document.querySelectorAll('.mob-card-inner').forEach(el => mobObs.observe(el))
 
 // ── Desktop scroll story (5 steps) ──────────────────────────
 const STEPS = ['s1','s2','s3','s4','s5']

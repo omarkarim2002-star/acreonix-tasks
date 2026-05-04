@@ -203,9 +203,9 @@ export default function ProjectDetailPage() {
           {/* Share button — only shows on team plan */}
           <ShareProjectButton
             projectId={id as string}
-            isShared={!!(project as any).shared_with_team}
+            sharingType={(project as any).sharing_type ?? 'private'}
             isOwn={(project as any).isOwn !== false}
-            onToggle={(shared) => setProject(prev => prev ? { ...prev, shared_with_team: shared } as any : prev)}
+            onUpdate={(type) => setProject(prev => prev ? { ...prev, sharing_type: type } as any : prev)}
           />
 
           {/* Mind map button */}
