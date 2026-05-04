@@ -5,753 +5,578 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Acreonix Tasks — AI that organises your work</title>
 <meta name="description" content="Paste your tasks. AI structures, schedules and prioritises everything. Start free.">
+<meta property="og:title" content="Acreonix Tasks — AI that organises your work">
+<meta property="og:description" content="Paste anything. AI creates projects, schedules your week, tells you what to do first.">
+<meta property="og:image" content="https://tasks.acreonix.co.uk/og.png">
 <link rel="icon" type="image/png" href="/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --g:#2d7a4f;--g2:#1f5537;--g3:#3a8f5e;
-  --gs:rgba(45,122,79,.06);--gb:rgba(45,122,79,.14);
-  --gold:#c9a84c;
-  --bg:#ffffff;--bg2:#f9f9f7;--bg3:#f3f3f0;
+  --gs:rgba(45,122,79,.07);--gb:rgba(45,122,79,.18);
+  --gold:#c9a84c;--gold-s:rgba(201,168,76,.08);
   --t:#111;--t2:#444;--t3:#888;--t4:#bbb;
-  --border:rgba(0,0,0,.07);
-  --r:10px;--r2:16px;
+  --bg:#fff;--bg2:#f9f9f7;--bg3:#f4f4f1;
+  --border:rgba(0,0,0,.07);--border2:rgba(0,0,0,.12);
 }
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
-body{
-  font-family:'DM Sans',system-ui,sans-serif;
-  background:#fff;color:var(--t);
-  -webkit-font-smoothing:antialiased;
-  overflow-x:hidden;
-}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--t);-webkit-font-smoothing:antialiased;overflow-x:hidden}
 a{text-decoration:none;color:inherit}
-img{display:block;max-width:100%}
 
-/* ── NAV ── */
-nav{
-  position:fixed;top:0;left:0;right:0;z-index:100;
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 40px;height:60px;
-  background:rgba(255,255,255,.82);
-  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-  border-bottom:1px solid rgba(0,0,0,.06);
-  transition:background .3s;
-}
-.nav-logo{display:flex;align-items:center;gap:9px}
-.nav-logo img{width:28px;height:28px;object-fit:contain}
-.nav-logo-text{font-size:15px;font-weight:600;color:var(--t);letter-spacing:-.01em}
-.nav-logo-badge{font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);padding:2px 6px;background:rgba(201,168,76,.1);border-radius:4px}
-.nav-pills{display:flex;gap:6px}
-.pill-rms{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;border-radius:20px;color:#C41E3A;background:rgba(196,30,58,.06);border:1px solid rgba(196,30,58,.15);transition:all .15s}
-.pill-ai{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;border-radius:20px;color:#3B82F6;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);transition:all .15s}
-.pill-rms:hover{background:rgba(196,30,58,.12)}
-.pill-ai:hover{background:rgba(59,130,246,.12)}
-.nav-right{display:flex;align-items:center;gap:10px}
-.nav-signin{font-size:13px;color:var(--t2);padding:7px 14px;border-radius:8px;border:1px solid var(--border);transition:all .15s}
-.nav-signin:hover{background:var(--bg2);border-color:rgba(0,0,0,.12)}
-.nav-cta{font-size:13px;font-weight:500;color:#fff;padding:7px 18px;border-radius:8px;background:var(--g);border:1px solid var(--g2);transition:all .15s;cursor:pointer}
-.nav-cta:hover{background:var(--g3);transform:translateY(-1px)}
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 36px;background:rgba(255,255,255,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,0,0,.06);transition:all .3s}
+.n-logo{display:flex;align-items:center;gap:9px}
+.n-logo img{width:26px;height:26px;object-fit:contain}
+.n-name{font-size:15px;font-weight:600;color:var(--t);letter-spacing:-.01em}
+.n-badge{font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);padding:2px 7px;background:rgba(201,168,76,.1);border-radius:4px}
+.n-pills{display:flex;gap:6px}
+.n-pill-rms{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:20px;color:#C41E3A;background:rgba(196,30,58,.06);border:1px solid rgba(196,30,58,.14);transition:background .15s}
+.n-pill-rms:hover{background:rgba(196,30,58,.12)}
+.n-pill-ai{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:20px;color:#3B82F6;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.14);transition:background .15s}
+.n-pill-ai:hover{background:rgba(59,130,246,.12)}
+.n-right{display:flex;align-items:center;gap:8px}
+.n-in{font-size:13px;color:var(--t3);padding:6px 14px;border-radius:7px;border:1px solid var(--border2);transition:all .15s}
+.n-in:hover{background:var(--bg2);border-color:rgba(0,0,0,.18)}
+.n-cta{font-size:13px;font-weight:500;color:#fff;padding:7px 18px;border-radius:8px;background:var(--g);border:1px solid var(--g2);box-shadow:0 1px 4px rgba(45,122,79,.25);transition:all .15s}
+.n-cta:hover{background:var(--g3);transform:translateY(-1px);box-shadow:0 3px 10px rgba(45,122,79,.28)}
 
-/* ── SECTIONS base ── */
-section{width:100%;position:relative}
+/* HERO */
+#hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:100px 24px 80px;background:#fff;overflow:hidden}
+.h-badge{display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border-radius:20px;background:var(--gs);border:1px solid var(--gb);font-size:12px;font-weight:500;color:var(--g);margin-bottom:30px;opacity:0;animation:fadeUp .7s .1s ease forwards}
+.h-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,.5);animation:blink 2s infinite}
+.h1{font-size:clamp(46px,8vw,90px);font-weight:600;line-height:1.04;letter-spacing:-.045em;color:var(--t);max-width:820px;margin:0 auto 22px;opacity:0;animation:fadeUp .8s .2s ease forwards}
+.h1 em{font-style:italic;font-weight:300;color:var(--g)}
+.h-sub{font-size:clamp(15px,2vw,19px);font-weight:300;line-height:1.65;color:var(--t2);max-width:460px;margin:0 auto 42px;opacity:0;animation:fadeUp .8s .33s ease forwards}
+.h-acts{display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:13px;opacity:0;animation:fadeUp .8s .44s ease forwards}
+.btn{display:inline-flex;align-items:center;gap:7px;font-size:15px;font-weight:500;padding:12px 26px;border-radius:10px;transition:all .2s cubic-bezier(.4,0,.2,1);cursor:pointer;font-family:inherit;border:none;text-decoration:none}
+.btn-p{background:var(--g);color:#fff;box-shadow:0 2px 12px rgba(45,122,79,.25)}
+.btn-p:hover{background:var(--g3);transform:translateY(-2px);box-shadow:0 6px 20px rgba(45,122,79,.3)}
+.btn-s{background:#fff;color:var(--t2);border:1px solid var(--border2)!important}
+.btn-s:hover{background:var(--bg2)}
+.h-note{font-size:11px;color:var(--t4);letter-spacing:.04em;opacity:0;animation:fadeUp .8s .54s ease forwards}
 
-/* ── HERO ── */
-#hero{
-  min-height:100vh;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;
-  padding:100px 24px 80px;
-  background:#fff;
-  overflow:hidden;
-}
-.hero-badge{
-  display:inline-flex;align-items:center;gap:7px;
-  padding:5px 14px;border-radius:20px;
-  background:var(--gs);border:1px solid var(--gb);
-  font-size:12px;font-weight:500;color:var(--g);
-  margin-bottom:32px;
-  opacity:0;animation:fadeUp .7s .1s ease forwards;
-}
-.hero-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,.6);animation:pulse 2s infinite}
-.hero-h1{
-  font-size:clamp(48px,7vw,88px);
-  font-weight:600;line-height:1.05;
-  letter-spacing:-.04em;color:var(--t);
-  max-width:820px;margin:0 auto 24px;
-  opacity:0;animation:fadeUp .8s .2s ease forwards;
-}
-.hero-h1 em{font-style:italic;font-weight:300;color:var(--g)}
-.hero-sub{
-  font-size:clamp(16px,2vw,20px);
-  font-weight:300;line-height:1.65;color:var(--t2);
-  max-width:480px;margin:0 auto 44px;
-  opacity:0;animation:fadeUp .8s .35s ease forwards;
-}
-.hero-actions{
-  display:flex;align-items:center;gap:12px;justify-content:center;flex-wrap:wrap;
-  margin-bottom:14px;
-  opacity:0;animation:fadeUp .8s .45s ease forwards;
-}
-.btn-hero{
-  display:inline-flex;align-items:center;gap:7px;
-  font-size:15px;font-weight:500;padding:13px 28px;border-radius:10px;
-  transition:all .2s cubic-bezier(.4,0,.2,1);cursor:pointer;
-}
-.btn-hero-primary{background:var(--g);color:#fff;border:1px solid var(--g2);box-shadow:0 2px 12px rgba(45,122,79,.25)}
-.btn-hero-primary:hover{background:var(--g3);transform:translateY(-2px);box-shadow:0 6px 20px rgba(45,122,79,.3)}
-.btn-hero-secondary{background:#fff;color:var(--t2);border:1px solid var(--border)}
-.btn-hero-secondary:hover{background:var(--bg2);border-color:rgba(0,0,0,.14)}
-.hero-note{font-size:11px;color:var(--t4);letter-spacing:.04em;opacity:0;animation:fadeUp .8s .55s ease forwards}
+/* HERO SCREEN */
+.h-visual{margin-top:60px;max-width:860px;width:100%;margin-left:auto;margin-right:auto;opacity:0;animation:fadeUp 1s .62s ease forwards;position:relative}
+.h-screen{background:#fff;border-radius:14px;overflow:hidden;border:1px solid rgba(0,0,0,.09);box-shadow:0 24px 80px rgba(0,0,0,.1),0 2px 8px rgba(0,0,0,.05)}
+.sc-bar{background:#f5f5f3;padding:9px 14px;display:flex;align-items:center;gap:7px;border-bottom:1px solid rgba(0,0,0,.07)}
+.sc-dot{width:10px;height:10px;border-radius:50%}
+.sc-url{flex:1;background:rgba(0,0,0,.05);border-radius:5px;padding:4px 10px;font-size:10px;color:var(--t4);margin:0 10px;font-family:monospace}
+.sc-body{display:grid;grid-template-columns:190px 1fr;min-height:320px}
+.sc-side{background:#fbfbfa;border-right:1px solid rgba(0,0,0,.06);padding:14px 10px}
+.si{padding:6px 8px;border-radius:6px;font-size:11.5px;color:#888;margin-bottom:2px;display:flex;align-items:center;gap:7px;transition:background .1s}
+.si.on{background:rgba(45,122,79,.09);color:var(--g);font-weight:500}
+.sc-main{padding:16px;background:#f9f9f7}
+.sm-greet{font-size:13.5px;font-weight:600;color:var(--t);margin-bottom:2px}
+.sm-date{font-size:10.5px;color:var(--t3);margin-bottom:12px}
+.sm-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.sm-stat{background:#fff;border-radius:7px;padding:8px 10px;border:1px solid rgba(0,0,0,.06)}
+.sm-sl{font-size:8.5px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.sm-sv{font-size:17px;font-weight:700;letter-spacing:-.02em}
+.sm-tasks{background:#fff;border-radius:8px;border:1px solid rgba(0,0,0,.06);overflow:hidden}
+.sm-th{padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.05);font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;display:flex;justify-content:space-between}
+.sm-tr{padding:7px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(0,0,0,.04)}
+.sm-ck{width:14px;height:14px;border-radius:50%;border:1.5px solid #ddd;flex-shrink:0}
+.sm-ck.done{background:var(--g);border-color:var(--g)}
+.sm-tag{font-size:8.5px;font-weight:700;padding:2px 6px;border-radius:4px}
+.tag-u{background:#fff0f0;color:#b91c1c}
+.tag-h{background:#fff4ee;color:#c2410c}
+.tag-m{background:#fdf8ee;color:#7a5e1a}
+.tag-d{background:#f0faf4;color:#1a5c35}
 
-/* Hero visual */
-.hero-visual{
-  margin-top:64px;
-  max-width:860px;width:100%;margin-left:auto;margin-right:auto;
-  opacity:0;animation:fadeUp 1s .6s ease forwards;
-  position:relative;
-}
-.hero-screen{
-  background:#fff;border-radius:14px;overflow:hidden;
-  border:1px solid rgba(0,0,0,.09);
-  box-shadow:0 24px 80px rgba(0,0,0,.1),0 2px 8px rgba(0,0,0,.06);
-}
-.screen-bar{
-  background:#f5f5f3;padding:10px 14px;
-  display:flex;align-items:center;gap:7px;
-  border-bottom:1px solid rgba(0,0,0,.07);
-}
-.screen-dot{width:10px;height:10px;border-radius:50%}
-.screen-url{
-  flex:1;background:rgba(0,0,0,.05);border-radius:5px;
-  padding:4px 10px;font-size:10.5px;color:var(--t3);
-  margin:0 10px;font-family:monospace;
-}
-.screen-body{display:grid;grid-template-columns:190px 1fr;min-height:320px}
-.screen-sidebar{background:#fbfbfa;border-right:1px solid rgba(0,0,0,.06);padding:14px 10px}
-.s-logo{font-size:13px;font-weight:600;color:var(--t);margin-bottom:3px;padding-left:4px}
-.s-sub{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);padding-left:4px;margin-bottom:16px}
-.s-item{padding:6px 8px;border-radius:6px;font-size:11.5px;color:#888;margin-bottom:1px;display:flex;align-items:center;gap:7px;transition:background .1s}
-.s-item.on{background:rgba(45,122,79,.09);color:var(--g);font-weight:500}
-.screen-main{padding:16px;background:#f9f9f7}
-.s-greeting{font-size:13.5px;font-weight:600;color:var(--t);margin-bottom:2px}
-.s-date{font-size:10.5px;color:var(--t3);margin-bottom:12px}
-.s-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
-.s-stat{background:#fff;border-radius:7px;padding:8px 10px;border:1px solid rgba(0,0,0,.06)}
-.s-stat-label{font-size:8.5px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
-.s-stat-val{font-size:17px;font-weight:600;letter-spacing:-.02em}
-.s-tasks{background:#fff;border-radius:8px;border:1px solid rgba(0,0,0,.06);overflow:hidden}
-.s-task-hdr{padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.05);font-size:9px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;display:flex;justify-content:space-between}
-.s-task{padding:7px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(0,0,0,.04)}
-.s-check{width:14px;height:14px;border-radius:50%;border:1.5px solid #ddd;flex-shrink:0}
-.s-check.done{background:var(--g);border-color:var(--g)}
-.s-task-name{font-size:11px;color:var(--t);flex:1}
-.s-task-name.done{text-decoration:line-through;color:var(--t3)}
-.s-tag{font-size:8.5px;font-weight:600;padding:2px 6px;border-radius:5px}
-.tag-urgent{background:#fff0f0;color:#b91c1c}
-.tag-high{background:#fff4ee;color:#c2410c}
-.tag-med{background:#fdf8ee;color:#7a5e1a}
-.tag-done{background:#f0faf4;color:#1a5c35}
+/* Floating insight card */
+.h-float{position:absolute;bottom:-16px;left:-24px;background:#fff;border:1px solid rgba(45,122,79,.22);border-radius:12px;padding:12px 16px;width:196px;box-shadow:0 10px 36px rgba(0,0,0,.1);animation:float 5s ease-in-out infinite}
+.hf-l{font-size:9px;font-weight:700;color:var(--g);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;display:flex;align-items:center;gap:5px}
+.hf-t{font-size:12.5px;font-weight:600;color:var(--t);margin-bottom:2px}
+.hf-s{font-size:11px;color:var(--t3)}
+.hf-b{display:inline-block;background:var(--gs);color:var(--g);font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;margin-top:6px;border:1px solid var(--gb)}
 
-/* Floating card on hero */
-.hero-float{
-  position:absolute;bottom:-20px;left:-30px;
-  background:#fff;border:1px solid rgba(45,122,79,.2);
-  border-radius:12px;padding:12px 16px;width:200px;
-  box-shadow:0 12px 40px rgba(0,0,0,.1);
-  animation:float 5s ease-in-out infinite;
-}
-.hf-label{font-size:9px;font-weight:600;color:var(--g);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;display:flex;align-items:center;gap:5px}
-.hf-title{font-size:12.5px;font-weight:600;color:var(--t);margin-bottom:2px}
-.hf-sub{font-size:11px;color:var(--t3)}
-.hf-badge{display:inline-block;background:var(--gs);color:var(--g);font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;margin-top:6px;border:1px solid var(--gb)}
-
-/* ── SCROLL STORY (Desktop) ── */
-#story{position:relative}
-.story-sticky{
-  position:sticky;top:0;height:100vh;
-  display:flex;align-items:center;justify-content:center;
-  overflow:hidden;pointer-events:none;
-}
-.story-panels{height:400vh}
-.story-content{
-  display:grid;grid-template-columns:1fr 1fr;
-  gap:80px;align-items:center;
-  max-width:1100px;width:100%;padding:0 60px;
-}
-.story-left{pointer-events:auto}
-.story-step{
-  position:absolute;top:0;left:0;
-  opacity:0;transform:translateY(20px);
-  transition:opacity .6s ease,transform .6s ease;
-}
-.story-step.active{opacity:1;transform:none}
-.story-step-num{font-size:11px;font-weight:600;color:var(--g);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px}
-.story-step-h{font-size:clamp(28px,3.5vw,44px);font-weight:600;letter-spacing:-.03em;line-height:1.1;color:var(--t);margin-bottom:14px}
-.story-step-h em{font-style:italic;font-weight:300;color:var(--g)}
-.story-step-p{font-size:16px;font-weight:300;line-height:1.75;color:var(--t2);max-width:420px;margin-bottom:20px}
-.story-bullets{list-style:none;display:flex;flex-direction:column;gap:8px}
-.story-bullets li{font-size:13.5px;color:var(--t2);display:flex;align-items:flex-start;gap:10px;line-height:1.5}
-.story-bullets li::before{
-  content:'';width:18px;height:18px;border-radius:50%;flex-shrink:0;margin-top:1px;
-  background:var(--gs) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8' viewBox='0 0 10 8'%3E%3Cpath d='M1 4l2.5 3L9 1' stroke='%232d7a4f' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center;
-  border:1px solid var(--gb);
-}
-.story-right{position:relative;height:400px;pointer-events:auto}
-
-/* Wireframe states */
-.wf-state{
-  position:absolute;top:0;left:0;right:0;bottom:0;
-  opacity:0;transform:scale(.97);
-  transition:opacity .5s ease,transform .5s ease;
-}
-.wf-state.active{opacity:1;transform:none}
-.wf-box{
-  background:#fff;border-radius:12px;overflow:hidden;
-  border:1px solid rgba(0,0,0,.08);
-  box-shadow:0 8px 32px rgba(0,0,0,.08);
-}
-
-/* Wf Step 1: extract textarea */
-.wf1-wrap{padding:16px}
-.wf1-label{font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
-.wf1-textarea{
-  background:#f9f9f7;border:1px solid rgba(0,0,0,.08);border-radius:8px;
-  padding:12px;font-size:11px;color:var(--t2);line-height:1.6;min-height:90px;margin-bottom:10px;
-  font-family:inherit;
-}
-.wf1-cta{background:var(--g);color:#fff;border-radius:7px;padding:9px;text-align:center;font-size:11px;font-weight:600}
-
-/* Wf Step 2: mindmap svg */
-/* Wf Step 3: calendar grid */
-.wf3-days{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:14px;background:#f9f9f7}
-.wf3-day-hdr{text-align:center;font-size:9px;color:var(--t3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
-.wf3-event{border-radius:5px;padding:4px 6px;margin-bottom:3px;font-size:9px;font-weight:500}
-
-/* Wf Step 4: insights */
-.wf4-wrap{padding:14px}
-.wf4-score{display:flex;align-items:center;gap:14px;margin-bottom:14px}
-.wf4-ring{width:64px;height:64px;flex-shrink:0}
-.wf4-bar-label{display:flex;justify-content:space-between;font-size:9.5px;margin-bottom:4px;color:var(--t2)}
-.wf4-bar{height:5px;background:rgba(0,0,0,.07);border-radius:3px;overflow:hidden;margin-bottom:8px}
-.wf4-bar-fill{height:100%;border-radius:3px}
-.wf4-tip{background:#fdf8ee;border:1px solid rgba(201,168,76,.2);border-radius:7px;padding:8px 10px;font-size:9.5px;color:var(--t2);line-height:1.5}
-
-/* ── EMOTION BREAK SECTIONS ── */
-.emotion-section{
-  min-height:60vh;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;padding:100px 24px;
-  background:var(--bg2);
-}
-.em-h{font-size:clamp(32px,5vw,60px);font-weight:600;letter-spacing:-.04em;line-height:1.1;max-width:700px;margin:0 auto 16px}
+/* EMOTION BREAK */
+.em{min-height:55vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:90px 24px;background:var(--bg2)}
+.em-h{font-size:clamp(30px,5vw,58px);font-weight:600;letter-spacing:-.04em;line-height:1.1;max-width:680px;margin:0 auto 14px}
 .em-h em{font-style:italic;font-weight:300;color:var(--g)}
-.em-p{font-size:clamp(15px,1.8vw,18px);font-weight:300;color:var(--t2);max-width:460px;margin:0 auto;line-height:1.7}
+.em-p{font-size:clamp(14px,1.8vw,18px);font-weight:300;color:var(--t2);max-width:440px;margin:0 auto;line-height:1.7}
 
-/* ── PRICING ── */
+/* DESKTOP SCROLL STORY */
+#story{position:relative}
+.sp{height:400vh}
+.ss{position:sticky;top:0;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:none}
+.sc{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;max-width:1100px;width:100%;padding:0 60px}
+.sl{pointer-events:auto;position:relative;min-height:320px}
+.step{position:absolute;top:0;left:0;opacity:0;transform:translateY(18px);transition:opacity .55s ease,transform .55s ease}
+.step.on{opacity:1;transform:none}
+.step-n{font-size:11px;font-weight:700;color:var(--g);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px}
+.step-h{font-size:clamp(28px,3.5vw,44px);font-weight:700;letter-spacing:-.035em;line-height:1.08;color:var(--t);margin-bottom:13px}
+.step-h em{font-style:italic;font-weight:300;color:var(--g)}
+.step-p{font-size:16px;font-weight:300;line-height:1.75;color:var(--t2);max-width:420px;margin-bottom:20px}
+.step-ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+.step-ul li{font-size:13.5px;color:var(--t2);display:flex;align-items:flex-start;gap:10px;line-height:1.5}
+.step-ul li::before{content:'';width:18px;height:18px;border-radius:50%;flex-shrink:0;margin-top:1px;background:var(--gs) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8' viewBox='0 0 10 8'%3E%3Cpath d='M1 4l2.5 3L9 1' stroke='%232d7a4f' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center;border:1px solid var(--gb)}
+.sr{position:relative;height:400px;pointer-events:auto}
+.wf{position:absolute;top:0;left:0;right:0;bottom:0;opacity:0;transform:scale(.97);transition:opacity .5s ease,transform .5s ease}
+.wf.on{opacity:1;transform:none}
+.wfb{background:#fff;border-radius:12px;overflow:hidden;border:1px solid rgba(0,0,0,.08);box-shadow:0 8px 30px rgba(0,0,0,.08)}
+
+/* MOBILE STORY — separate section */
+.mob-story{display:none;background:#fff}
+.mob-hdr{padding:52px 24px 24px;text-align:center}
+.mob-hdr-label{font-size:11px;font-weight:700;color:var(--g);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.mob-hdr-h{font-size:clamp(28px,8vw,38px);font-weight:700;letter-spacing:-.035em;line-height:1.1;color:var(--t)}
+.mob-hdr-h em{font-style:italic;font-weight:300;color:var(--g)}
+.mob-card{padding:40px 24px;border-top:1px solid rgba(0,0,0,.06)}
+.mob-card:nth-child(even){background:#f9f9f7}
+.mob-cn{font-size:11px;font-weight:700;color:var(--g);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.mob-icon{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px;border:1px solid var(--gb);background:var(--gs)}
+.mob-h{font-size:clamp(24px,7vw,34px);font-weight:700;letter-spacing:-.03em;line-height:1.1;color:var(--t);margin-bottom:10px}
+.mob-h em{font-style:italic;font-weight:300;color:var(--g)}
+.mob-p{font-size:15px;font-weight:300;color:var(--t2);line-height:1.65;margin-bottom:16px}
+.mob-ul{list-style:none;display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.mob-ul li{font-size:13.5px;color:var(--t2);display:flex;align-items:flex-start;gap:9px;line-height:1.5}
+.mob-ul li::before{content:'';width:18px;height:18px;border-radius:50%;flex-shrink:0;margin-top:1px;background:var(--gs) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8' viewBox='0 0 10 8'%3E%3Cpath d='M1 4l2.5 3L9 1' stroke='%232d7a4f' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center;border:1px solid var(--gb)}
+.mob-screen{background:#fff;border-radius:12px;overflow:hidden;border:1px solid rgba(0,0,0,.08);box-shadow:0 4px 20px rgba(0,0,0,.07)}
+.mob-screen-bar{background:#f5f5f3;padding:8px 12px;display:flex;align-items:center;gap:5px;border-bottom:1px solid rgba(0,0,0,.07)}
+.mob-sc-dot{width:8px;height:8px;border-radius:50%}
+.mob-sc-url{flex:1;background:rgba(0,0,0,.05);border-radius:4px;padding:3px 8px;font-size:9px;color:var(--t4);margin:0 8px;font-family:monospace}
+
+/* PRICING */
 #pricing{padding:100px 24px;background:#fff;text-align:center}
-.section-label{font-size:11px;font-weight:600;color:var(--g);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;display:block}
-.section-h{font-size:clamp(30px,4vw,48px);font-weight:600;letter-spacing:-.03em;line-height:1.1;margin-bottom:12px}
-.section-h em{font-style:italic;font-weight:300;color:var(--g)}
-.section-sub{font-size:16px;font-weight:300;color:var(--t2);max-width:420px;margin:0 auto 56px;line-height:1.65}
-.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:860px;margin:0 auto}
-.plan{
-  background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;
-  padding:28px 22px;text-align:left;position:relative;
-  display:flex;flex-direction:column;
-  transition:transform .2s,box-shadow .2s;
-}
+.sec-label{font-size:11px;font-weight:700;color:var(--g);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;display:block}
+.sec-h{font-size:clamp(30px,4.5vw,50px);font-weight:700;letter-spacing:-.04em;line-height:1.08;margin-bottom:11px}
+.sec-h em{font-style:italic;font-weight:300;color:var(--g)}
+.sec-sub{font-size:16px;font-weight:300;color:var(--t2);max-width:400px;margin:0 auto 52px;line-height:1.65}
+.pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:860px;margin:0 auto}
+.plan{background:#fff;border:1px solid rgba(0,0,0,.09);border-radius:14px;padding:28px 22px;text-align:left;position:relative;display:flex;flex-direction:column;transition:transform .2s,box-shadow .2s}
 .plan:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.09)}
-.plan.featured{border-color:var(--g);background:linear-gradient(160deg,rgba(45,122,79,.04),#fff 60%)}
+.plan.feat{border-color:var(--g);background:linear-gradient(160deg,rgba(45,122,79,.04),#fff 60%)}
 .plan-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--g);color:#fff;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 12px;border-radius:20px;white-space:nowrap}
-.plan-name{font-size:11px;font-weight:600;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
-.plan-price{font-size:36px;font-weight:600;color:var(--t);letter-spacing:-.04em;line-height:1;margin-bottom:2px}
+.plan-name{font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
+.plan-price{font-size:36px;font-weight:700;color:var(--t);letter-spacing:-.04em;line-height:1}
 .plan-price span{font-size:13px;color:var(--t3);font-weight:400}
-.plan-period{font-size:11px;color:var(--t4);margin-bottom:20px}
-.plan-divider{height:1px;background:var(--border);margin-bottom:18px}
-.plan-features{list-style:none;flex:1;margin-bottom:20px}
-.plan-features li{font-size:12.5px;color:var(--t2);padding:5px 0;display:flex;align-items:flex-start;gap:8px;line-height:1.45}
-.plan-features li::before{content:'\2713';color:var(--g);font-size:10px;font-weight:700;margin-top:2px;flex-shrink:0}
-.plan-btn{display:block;width:100%;text-align:center;padding:11px;border-radius:8px;font-size:13px;font-weight:500;transition:all .15s;cursor:pointer;border:none;font-family:inherit}
-.plan-btn-green{background:var(--g);color:#fff}.plan-btn-green:hover{background:var(--g3)}
-.plan-btn-outline{background:transparent;color:var(--t2);border:1px solid var(--border)}.plan-btn-outline:hover{border-color:var(--gb);color:var(--g)}
+.plan-period{font-size:11px;color:var(--t4);margin:4px 0 18px}
+.plan-div{height:1px;background:rgba(0,0,0,.07);margin-bottom:16px}
+.plan-ul{list-style:none;flex:1;margin-bottom:20px}
+.plan-ul li{font-size:12.5px;color:var(--t2);padding:5px 0;display:flex;align-items:flex-start;gap:8px;line-height:1.45}
+.plan-ul li::before{content:'\2713';color:var(--g);font-size:10px;font-weight:800;margin-top:2px;flex-shrink:0}
+.plan-btn{display:block;width:100%;text-align:center;padding:11px;border-radius:8px;font-size:13px;font-weight:500;transition:all .15s;cursor:pointer;border:none;font-family:inherit;text-decoration:none}
+.pb-g{background:var(--g);color:#fff}.pb-g:hover{background:var(--g3)}
+.pb-o{background:transparent;color:var(--t2);border:1px solid rgba(0,0,0,.1)!important}.pb-o:hover{border-color:var(--gb)!important;color:var(--g)}
 
-/* ── CTA ── */
-#cta{
-  padding:120px 24px;text-align:center;
-  background:linear-gradient(180deg,#fff 0%,#f9fdf9 100%);
-  border-top:1px solid var(--border);
-}
-.cta-h{font-size:clamp(36px,5.5vw,64px);font-weight:600;letter-spacing:-.04em;line-height:1.08;max-width:600px;margin:0 auto 18px}
+/* CTA */
+#cta{padding:120px 24px;text-align:center;background:linear-gradient(180deg,#fff 0%,#f5fdf8 100%);border-top:1px solid rgba(0,0,0,.06)}
+.cta-h{font-size:clamp(34px,6vw,64px);font-weight:700;letter-spacing:-.04em;line-height:1.06;max-width:600px;margin:0 auto 16px}
 .cta-h em{font-style:italic;font-weight:300;color:var(--g)}
-.cta-p{font-size:clamp(15px,1.8vw,18px);font-weight:300;color:var(--t2);max-width:380px;margin:0 auto 40px;line-height:1.65}
+.cta-p{font-size:clamp(15px,1.8vw,18px);font-weight:300;color:var(--t2);max-width:360px;margin:0 auto 38px;line-height:1.65}
 .cta-note{font-size:11px;color:var(--t4);letter-spacing:.04em;margin-top:14px}
 
-/* ── FOOTER ── */
-footer{padding:56px 60px 36px;border-top:1px solid var(--border);background:#fff}
-.footer-grid{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1.8fr 1fr 1fr 1fr;gap:48px;margin-bottom:40px}
-.footer-logo-wrap{display:flex;align-items:center;gap:9px;margin-bottom:12px}
-.footer-logo-wrap img{width:28px;height:28px;object-fit:contain}
-.footer-tagline{font-size:13px;color:var(--t3);line-height:1.65;margin-bottom:16px}
-.footer-contact{font-size:12px;color:var(--t4);margin-bottom:6px;display:flex;align-items:flex-start;gap:8px;line-height:1.5}
-.footer-contact a{color:var(--g)}
-.fc-title{font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
-.fc-links{list-style:none;display:flex;flex-direction:column;gap:9px}
-.fc-links a{font-size:13px;color:var(--t3);transition:color .12s}
-.fc-links a:hover{color:var(--g)}
-.footer-bottom{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding-top:22px;border-top:1px solid var(--border);flex-wrap:wrap;gap:10px}
-.footer-copy{font-size:12px;color:var(--t4)}
+/* FOOTER */
+footer{padding:56px 56px 36px;border-top:1px solid var(--border);background:#fff}
+.f-grid{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1.8fr 1fr 1fr 1fr;gap:44px;margin-bottom:36px}
+.f-tagline{font-size:13px;color:var(--t3);line-height:1.65;margin-bottom:14px}
+.f-contact{font-size:12px;color:var(--t4);margin-bottom:5px}
+.f-contact a{color:var(--g)}
+.f-title{font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:13px}
+.f-links{list-style:none;display:flex;flex-direction:column;gap:9px}
+.f-links a{font-size:13px;color:var(--t3);transition:color .12s}
+.f-links a:hover{color:var(--g)}
+.f-btm{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding-top:20px;border-top:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.f-copy{font-size:12px;color:var(--t4)}
 
-/* ── ANIMATIONS ── */
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .7s ease,transform .7s ease}
+.reveal.vis{opacity:1;transform:none}
+
+/* ANIMATIONS */
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}70%{box-shadow:0 0 0 6px rgba(34,197,94,0)}}
-@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}70%{box-shadow:0 0 0 6px rgba(34,197,94,0)}}
 
-/* Scroll reveal */
-.reveal{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease}
-.reveal.visible{opacity:1;transform:none}
+/* DESKTOP OVERRIDES */
+@media(min-width:769px){
+  .mob-story{display:none!important}
+}
 
-/* ── MOBILE ── */
+/* MOBILE */
 @media(max-width:768px){
-  nav{padding:0 18px;height:54px}
-  .nav-pills{display:none}
-  .nav-signin{display:none}
-  .nav-cta{font-size:12px;padding:6px 14px}
-
-  #hero{padding:90px 20px 60px;min-height:auto}
-  .hero-visual{display:none}
-  .hero-actions{flex-direction:column;align-items:stretch;max-width:280px;margin:0 auto 14px}
-  .btn-hero{justify-content:center;font-size:14px;padding:12px 22px}
-
-  /* Mobile story: no sticky, just sections */
-  .story-sticky{position:relative;height:auto;display:block;padding:60px 0}
-  .story-panels{height:auto}
-  .story-content{grid-template-columns:1fr;gap:32px;padding:0 20px}
-  .story-right{display:none}
-  .story-step{position:relative;opacity:1;transform:none;margin-bottom:48px}
-  .story-step:last-child{margin-bottom:0}
-  .story-step-h{font-size:clamp(24px,6vw,34px)}
-
-  .emotion-section{padding:70px 20px;min-height:auto}
-  .em-h{font-size:clamp(28px,7vw,44px)}
-
-  #pricing{padding:70px 20px}
-  .pricing-grid{grid-template-columns:1fr;max-width:340px;margin:0 auto}
-
+  nav{padding:0 18px;height:52px}
+  .n-pills,.n-in{display:none}
+  .n-cta{font-size:12px;padding:6px 14px}
+  #hero{padding:84px 20px 52px;min-height:auto}
+  .h-visual{display:none}
+  .h-acts{flex-direction:column;align-items:stretch;max-width:300px;margin:0 auto 12px}
+  .btn{justify-content:center;font-size:14px;padding:13px 22px}
+  #story{display:none!important}
+  .mob-story{display:block!important}
+  .em{padding:64px 20px;min-height:auto}
+  .em-h{font-size:clamp(26px,8vw,42px)}
+  #pricing{padding:64px 20px}
+  .pricing{grid-template-columns:1fr;max-width:340px;margin:0 auto}
   #cta{padding:80px 20px}
-  .cta-h{font-size:clamp(30px,7vw,48px)}
-
+  .cta-h{font-size:clamp(30px,8vw,48px)}
   footer{padding:44px 20px 28px}
-  .footer-grid{grid-template-columns:1fr 1fr;gap:28px}
+  .f-grid{grid-template-columns:1fr 1fr;gap:28px}
 }
 @media(max-width:480px){
-  .hero-h1{font-size:clamp(38px,10vw,56px)}
-  .footer-grid{grid-template-columns:1fr}
+  .h1{font-size:clamp(38px,11vw,54px)}
+  .f-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
 <body>
 
-<!-- NAV -->
 <nav>
-  <a href="/" class="nav-logo">
+  <a href="/" class="n-logo">
     <img src="/logo.png" alt="Acreonix Tasks">
-    <span class="nav-logo-text">Acreonix</span>
-    <span class="nav-logo-badge">Tasks</span>
+    <span class="n-name">Acreonix</span>
+    <span class="n-badge">Tasks</span>
   </a>
-  <div class="nav-pills">
-    <a href="https://acreonix.co.uk/rms" class="pill-rms">RMS &#8599;</a>
-    <a href="https://acreonix.co.uk" class="pill-ai">AI Lead Agent &#8599;</a>
+  <div class="n-pills">
+    <a href="https://acreonix.co.uk/rms" class="n-pill-rms">RMS &#8599;</a>
+    <a href="https://acreonix.co.uk" class="n-pill-ai">AI Lead Agent &#8599;</a>
   </div>
-  <div class="nav-right">
-    <a href="/dashboard" class="nav-signin">Sign in</a>
-    <a href="/dashboard/extract" class="nav-cta">Get started free</a>
+  <div class="n-right">
+    <a href="/dashboard" class="n-in">Sign in</a>
+    <a href="/dashboard/extract" class="n-cta">Get started free</a>
   </div>
 </nav>
 
 <!-- HERO -->
 <section id="hero">
-  <div class="hero-badge"><span class="hero-dot"></span> AI-powered &middot; Free to start</div>
-  <h1 class="hero-h1">Your work,<br><em>finally</em> organised.</h1>
-  <p class="hero-sub">Paste anything. AI structures your tasks, schedules your week, and tells you what to do right now.</p>
-  <div class="hero-actions">
-    <a href="/dashboard/extract" class="btn-hero btn-hero-primary">Start for free &#8594;</a>
-    <a href="#story" class="btn-hero btn-hero-secondary">See how it works</a>
+  <div class="h-badge"><span class="h-dot"></span>AI-powered &middot; Free to start</div>
+  <h1 class="h1">Your work,<br><em>finally</em> organised.</h1>
+  <p class="h-sub">Paste anything. AI structures your tasks, schedules your week, and tells you what to do right now.</p>
+  <div class="h-acts">
+    <a href="/dashboard/extract" class="btn btn-p">Start for free &#8594;</a>
+    <a href="#pricing" class="btn btn-s">See pricing</a>
   </div>
-  <p class="hero-note">FREE TO START &nbsp;&middot;&nbsp; NO CREDIT CARD &nbsp;&middot;&nbsp; 60 SECONDS</p>
+  <p class="h-note">FREE TO START &nbsp;&middot;&nbsp; NO CREDIT CARD &nbsp;&middot;&nbsp; 60 SECONDS</p>
 
-  <div class="hero-visual">
-    <div class="hero-screen">
-      <div class="screen-bar">
-        <div class="screen-dot" style="background:#ff5f57"></div>
-        <div class="screen-dot" style="background:#febc2e"></div>
-        <div class="screen-dot" style="background:#28c840"></div>
-        <div class="screen-url">tasks.acreonix.co.uk/dashboard</div>
+  <div class="h-visual">
+    <div class="h-screen">
+      <div class="sc-bar">
+        <div class="sc-dot" style="background:#ff5f57"></div>
+        <div class="sc-dot" style="background:#febc2e"></div>
+        <div class="sc-dot" style="background:#28c840"></div>
+        <div class="sc-url">tasks.acreonix.co.uk/dashboard</div>
       </div>
-      <div class="screen-body">
-        <div class="screen-sidebar">
-          <div class="s-logo">Acreonix</div>
-          <div class="s-sub">Tasks</div>
-          <div class="s-item on">&#9889; AI Extract</div>
-          <div class="s-item">&#128193; Projects</div>
-          <div class="s-item">&#9989; Tasks</div>
-          <div class="s-item">&#128197; Calendar</div>
-          <div class="s-item">&#9201; Tracker</div>
-          <div class="s-item">&#128202; Insights</div>
+      <div class="sc-body">
+        <div class="sc-side">
+          <div style="font-size:13px;font-weight:600;color:#111;margin-bottom:2px;padding-left:4px">Acreonix</div>
+          <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#c9a84c;padding-left:4px;margin-bottom:14px">Tasks</div>
+          <div class="si on">&#10022; AI Extract</div>
+          <div class="si">&#128193; Projects</div>
+          <div class="si">&#9989; Tasks</div>
+          <div class="si">&#128197; Calendar</div>
+          <div class="si">&#9201; Tracker</div>
+          <div class="si">&#128202; Insights</div>
         </div>
-        <div class="screen-main">
-          <div class="s-greeting">Good morning, Omar &#128075;</div>
-          <div class="s-date">Monday, 4 May &middot; 3 tasks due today</div>
-          <div class="s-stats">
-            <div class="s-stat"><div class="s-stat-label">Due today</div><div class="s-stat-val" style="color:#c9a84c">3</div></div>
-            <div class="s-stat"><div class="s-stat-label">In progress</div><div class="s-stat-val" style="color:#2d7a4f">7</div></div>
-            <div class="s-stat"><div class="s-stat-label">Overdue</div><div class="s-stat-val" style="color:#ef4444">1</div></div>
-            <div class="s-stat"><div class="s-stat-label">Projects</div><div class="s-stat-val" style="color:#2d7a4f">4</div></div>
+        <div class="sc-main">
+          <div class="sm-greet">Good morning, Omar &#128075;</div>
+          <div class="sm-date">Monday, 5 May &middot; 3 tasks due today</div>
+          <div class="sm-grid">
+            <div class="sm-stat"><div class="sm-sl">Due today</div><div class="sm-sv" style="color:#c9a84c">3</div></div>
+            <div class="sm-stat"><div class="sm-sl">In progress</div><div class="sm-sv" style="color:#2d7a4f">7</div></div>
+            <div class="sm-stat"><div class="sm-sl">Overdue</div><div class="sm-sv" style="color:#ef4444">1</div></div>
+            <div class="sm-stat"><div class="sm-sl">Projects</div><div class="sm-sv" style="color:#2d7a4f">4</div></div>
           </div>
-          <div class="s-tasks">
-            <div class="s-task-hdr"><span>Do now</span><span style="color:#2d7a4f">AI prioritised &#10022;</span></div>
-            <div class="s-task"><div class="s-check done"></div><span class="s-task-name done">Client proposal draft</span><span class="s-tag tag-done">Done</span></div>
-            <div class="s-task"><div class="s-check"></div><span class="s-task-name">Fix login bug on staging</span><span class="s-tag tag-urgent">Urgent</span></div>
-            <div class="s-task"><div class="s-check"></div><span class="s-task-name">Acreonix Tasks landing page</span><span class="s-tag tag-high">High</span></div>
-            <div class="s-task"><div class="s-check"></div><span class="s-task-name">Review Q3 roadmap</span><span class="s-tag tag-med">Medium</span></div>
+          <div class="sm-tasks">
+            <div class="sm-th"><span>Do now</span><span style="color:#2d7a4f">AI prioritised &#10022;</span></div>
+            <div class="sm-tr"><div class="sm-ck done"></div><span style="font-size:10.5px;flex:1;text-decoration:line-through;color:#aaa">Client proposal draft</span><span class="sm-tag tag-d">Done</span></div>
+            <div class="sm-tr"><div class="sm-ck"></div><span style="font-size:10.5px;flex:1">Fix login bug on staging</span><span class="sm-tag tag-u">Urgent</span></div>
+            <div class="sm-tr"><div class="sm-ck"></div><span style="font-size:10.5px;flex:1">Design landing page</span><span class="sm-tag tag-h">High</span></div>
+            <div class="sm-tr"><div class="sm-ck"></div><span style="font-size:10.5px;flex:1">Review Q3 roadmap</span><span class="sm-tag tag-m">Medium</span></div>
           </div>
         </div>
       </div>
     </div>
-    <div class="hero-float">
-      <div class="hf-label"><span class="hero-dot"></span> AI insight</div>
-      <div class="hf-title">Focus: Acreonix Tasks</div>
-      <div class="hf-sub">2h 30m blocked today</div>
-      <div class="hf-badge">CONTEXT PROTECTED</div>
+    <div class="h-float">
+      <div class="hf-l"><span class="h-dot"></span>AI insight</div>
+      <div class="hf-t">Focus: Acreonix Tasks</div>
+      <div class="hf-s">2h 30m blocked today</div>
+      <div class="hf-b">CONTEXT PROTECTED</div>
     </div>
   </div>
 </section>
 
 <!-- EMOTION BREAK 1 -->
-<div class="emotion-section reveal">
+<div class="em reveal">
   <h2 class="em-h">Most people lose 2 hours a day<br><em>deciding what to work on.</em></h2>
   <p class="em-p">Not because they're lazy. Because no tool has ever made it obvious. Until now.</p>
 </div>
 
-<!-- SCROLL STORY -->
+<!-- DESKTOP SCROLL STORY -->
 <section id="story">
-  <div class="story-panels">
-    <div class="story-sticky">
-      <div class="story-content">
-        <!-- Left: captions -->
-        <div class="story-left" style="position:relative;min-height:320px">
-          <div class="story-step active" id="step1">
-            <div class="story-step-num">01 &mdash; Capture</div>
-            <h3 class="story-step-h">Paste anything.<br><em>AI structures it.</em></h3>
-            <p class="story-step-p">Brain dump, email thread, WhatsApp notes &mdash; paste it all. AI extracts every task, assigns priorities, estimates times, and groups into projects. You review before anything saves.</p>
-            <ul class="story-bullets">
-              <li>Natural language &mdash; no forms, no templates</li>
-              <li>AI creates projects from context automatically</li>
-              <li>Full preview and edit before saving</li>
-            </ul>
+  <div class="sp">
+    <div class="ss">
+      <div class="sc">
+        <div class="sl">
+          <div class="step on" id="s1">
+            <div class="step-n">01 &mdash; Capture</div>
+            <h3 class="step-h">Paste anything.<br><em>AI structures it.</em></h3>
+            <p class="step-p">Brain dump, email thread, WhatsApp notes &mdash; paste it all. AI extracts every task, assigns priorities, estimates times, and groups into projects.</p>
+            <ul class="step-ul"><li>Natural language &mdash; no forms or templates</li><li>AI creates projects from context automatically</li><li>Full preview and edit before saving</li></ul>
           </div>
-          <div class="story-step" id="step2">
-            <div class="story-step-num">02 &mdash; Organise</div>
-            <h3 class="story-step-h">Every project.<br><em>Mapped visually.</em></h3>
-            <p class="story-step-p">Switch between list and mind map at any time. See every project, every task, every connection &mdash; on one interactive canvas that updates in real time.</p>
-            <ul class="story-bullets">
-              <li>Interactive mind map with live task status</li>
-              <li>Colour-coded by project and priority</li>
-              <li>Click any node to edit instantly</li>
-            </ul>
+          <div class="step" id="s2">
+            <div class="step-n">02 &mdash; Organise</div>
+            <h3 class="step-h">Every project.<br><em>Mapped visually.</em></h3>
+            <p class="step-p">Switch between list and mind map at any time. See every project, every task, every connection on one interactive canvas.</p>
+            <ul class="step-ul"><li>Interactive mind map with live task status</li><li>Colour-coded by project and priority</li><li>Click any node to edit instantly</li></ul>
           </div>
-          <div class="story-step" id="step3">
-            <div class="story-step-num">03 &mdash; Schedule</div>
-            <h3 class="story-step-h">One click.<br><em>Your week, built.</em></h3>
-            <p class="story-step-p">AI reads your deadlines, priorities, and time estimates, then builds an optimal week &mdash; grouping tasks by project to protect your flow state. Drag to adjust. Confirm to move.</p>
-            <ul class="story-bullets">
-              <li>Week, day, month views &mdash; like Outlook</li>
-              <li>Groups tasks by project to cut context switching</li>
-              <li>Drag-drop with confirmation to prevent accidents</li>
-            </ul>
+          <div class="step" id="s3">
+            <div class="step-n">03 &mdash; Schedule</div>
+            <h3 class="step-h">One click.<br><em>Your week, built.</em></h3>
+            <p class="step-p">AI reads your deadlines, priorities, and time estimates, then builds an optimal week &mdash; grouping tasks by project to protect your flow state.</p>
+            <ul class="step-ul"><li>Week, day, month views</li><li>Groups tasks by project</li><li>Drag-drop with confirmation</li></ul>
           </div>
-          <div class="story-step" id="step4">
-            <div class="story-step-num">04 &mdash; Improve</div>
-            <h3 class="story-step-h">Track time.<br><em>Get smarter.</em></h3>
-            <p class="story-step-p">Log time with a live timer or in plain English. Each week AI tells you where your time actually went, what patterns it spotted, and three specific changes to make next week.</p>
-            <ul class="story-bullets">
-              <li>Live timer or &ldquo;worked on X from 9 to 10:30&rdquo;</li>
-              <li>Weekly insight score with actionable tips</li>
-              <li>Notification bell for overdue and due-today</li>
-            </ul>
+          <div class="step" id="s4">
+            <div class="step-n">04 &mdash; Improve</div>
+            <h3 class="step-h">Track time.<br><em>Get smarter.</em></h3>
+            <p class="step-p">Log time with a live timer or in plain English. Each week AI tells you where your time went, what patterns it spotted, and three changes to make.</p>
+            <ul class="step-ul"><li>Live timer from anywhere on the app</li><li>Weekly insight score with actionable tips</li><li>Gets smarter every week you use it</li></ul>
           </div>
         </div>
-        <!-- Right: evolving wireframe -->
-        <div class="story-right">
-          <!-- State 1: Extract -->
-          <div class="wf-state active" id="wf1">
-            <div class="wf-box">
-              <div class="screen-bar" style="background:#f5f5f3">
-                <div class="screen-dot" style="background:#ff5f57"></div>
-                <div class="screen-dot" style="background:#febc2e"></div>
-                <div class="screen-dot" style="background:#28c840"></div>
-                <div class="screen-url">tasks.acreonix.co.uk/dashboard/extract</div>
-              </div>
-              <div class="wf1-wrap">
-                <div class="wf1-label">Paste your tasks</div>
-                <div class="wf1-textarea">&ldquo;Need to finish client proposal by Friday, fix the login bug on staging, book a call with James, pay the Supabase invoice, design new landing page hero section, review Q3 roadmap before Monday...&rdquo;</div>
-                <div class="wf1-cta">&#10022; Extract tasks with AI</div>
-              </div>
-              <div style="padding:0 16px 14px">
-                <div style="background:#f9f9f7;border-radius:8px;border:1px solid rgba(0,0,0,.06);overflow:hidden">
-                  <div style="padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.05);font-size:9px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.06em;display:flex;justify-content:space-between"><span>6 tasks extracted</span><span style="color:#2d7a4f">Preview &#10003;</span></div>
-                  <div class="s-task"><div class="s-check"></div><span class="s-task-name" style="font-size:10.5px">Finish client proposal</span><span class="s-tag tag-urgent">Urgent</span></div>
-                  <div class="s-task"><div class="s-check"></div><span class="s-task-name" style="font-size:10.5px">Fix login bug on staging</span><span class="s-tag tag-urgent">Urgent</span></div>
-                  <div class="s-task"><div class="s-check"></div><span class="s-task-name" style="font-size:10.5px">Design new landing page hero</span><span class="s-tag tag-high">High</span></div>
-                  <div class="s-task"><div class="s-check"></div><span class="s-task-name" style="font-size:10.5px">Review Q3 roadmap</span><span class="s-tag tag-med">Medium</span></div>
+        <div class="sr">
+          <!-- WF1: Extract -->
+          <div class="wf on" id="wf1">
+            <div class="wfb">
+              <div class="sc-bar" style="background:#f5f5f3"><div class="sc-dot" style="background:#ff5f57"></div><div class="sc-dot" style="background:#febc2e"></div><div class="sc-dot" style="background:#28c840"></div><div class="sc-url">…/extract</div></div>
+              <div style="padding:14px">
+                <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Paste your tasks</div>
+                <div style="background:#f9f9f7;border:1px solid rgba(0,0,0,.07);border-radius:8px;padding:10px;font-size:11px;color:#888;line-height:1.6;min-height:70px;margin-bottom:10px">&ldquo;Finish proposal by Friday, fix login bug, book call with James, pay invoice, design landing page...&rdquo;</div>
+                <div style="background:#2d7a4f;color:#fff;border-radius:7px;padding:9px;text-align:center;font-size:11px;font-weight:600;margin-bottom:10px">&#10022; Extract tasks with AI</div>
+                <div style="background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:8px;overflow:hidden">
+                  <div style="padding:7px 10px;border-bottom:1px solid rgba(0,0,0,.05);font-size:9px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.06em;display:flex;justify-content:space-between"><span>5 tasks extracted</span><span style="color:#2d7a4f">Preview &#10003;</span></div>
+                  <div class="sm-tr"><div class="sm-ck"></div><span style="font-size:10.5px;flex:1">Finish client proposal</span><span class="sm-tag tag-u">Urgent</span></div>
+                  <div class="sm-tr"><div class="sm-ck"></div><span style="font-size:10.5px;flex:1">Fix login bug</span><span class="sm-tag tag-u">Urgent</span></div>
+                  <div class="sm-tr"><div class="sm-ck"></div><span style="font-size:10.5px;flex:1">Design landing page</span><span class="sm-tag tag-h">High</span></div>
+                  <div class="sm-tr"><div class="sm-ck"></div><span style="font-size:10.5px;flex:1">Review Q3 roadmap</span><span class="sm-tag tag-m">Medium</span></div>
                 </div>
               </div>
             </div>
           </div>
-          <!-- State 2: Mind map SVG -->
-          <div class="wf-state" id="wf2">
-            <div class="wf-box" style="padding:0;overflow:hidden">
-              <!-- Header bar -->
-              <div style="background:#f5f5f3;padding:8px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid rgba(0,0,0,0.07)">
-                <div style="width:9px;height:9px;border-radius:50%;background:#ff5f57"></div>
-                <div style="width:9px;height:9px;border-radius:50%;background:#febc2e"></div>
-                <div style="width:9px;height:9px;border-radius:50%;background:#28c840"></div>
-                <div style="flex:1;background:rgba(0,0,0,0.06);border-radius:4px;padding:3px 8px;font-size:9px;color:#aaa;margin:0 8px;font-family:monospace">tasks.acreonix.co.uk/dashboard/mindmap</div>
+          <!-- WF2: Mind map -->
+          <div class="wf" id="wf2">
+            <div class="wfb" style="padding:14px;background:#f9f9f7">
+              <svg width="100%" viewBox="0 0 440 280" xmlns="http://www.w3.org/2000/svg" style="font-family:DM Sans,sans-serif;display:block">
+                <rect x="165" y="8" width="110" height="30" rx="8" fill="white" stroke="#2d7a4f" stroke-width="1.8"/>
+                <text x="220" y="20" text-anchor="middle" font-size="9" font-weight="700" fill="#2d7a4f" letter-spacing="1">ACREONIX</text>
+                <text x="220" y="32" text-anchor="middle" font-size="7.5" fill="#c9a84c" letter-spacing="1.5">TASKS</text>
+                <path d="M220 38 Q220 58 86 76" stroke="#2d7a4f" stroke-width="1" fill="none" stroke-opacity=".3"/>
+                <path d="M220 38 Q220 58 220 76" stroke="#c9a84c" stroke-width="1" fill="none" stroke-opacity=".3"/>
+                <path d="M220 38 Q220 58 356 76" stroke="#3b82f6" stroke-width="1" fill="none" stroke-opacity=".3"/>
+                <rect x="20" y="76" width="132" height="34" rx="8" fill="#f0faf4" stroke="#2d7a4f" stroke-width="1.5"/>
+                <text x="48" y="90" font-size="8" fill="#2d7a4f">&#128193;</text><text x="58" y="90" font-size="8.5" font-weight="600" fill="#1a5c35">Acreonix Tasks</text>
+                <text x="58" y="103" font-size="7.5" fill="#888">6 tasks</text>
+                <rect x="154" y="76" width="132" height="34" rx="8" fill="#fdf8ee" stroke="#c9a84c" stroke-width="1.5"/>
+                <text x="182" y="90" font-size="8" fill="#c9a84c">&#128193;</text><text x="192" y="90" font-size="8.5" font-weight="600" fill="#7a5e1a">Client Work</text>
+                <text x="192" y="103" font-size="7.5" fill="#888">3 tasks</text>
+                <rect x="288" y="76" width="132" height="34" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+                <text x="316" y="90" font-size="8" fill="#3b82f6">&#128193;</text><text x="326" y="90" font-size="8.5" font-weight="600" fill="#1d4ed8">Admin</text>
+                <text x="326" y="103" font-size="7.5" fill="#888">2 tasks</text>
+                <path d="M86 110 Q60 138 38 150" stroke="#2d7a4f" stroke-width=".8" fill="none" stroke-opacity=".2"/>
+                <path d="M86 110 Q100 138 104 150" stroke="#2d7a4f" stroke-width=".8" fill="none" stroke-opacity=".2"/>
+                <path d="M86 110 Q128 138 148 150" stroke="#2d7a4f" stroke-width=".8" fill="none" stroke-opacity=".2"/>
+                <rect x="10" y="150" width="62" height="22" rx="6" fill="white" stroke="#e0e0dd"/><circle cx="20" cy="161" r="3.5" fill="#2d7a4f"/><rect x="26" y="157" width="38" height="4" rx="2" fill="#e8f4ee"/>
+                <rect x="78" y="150" width="62" height="22" rx="6" fill="white" stroke="#e0e0dd"/><circle cx="88" cy="161" r="3.5" fill="#ef4444" opacity=".8"/><rect x="94" y="157" width="38" height="4" rx="2" fill="#fff0f0"/>
+                <rect x="142" y="150" width="62" height="22" rx="6" fill="white" stroke="#e0e0dd"/><circle cx="152" cy="161" r="3.5" fill="#888"/><rect x="158" y="157" width="38" height="4" rx="2" fill="#f3f3f1"/>
+                <path d="M220 110 Q205 138 196 150" stroke="#c9a84c" stroke-width=".8" fill="none" stroke-opacity=".2"/>
+                <path d="M220 110 Q244 138 256 150" stroke="#c9a84c" stroke-width=".8" fill="none" stroke-opacity=".2"/>
+                <rect x="170" y="150" width="62" height="22" rx="6" fill="white" stroke="#e0e0dd"/><circle cx="180" cy="161" r="3.5" fill="#c9a84c"/><rect x="186" y="157" width="38" height="4" rx="2" fill="#fdf8ee"/>
+                <rect x="234" y="150" width="62" height="22" rx="6" fill="white" stroke="#e0e0dd"/><circle cx="244" cy="161" r="3.5" fill="#22c55e"/><rect x="250" y="157" width="38" height="4" rx="2" fill="#f0fdf4"/>
+                <circle cx="14" cy="212" r="4" fill="#2d7a4f"/><text x="22" y="216" font-size="8.5" fill="#888">In progress</text>
+                <circle cx="90" cy="212" r="4" fill="#22c55e"/><text x="98" y="216" font-size="8.5" fill="#888">Done</text>
+                <circle cx="144" cy="212" r="4" fill="#ef4444" opacity=".8"/><text x="152" y="216" font-size="8.5" fill="#888">Urgent</text>
+                <circle cx="198" cy="212" r="4" fill="#888"/><text x="206" y="216" font-size="8.5" fill="#888">To do</text>
+                <circle cx="220" cy="23" r="50" fill="none" stroke="#2d7a4f" stroke-width="0.8" stroke-opacity=".1">
+                  <animate attributeName="r" values="46;62;46" dur="3.5s" repeatCount="indefinite"/>
+                  <animate attributeName="stroke-opacity" values=".1;0;.1" dur="3.5s" repeatCount="indefinite"/>
+                </circle>
+              </svg>
+            </div>
+          </div>
+          <!-- WF3: Calendar -->
+          <div class="wf" id="wf3">
+            <div class="wfb">
+              <div style="display:grid;grid-template-columns:repeat(5,1fr);background:#f9f9f7;border-radius:12px;overflow:hidden">
+                <div style="padding:10px 7px;border-right:1px solid rgba(0,0,0,.06)">
+                  <div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Mon</div>
+                  <div style="background:rgba(45,122,79,.1);border-left:2.5px solid #2d7a4f;border-radius:4px;padding:4px 5px;margin-bottom:3px;font-size:8.5px;color:#1a5c35">Fix bug<br><span style="font-size:7.5px;color:#888">9&#8211;10am</span></div>
+                  <div style="background:rgba(201,168,76,.1);border-left:2.5px solid #c9a84c;border-radius:4px;padding:4px 5px;font-size:8.5px;color:#7a5e1a">Proposal<br><span style="font-size:7.5px;color:#888">11am</span></div>
+                </div>
+                <div style="padding:10px 7px;border-right:1px solid rgba(0,0,0,.06)">
+                  <div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Tue</div>
+                  <div style="background:rgba(45,122,79,.1);border-left:2.5px solid #2d7a4f;border-radius:4px;padding:4px 5px;font-size:8.5px;color:#1a5c35">Design<br><span style="font-size:7.5px;color:#888">9&#8211;11am</span></div>
+                </div>
+                <div style="padding:10px 7px;border-right:1px solid rgba(0,0,0,.06)">
+                  <div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Wed</div>
+                  <div style="background:rgba(201,168,76,.1);border-left:2.5px solid #c9a84c;border-radius:4px;padding:4px 5px;font-size:8.5px;color:#7a5e1a">Call<br><span style="font-size:7.5px;color:#888">10am</span></div>
+                  <div style="background:rgba(45,122,79,.1);border-left:2.5px solid #2d7a4f;border-radius:4px;padding:4px 5px;font-size:8.5px;color:#1a5c35;margin-top:3px">Roadmap<br><span style="font-size:7.5px;color:#888">2&#8211;4pm</span></div>
+                </div>
+                <div style="padding:10px 7px;border-right:1px solid rgba(0,0,0,.06)">
+                  <div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Thu</div>
+                  <div style="background:rgba(45,122,79,.1);border-left:2.5px solid #2d7a4f;border-radius:4px;padding:4px 5px;font-size:8.5px;color:#1a5c35">Deep work<br><span style="font-size:7.5px;color:#888">9am&#8211;12</span></div>
+                </div>
+                <div style="padding:10px 7px">
+                  <div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Fri</div>
+                  <div style="background:rgba(201,168,76,.1);border-left:2.5px solid #c9a84c;border-radius:4px;padding:4px 5px;font-size:8.5px;color:#7a5e1a">Invoice<br><span style="font-size:7.5px;color:#888">9am</span></div>
+                </div>
               </div>
-              <div style="background:#f9f9f7;padding:16px">
-                <svg width="100%" viewBox="0 0 460 290" xmlns="http://www.w3.org/2000/svg" style="font-family:DM Sans,sans-serif;display:block">
-                  <!-- Root node -->
-                  <rect x="175" y="8" width="110" height="32" rx="8" fill="white" stroke="#2d7a4f" stroke-width="1.8"/>
-                  <text x="230" y="22" text-anchor="middle" font-size="9.5" font-weight="700" fill="#2d7a4f" letter-spacing="1">ACREONIX</text>
-                  <text x="230" y="34" text-anchor="middle" font-size="8" fill="#c9a84c" letter-spacing="1.5">TASKS</text>
-
-                  <!-- Connector lines -->
-                  <path d="M230 40 Q230 60 90 80" stroke="#2d7a4f" stroke-width="1" fill="none" stroke-opacity=".3"/>
-                  <path d="M230 40 Q230 60 230 80" stroke="#c9a84c" stroke-width="1" fill="none" stroke-opacity=".3"/>
-                  <path d="M230 40 Q230 60 370 80" stroke="#3b82f6" stroke-width="1" fill="none" stroke-opacity=".3"/>
-
-                  <!-- Project 1: Acreonix Tasks (green) -->
-                  <rect x="22" y="80" width="134" height="38" rx="8" fill="#f0faf4" stroke="#2d7a4f" stroke-width="1.5"/>
-                  <text x="36" y="96" font-size="8" fill="#2d7a4f">&#128193;</text>
-                  <text x="48" y="96" font-size="9" font-weight="600" fill="#1a5c35">Acreonix Tasks</text>
-                  <text x="48" y="110" font-size="8" fill="#888">6 tasks &middot; in progress</text>
-
-                  <!-- Project 2: Client Work (gold) -->
-                  <rect x="163" y="80" width="134" height="38" rx="8" fill="#fdf8ee" stroke="#c9a84c" stroke-width="1.5"/>
-                  <text x="177" y="96" font-size="8" fill="#c9a84c">&#128193;</text>
-                  <text x="189" y="96" font-size="9" font-weight="600" fill="#7a5e1a">Client Work</text>
-                  <text x="189" y="110" font-size="8" fill="#888">3 tasks &middot; on track</text>
-
-                  <!-- Project 3: Admin (blue) -->
-                  <rect x="304" y="80" width="134" height="38" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
-                  <text x="318" y="96" font-size="8" fill="#3b82f6">&#128193;</text>
-                  <text x="330" y="96" font-size="9" font-weight="600" fill="#1d4ed8">Admin</text>
-                  <text x="330" y="110" font-size="8" fill="#888">2 tasks &middot; done</text>
-
-                  <!-- Task lines from project 1 -->
-                  <path d="M89 118 Q60 145 42 158" stroke="#2d7a4f" stroke-width="0.8" fill="none" stroke-opacity=".2"/>
-                  <path d="M89 118 Q105 145 108 158" stroke="#2d7a4f" stroke-width="0.8" fill="none" stroke-opacity=".2"/>
-                  <path d="M89 118 Q130 145 158 158" stroke="#2d7a4f" stroke-width="0.8" fill="none" stroke-opacity=".2"/>
-
-                  <!-- Task nodes row 1 -->
-                  <rect x="10" y="158" width="74" height="24" rx="6" fill="white" stroke="#e0e0dd"/>
-                  <circle cx="20" cy="170" r="3.5" fill="#2d7a4f"/>
-                  <rect x="27" y="165" width="48" height="4" rx="2" fill="#e8f4ee"/>
-                  <rect x="27" y="173" width="36" height="3" rx="1.5" fill="#f3f3f1"/>
-
-                  <rect x="90" y="158" width="74" height="24" rx="6" fill="white" stroke="#e0e0dd"/>
-                  <circle cx="100" cy="170" r="3.5" fill="#ef4444" opacity=".8"/>
-                  <rect x="107" y="165" width="48" height="4" rx="2" fill="#fff0f0"/>
-                  <rect x="107" y="173" width="30" height="3" rx="1.5" fill="#f3f3f1"/>
-
-                  <rect x="136" y="158" width="74" height="24" rx="6" fill="white" stroke="#e0e0dd"/>
-                  <circle cx="146" cy="170" r="3.5" fill="#888"/>
-                  <rect x="153" y="165" width="48" height="4" rx="2" fill="#f3f3f1"/>
-                  <rect x="153" y="173" width="40" height="3" rx="1.5" fill="#f3f3f1"/>
-
-                  <!-- Task lines from project 2 -->
-                  <path d="M230 118 Q215 145 210 158" stroke="#c9a84c" stroke-width="0.8" fill="none" stroke-opacity=".2"/>
-                  <path d="M230 118 Q252 145 264 158" stroke="#c9a84c" stroke-width="0.8" fill="none" stroke-opacity=".2"/>
-
-                  <rect x="182" y="158" width="68" height="24" rx="6" fill="white" stroke="#e0e0dd"/>
-                  <circle cx="192" cy="170" r="3.5" fill="#c9a84c"/>
-                  <rect x="199" y="165" width="42" height="4" rx="2" fill="#fdf8ee"/>
-                  <rect x="199" y="173" width="32" height="3" rx="1.5" fill="#f3f3f1"/>
-
-                  <rect x="256" y="158" width="68" height="24" rx="6" fill="white" stroke="#e0e0dd"/>
-                  <circle cx="266" cy="170" r="3.5" fill="#22c55e"/>
-                  <rect x="273" y="165" width="42" height="4" rx="2" fill="#f0fdf4"/>
-                  <rect x="273" y="173" width="28" height="3" rx="1.5" fill="#f3f3f1"/>
-
-                  <!-- Task lines from project 3 -->
-                  <path d="M371 118 Q356 145 348 158" stroke="#3b82f6" stroke-width="0.8" fill="none" stroke-opacity=".2"/>
-                  <path d="M371 118 Q393 145 400 158" stroke="#3b82f6" stroke-width="0.8" fill="none" stroke-opacity=".2"/>
-
-                  <rect x="322" y="158" width="68" height="24" rx="6" fill="white" stroke="#e0e0dd"/>
-                  <circle cx="332" cy="170" r="3.5" fill="#22c55e"/>
-                  <rect x="339" y="165" width="42" height="4" rx="2" fill="#f0fdf4"/>
-                  <rect x="339" y="173" width="34" height="3" rx="1.5" fill="#f3f3f1"/>
-
-                  <rect x="396" y="158" width="54" height="24" rx="6" fill="white" stroke="#e0e0dd"/>
-                  <circle cx="404" cy="170" r="3.5" fill="#888"/>
-                  <rect x="410" y="165" width="32" height="4" rx="2" fill="#f3f3f1"/>
-                  <rect x="410" y="173" width="26" height="3" rx="1.5" fill="#f3f3f1"/>
-
-                  <!-- Legend -->
-                  <circle cx="14" cy="218" r="4" fill="#2d7a4f"/>
-                  <text x="22" y="222" font-size="9" fill="#888">In progress</text>
-                  <circle cx="90" cy="218" r="4" fill="#22c55e"/>
-                  <text x="98" y="222" font-size="9" fill="#888">Done</text>
-                  <circle cx="148" cy="218" r="4" fill="#ef4444" opacity=".8"/>
-                  <text x="156" y="222" font-size="9" fill="#888">Urgent</text>
-                  <circle cx="210" cy="218" r="4" fill="#888"/>
-                  <text x="218" y="222" font-size="9" fill="#888">To do</text>
-
-                  <!-- Pulse animation on root -->
-                  <circle cx="230" cy="24" r="56" fill="none" stroke="#2d7a4f" stroke-width="0.8" stroke-opacity=".1">
-                    <animate attributeName="r" values="52;68;52" dur="3.5s" repeatCount="indefinite"/>
-                    <animate attributeName="stroke-opacity" values=".1;0;.1" dur="3.5s" repeatCount="indefinite"/>
-                  </circle>
-
-                  <!-- "Click to open" hint -->
-                  <rect x="138" y="234" width="144" height="20" rx="10" fill="rgba(45,122,79,.08)"/>
-                  <text x="210" y="248" text-anchor="middle" font-size="8.5" fill="#2d7a4f" font-weight="500">Click any node to open task</text>
+              <div style="padding:9px 14px;border-top:1px solid rgba(0,0,0,.06);display:flex;align-items:center;gap:7px">
+                <span style="font-size:8.5px;background:#f0faf4;color:#2d7a4f;font-weight:700;padding:2px 8px;border-radius:4px;border:1px solid rgba(45,122,79,.15)">AI scheduled</span>
+                <span style="font-size:9.5px;color:#888">Tasks grouped by project</span>
+              </div>
+            </div>
+          </div>
+          <!-- WF4: Insights -->
+          <div class="wf" id="wf4">
+            <div class="wfb" style="padding:14px">
+              <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+                <svg viewBox="0 0 64 64" width="60" height="60">
+                  <circle cx="32" cy="32" r="26" fill="none" stroke="#f0f0ee" stroke-width="7"/>
+                  <circle cx="32" cy="32" r="26" fill="none" stroke="#2d7a4f" stroke-width="7" stroke-dasharray="163.36" stroke-dashoffset="40.84" stroke-linecap="round" transform="rotate(-90 32 32)"/>
+                  <text x="32" y="36" text-anchor="middle" font-size="13" font-weight="700" fill="#111">75</text>
                 </svg>
-              </div>
-            </div>
-          </div>
-          <!-- State 3: Calendar week view -->
-          <div class="wf-state" id="wf3">
-            <div class="wf-box">
-              <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0;background:#f9f9f7;border-radius:12px;overflow:hidden">
-                <div style="padding:10px 8px;border-right:1px solid rgba(0,0,0,.06)">
-                  <div class="wf3-day-hdr">Mon</div>
-                  <div class="wf3-event" style="background:rgba(45,122,79,.1);border-left:2.5px solid #2d7a4f;color:#1a5c35">Fix bug<br><span style="font-size:7.5px;color:#888">9&#8211;10am</span></div>
-                  <div class="wf3-event" style="background:rgba(201,168,76,.1);border-left:2.5px solid #c9a84c;color:#7a5e1a">Proposal<br><span style="font-size:7.5px;color:#888">11am&#8211;1pm</span></div>
-                  <div class="wf3-event" style="background:rgba(0,0,0,.04);border-left:2.5px solid #ccc;color:#888">Lunch<br><span style="font-size:7.5px;color:#bbb">1&#8211;1:30</span></div>
-                </div>
-                <div style="padding:10px 8px;border-right:1px solid rgba(0,0,0,.06)">
-                  <div class="wf3-day-hdr">Tue</div>
-                  <div class="wf3-event" style="background:rgba(45,122,79,.1);border-left:2.5px solid #2d7a4f;color:#1a5c35">Hero design<br><span style="font-size:7.5px;color:#888">9&#8211;11am</span></div>
-                  <div class="wf3-event" style="background:rgba(45,122,79,.1);border-left:2.5px solid #2d7a4f;color:#1a5c35">Q3 review<br><span style="font-size:7.5px;color:#888">2&#8211;3pm</span></div>
-                </div>
-                <div style="padding:10px 8px;border-right:1px solid rgba(0,0,0,.06)">
-                  <div class="wf3-day-hdr">Wed</div>
-                  <div class="wf3-event" style="background:rgba(201,168,76,.1);border-left:2.5px solid #c9a84c;color:#7a5e1a">James call<br><span style="font-size:7.5px;color:#888">10am</span></div>
-                  <div class="wf3-event" style="background:rgba(45,122,79,.1);border-left:2.5px solid #2d7a4f;color:#1a5c35">Roadmap<br><span style="font-size:7.5px;color:#888">2&#8211;4pm</span></div>
-                </div>
-                <div style="padding:10px 8px;border-right:1px solid rgba(0,0,0,.06)">
-                  <div class="wf3-day-hdr">Thu</div>
-                  <div class="wf3-event" style="background:rgba(45,122,79,.1);border-left:2.5px solid #2d7a4f;color:#1a5c35">Deep work<br><span style="font-size:7.5px;color:#888">9am&#8211;12</span></div>
-                </div>
-                <div style="padding:10px 8px">
-                  <div class="wf3-day-hdr">Fri</div>
-                  <div class="wf3-event" style="background:rgba(201,168,76,.1);border-left:2.5px solid #c9a84c;color:#7a5e1a">Invoice<br><span style="font-size:7.5px;color:#888">9am</span></div>
-                  <div class="wf3-event" style="background:rgba(45,122,79,.1);border-left:2.5px solid #2d7a4f;color:#1a5c35">Review week<br><span style="font-size:7.5px;color:#888">4&#8211;5pm</span></div>
+                <div>
+                  <div style="font-size:11px;font-weight:700;color:#2d7a4f;margin-bottom:3px">Good focus week</div>
+                  <div style="font-size:10px;color:#888;line-height:1.5">8 tasks done &middot; 14h 20m tracked</div>
                 </div>
               </div>
-              <div style="padding:10px 14px;border-top:1px solid rgba(0,0,0,.06);display:flex;align-items:center;gap:7px">
-                <span style="font-size:9px;background:#f0faf4;color:#2d7a4f;font-weight:600;padding:2px 8px;border-radius:5px;border:1px solid rgba(45,122,79,.15)">AI scheduled</span>
-                <span style="font-size:9.5px;color:#888">Tasks grouped by project to protect focus</span>
-              </div>
-            </div>
-          </div>
-          <!-- State 4: Insights -->
-          <div class="wf-state" id="wf4">
-            <div class="wf-box">
-              <div class="wf4-wrap">
-                <div class="wf4-score">
-                  <svg class="wf4-ring" viewBox="0 0 64 64">
-                    <circle cx="32" cy="32" r="26" fill="none" stroke="#f0f0ee" stroke-width="7"/>
-                    <circle cx="32" cy="32" r="26" fill="none" stroke="#2d7a4f" stroke-width="7"
-                      stroke-dasharray="163.36" stroke-dashoffset="40.84"
-                      stroke-linecap="round" transform="rotate(-90 32 32)"/>
-                    <text x="32" y="36" text-anchor="middle" font-size="13" font-weight="700" fill="#111">75</text>
-                  </svg>
-                  <div>
-                    <div style="font-size:11px;font-weight:600;color:#2d7a4f;margin-bottom:3px">Good focus week</div>
-                    <div style="font-size:10px;color:#888;line-height:1.5">You completed 8 tasks and tracked 14h 20m of focused work.</div>
-                  </div>
-                </div>
-                <div class="wf4-bar-label"><span>Acreonix Tasks</span><span style="color:#2d7a4f;font-weight:600">42%</span></div>
-                <div class="wf4-bar"><div class="wf4-bar-fill" style="width:42%;background:#2d7a4f"></div></div>
-                <div class="wf4-bar-label"><span>Client Work</span><span style="color:#c9a84c;font-weight:600">35%</span></div>
-                <div class="wf4-bar"><div class="wf4-bar-fill" style="width:35%;background:#c9a84c"></div></div>
-                <div class="wf4-bar-label"><span>Admin</span><span style="color:#888;font-weight:600">23%</span></div>
-                <div class="wf4-bar"><div class="wf4-bar-fill" style="width:23%;background:#aaa"></div></div>
-                <div class="wf4-tip">
-                  <span style="color:#c9a84c;font-weight:600">&#128161; AI tip:</span> You work best 9&#8211;11am. Schedule your hardest task first thing next week.
-                </div>
+              <div style="display:flex;justify-content:space-between;font-size:9.5px;margin-bottom:4px;color:#444"><span>Acreonix Tasks</span><span style="color:#2d7a4f;font-weight:700">42%</span></div>
+              <div style="height:5px;background:rgba(0,0,0,.07);border-radius:3px;overflow:hidden;margin-bottom:8px"><div style="width:42%;height:100%;background:#2d7a4f;border-radius:3px"></div></div>
+              <div style="display:flex;justify-content:space-between;font-size:9.5px;margin-bottom:4px;color:#444"><span>Client Work</span><span style="color:#c9a84c;font-weight:700">35%</span></div>
+              <div style="height:5px;background:rgba(0,0,0,.07);border-radius:3px;overflow:hidden;margin-bottom:10px"><div style="width:35%;height:100%;background:#c9a84c;border-radius:3px"></div></div>
+              <div style="background:#fdf8ee;border:1px solid rgba(201,168,76,.2);border-radius:7px;padding:8px 10px;font-size:9.5px;color:#444;line-height:1.5">
+                <span style="color:#c9a84c;font-weight:700">&#128161; AI tip:</span> You work best 9&#8211;11am. Schedule your hardest task first thing next week.
               </div>
             </div>
           </div>
         </div>
-        <!-- Step dots (desktop) -->
-        <div id="step-dots" style="position:absolute;left:50%;bottom:40px;transform:translateX(-50%);display:none;gap:7px"></div>
       </div>
     </div>
   </div>
 </section>
 
+<!-- MOBILE STORY (only on mobile) -->
+<section class="mob-story">
+  <div class="mob-hdr">
+    <div class="mob-hdr-label">How it works</div>
+    <h2 class="mob-hdr-h">From chaos<br>to <em>clarity</em></h2>
+  </div>
+
+  <div class="mob-card">
+    <div class="mob-cn">01 &mdash; Capture</div>
+    <div class="mob-icon">✦</div>
+    <h3 class="mob-h">Paste anything.<br><em>AI structures it.</em></h3>
+    <p class="mob-p">Brain dump, email, WhatsApp &mdash; paste it all. AI extracts every task, groups into projects, and shows a preview before anything saves.</p>
+    <ul class="mob-ul">
+      <li>Natural language &mdash; no forms or templates</li>
+      <li>AI creates projects from context automatically</li>
+      <li>Full preview and edit before saving</li>
+    </ul>
+    <div class="mob-screen">
+      <div class="mob-screen-bar"><div class="mob-sc-dot" style="background:#ff5f57"></div><div class="mob-sc-dot" style="background:#febc2e"></div><div class="mob-sc-dot" style="background:#28c840"></div><div class="mob-sc-url">…/extract</div></div>
+      <div style="padding:14px">
+        <div style="background:#f9f9f7;border:1px solid rgba(0,0,0,.07);border-radius:8px;padding:10px;font-size:11px;color:#888;line-height:1.6;margin-bottom:10px">&ldquo;Finish proposal by Friday, fix login bug, book call with James...&rdquo;</div>
+        <div style="background:#2d7a4f;color:#fff;border-radius:7px;padding:9px;text-align:center;font-size:11px;font-weight:700;margin-bottom:10px">&#10022; Extract tasks with AI</div>
+        <div style="background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:8px;overflow:hidden">
+          <div style="padding:6px 10px;border-bottom:1px solid rgba(0,0,0,.05);font-size:9px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em;display:flex;justify-content:space-between"><span>3 tasks extracted</span><span style="color:#2d7a4f">Preview &#10003;</span></div>
+          <div style="padding:7px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(0,0,0,.04)"><div class="sm-ck"></div><span style="font-size:11px;flex:1">Finish proposal</span><span class="sm-tag tag-u">Urgent</span></div>
+          <div style="padding:7px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(0,0,0,.04)"><div class="sm-ck"></div><span style="font-size:11px;flex:1">Fix login bug</span><span class="sm-tag tag-h">High</span></div>
+          <div style="padding:7px 10px;display:flex;align-items:center;gap:8px"><div class="sm-ck"></div><span style="font-size:11px;flex:1">Book call with James</span><span class="sm-tag tag-m">Medium</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mob-card">
+    <div class="mob-cn">02 &mdash; Organise</div>
+    <div class="mob-icon">🗺</div>
+    <h3 class="mob-h">Every project.<br><em>Mapped visually.</em></h3>
+    <p class="mob-p">Switch between list and mind map at any time. See every project and task on one interactive canvas that updates in real time.</p>
+    <ul class="mob-ul">
+      <li>Colour-coded by project and priority</li>
+      <li>Click any node to edit instantly</li>
+      <li>Live task status always visible</li>
+    </ul>
+  </div>
+
+  <div class="mob-card">
+    <div class="mob-cn">03 &mdash; Schedule</div>
+    <div class="mob-icon">📅</div>
+    <h3 class="mob-h">One click.<br><em>Your week, built.</em></h3>
+    <p class="mob-p">AI reads your deadlines and priorities, then builds an optimised week &mdash; grouping tasks by project so you stay in flow.</p>
+    <ul class="mob-ul">
+      <li>Week, day, month views</li>
+      <li>Groups tasks by project to protect focus</li>
+      <li>Drag and drop to adjust</li>
+    </ul>
+    <div class="mob-screen">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);background:#f9f9f7;padding:10px 8px;gap:3px">
+        <div><div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:4px;text-transform:uppercase">Mon</div><div style="background:rgba(45,122,79,.1);border-left:2px solid #2d7a4f;border-radius:3px;padding:3px 5px;font-size:8px;color:#1a5c35;margin-bottom:2px">Fix bug<br><span style="font-size:7px;color:#888">9am</span></div><div style="background:rgba(201,168,76,.1);border-left:2px solid #c9a84c;border-radius:3px;padding:3px 5px;font-size:8px;color:#7a5e1a">Proposal<br><span style="font-size:7px;color:#888">11am</span></div></div>
+        <div><div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:4px;text-transform:uppercase">Tue</div><div style="background:rgba(45,122,79,.1);border-left:2px solid #2d7a4f;border-radius:3px;padding:3px 5px;font-size:8px;color:#1a5c35">Design<br><span style="font-size:7px;color:#888">9&#8211;11</span></div></div>
+        <div><div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:4px;text-transform:uppercase">Wed</div><div style="background:rgba(201,168,76,.1);border-left:2px solid #c9a84c;border-radius:3px;padding:3px 5px;font-size:8px;color:#7a5e1a">Call<br><span style="font-size:7px;color:#888">10am</span></div></div>
+        <div><div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:4px;text-transform:uppercase">Thu</div><div style="background:rgba(45,122,79,.1);border-left:2px solid #2d7a4f;border-radius:3px;padding:3px 5px;font-size:8px;color:#1a5c35">Deep<br><span style="font-size:7px;color:#888">9&#8211;12</span></div></div>
+        <div><div style="text-align:center;font-size:9px;color:#aaa;margin-bottom:4px;text-transform:uppercase">Fri</div><div style="background:rgba(201,168,76,.1);border-left:2px solid #c9a84c;border-radius:3px;padding:3px 5px;font-size:8px;color:#7a5e1a">Invoice<br><span style="font-size:7px;color:#888">9am</span></div></div>
+      </div>
+      <div style="padding:8px 12px;border-top:1px solid rgba(0,0,0,.06);font-size:9.5px;color:#888;display:flex;align-items:center;gap:6px"><span style="background:#f0faf4;color:#2d7a4f;font-size:8.5px;font-weight:700;padding:2px 7px;border-radius:4px;border:1px solid rgba(45,122,79,.15)">AI scheduled</span>Grouped by project</div>
+    </div>
+  </div>
+
+  <div class="mob-card">
+    <div class="mob-cn">04 &mdash; Improve</div>
+    <div class="mob-icon">📊</div>
+    <h3 class="mob-h">Track time.<br><em>Get smarter.</em></h3>
+    <p class="mob-p">Log time with a live timer or in plain English. Each week AI tells you where your time went and what to change.</p>
+    <ul class="mob-ul">
+      <li>Tap the timer from anywhere in the app</li>
+      <li>Weekly AI insight score</li>
+      <li>Three specific tips every Monday</li>
+    </ul>
+  </div>
+
+  <div style="padding:40px 24px;text-align:center">
+    <a href="/dashboard/extract" class="btn btn-p" style="display:inline-flex;font-size:15px;padding:14px 32px">Start for free &#8594;</a>
+    <p style="font-size:11px;color:#bbb;margin-top:12px;letter-spacing:.04em">FREE &middot; NO CREDIT CARD &middot; 60 SECONDS</p>
+  </div>
+</section>
+
 <!-- EMOTION BREAK 2 -->
-<div class="emotion-section reveal" style="background:#fff">
+<div class="em reveal" style="background:#fff">
   <h2 class="em-h">Not another to-do app.<br><em>A system that thinks.</em></h2>
   <p class="em-p">Acreonix Tasks learns how you work, adapts to your pace, and gets smarter every week you use it.</p>
 </div>
 
 <!-- PRICING -->
 <section id="pricing">
-  <span class="section-label reveal">Simple pricing</span>
-  <h2 class="section-h reveal">Start free.<br><em>Upgrade when ready.</em></h2>
-  <p class="section-sub reveal">All core features free. Upgrade for advanced AI, unlimited history, and team collaboration.</p>
-
-  <div class="pricing-grid reveal">
+  <span class="sec-label reveal">Simple pricing</span>
+  <h2 class="sec-h reveal">Start free.<br><em>Upgrade when ready.</em></h2>
+  <p class="sec-sub reveal">Core features free forever. Upgrade for unlimited AI, full calendar, and team collaboration.</p>
+  <div class="pricing reveal">
     <div class="plan">
       <div class="plan-name">Free</div>
       <div class="plan-price">&#163;0<span>/mo</span></div>
       <div class="plan-period">Forever free</div>
-      <div class="plan-divider"></div>
-      <ul class="plan-features">
-        <li>AI task extraction</li>
-        <li>3 projects &middot; 20 tasks each</li>
-        <li>Weekly AI schedule</li>
-        <li>Mind map view</li>
-        <li>30-day task history</li>
-      </ul>
-      <a href="/dashboard/extract" class="plan-btn plan-btn-outline">Get started free</a>
+      <div class="plan-div"></div>
+      <ul class="plan-ul"><li>AI task extraction (3/month)</li><li>3 projects &middot; 20 tasks each</li><li>Weekly AI schedule</li><li>Mind map view</li><li>30-day task history</li></ul>
+      <a href="/dashboard/extract" class="plan-btn pb-o">Get started free</a>
     </div>
-    <div class="plan featured">
+    <div class="plan feat">
       <div class="plan-badge">Most popular</div>
       <div class="plan-name">Pro</div>
       <div class="plan-price">&#163;12<span>/mo</span></div>
       <div class="plan-period">7-day free trial &middot; cancel anytime</div>
-      <div class="plan-divider"></div>
-      <ul class="plan-features">
-        <li>Everything in Free</li>
-        <li>Unlimited projects &amp; tasks</li>
-        <li>Unlimited AI extracts</li>
-        <li>Full calendar &mdash; week &amp; month</li>
-        <li>Time tracker &amp; AI insights</li>
-        <li>Unlimited history</li>
-      </ul>
-      <a href="/dashboard/extract" class="plan-btn plan-btn-green">Start free trial &#8594;</a>
+      <div class="plan-div"></div>
+      <ul class="plan-ul"><li>Everything in Free</li><li>Unlimited projects &amp; tasks</li><li>Unlimited AI extracts</li><li>Full calendar &mdash; week &amp; month</li><li>Time tracker &amp; AI insights</li><li>Unlimited history</li></ul>
+      <a href="/dashboard/extract" class="plan-btn pb-g">Start free trial &#8594;</a>
     </div>
     <div class="plan">
       <div class="plan-name">Team</div>
       <div class="plan-price">&#163;29<span>/mo</span></div>
       <div class="plan-period">Up to 5 members</div>
-      <div class="plan-divider"></div>
-      <ul class="plan-features">
-        <li>Everything in Pro</li>
-        <li>Shared projects &amp; calendar</li>
-        <li>Team insights dashboard</li>
-        <li>Member invite system</li>
-        <li>Dedicated onboarding</li>
-      </ul>
-      <a href="mailto:sales@acreonix.co.uk" class="plan-btn plan-btn-outline">Contact us</a>
+      <div class="plan-div"></div>
+      <ul class="plan-ul"><li>Everything in Pro</li><li>Shared projects &amp; calendar</li><li>Team insights dashboard</li><li>Member invite system</li><li>Dedicated onboarding</li></ul>
+      <a href="mailto:sales@acreonix.co.uk" class="plan-btn pb-o">Contact us</a>
     </div>
   </div>
 </section>
@@ -760,110 +585,66 @@ footer{padding:56px 60px 36px;border-top:1px solid var(--border);background:#fff
 <section id="cta">
   <h2 class="cta-h reveal">Your most focused week<br>starts <em>right now.</em></h2>
   <p class="cta-p reveal">Takes 60 seconds. Paste your tasks. AI does the rest.</p>
-  <div class="reveal">
-    <a href="/dashboard/extract" class="btn-hero btn-hero-primary" style="font-size:16px;padding:14px 36px;display:inline-flex">
-      Start for free &#8594;
-    </a>
-  </div>
+  <div class="reveal"><a href="/dashboard/extract" class="btn btn-p" style="font-size:16px;padding:14px 38px;display:inline-flex">Start for free &#8594;</a></div>
   <p class="cta-note reveal">FREE &nbsp;&middot;&nbsp; NO CREDIT CARD &nbsp;&middot;&nbsp; PART OF THE ACREONIX SUITE</p>
 </section>
 
 <!-- FOOTER -->
 <footer>
-  <div class="footer-grid">
+  <div class="f-grid">
     <div>
-      <div class="footer-logo-wrap">
-        <img src="/logo.png" alt="Acreonix Tasks" style="width:28px;height:28px;object-fit:contain">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
+        <img src="/logo.png" alt="" style="width:26px;height:26px;object-fit:contain">
         <span style="font-size:15px;font-weight:600;color:#111;letter-spacing:-.01em">Acreonix</span>
-        <span style="font-size:9px;font-weight:600;color:#c9a84c;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;background:rgba(201,168,76,.1);border-radius:4px">Tasks</span>
+        <span style="font-size:9px;font-weight:600;color:#c9a84c;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;background:rgba(201,168,76,.1);border-radius:4px">Tasks</span>
       </div>
-      <p class="footer-tagline">AI-powered task management and smart scheduling. Paste your work &mdash; AI organises, schedules, and learns from your habits.</p>
-      <div class="footer-contact">&#9993; <a href="mailto:sales@acreonix.co.uk">sales@acreonix.co.uk</a></div>
-      <div class="footer-contact">&#128205; Unit 1 Generator Hall, Electric Wharf, Coventry, CV1 4JL</div>
+      <p class="f-tagline">AI-powered task management and smart scheduling. Paste your work &mdash; AI organises, schedules, and learns from your habits.</p>
+      <div class="f-contact">&#9993; <a href="mailto:sales@acreonix.co.uk">sales@acreonix.co.uk</a></div>
+      <div class="f-contact">&#128205; Electric Wharf, Coventry, CV1 4JL</div>
     </div>
     <div>
-      <div class="fc-title">Platform</div>
-      <ul class="fc-links">
-        <li><a href="/dashboard">Open app</a></li>
-        <li><a href="/sign-in">Sign in</a></li>
-        <li><a href="/sign-up">Create account</a></li>
-        <li><a href="/dashboard/billing">Pricing</a></li>
-      </ul>
+      <div class="f-title">Platform</div>
+      <ul class="f-links"><li><a href="/dashboard">Open app</a></li><li><a href="/sign-in">Sign in</a></li><li><a href="/sign-up">Create account</a></li><li><a href="#pricing">Pricing</a></li></ul>
     </div>
     <div>
-      <div class="fc-title">Acreonix Suite</div>
-      <ul class="fc-links">
-        <li><a href="https://acreonix.co.uk" style="color:#3B82F6">AI Lead Agent &#8599;</a></li>
-        <li><a href="https://acreonix.co.uk/rms" style="color:#C41E3A">Acreonix RMS &#8599;</a></li>
-        <li><a href="/" style="color:#2d7a4f">Acreonix Tasks &#8599;</a></li>
-      </ul>
+      <div class="f-title">Acreonix Suite</div>
+      <ul class="f-links"><li><a href="https://acreonix.co.uk" style="color:#3B82F6">AI Lead Agent &#8599;</a></li><li><a href="https://acreonix.co.uk/rms" style="color:#C41E3A">Acreonix RMS &#8599;</a></li><li><a href="/" style="color:#2d7a4f">Acreonix Tasks &#8599;</a></li></ul>
     </div>
     <div>
-      <div class="fc-title">Company</div>
-      <ul class="fc-links">
-        <li><a href="mailto:sales@acreonix.co.uk">Contact sales</a></li>
-        <li><a href="https://acreonix.co.uk/privacy">Privacy</a></li>
-        <li><a href="https://acreonix.co.uk/terms">Terms</a></li>
-      </ul>
+      <div class="f-title">Company</div>
+      <ul class="f-links"><li><a href="mailto:sales@acreonix.co.uk">Contact sales</a></li><li><a href="https://acreonix.co.uk/privacy">Privacy</a></li><li><a href="https://acreonix.co.uk/terms">Terms</a></li></ul>
     </div>
   </div>
-  <div class="footer-bottom">
-    <p class="footer-copy">&#169; 2026 Acreonix Ltd. All rights reserved.</p>
-    <p class="footer-copy">Part of the Acreonix Suite</p>
+  <div class="f-btm">
+    <p class="f-copy">&#169; 2026 Acreonix Ltd. All rights reserved.</p>
+    <p class="f-copy">Part of the Acreonix Suite</p>
   </div>
 </footer>
 
 <script>
-// ── Scroll reveal ──
-const obs = new IntersectionObserver(entries => {
-  entries.forEach(e => { if(e.isIntersecting){ e.target.classList.add('visible'); obs.unobserve(e.target) } })
-}, {threshold: 0.12})
+// Reveal on scroll
+const obs = new IntersectionObserver(e => e.forEach(x => { if(x.isIntersecting){x.target.classList.add('vis');obs.unobserve(x.target)} }),{threshold:.1})
 document.querySelectorAll('.reveal').forEach(el => obs.observe(el))
 
-// ── Desktop scroll story ──
-const isMobile = () => window.innerWidth <= 768
-
-const steps = ['step1','step2','step3','step4']
-const wfStates = ['wf1','wf2','wf3','wf4']
-let currentStep = 0
-
-function setStep(idx) {
-  if(idx === currentStep) return
-  // Fade out current
-  document.getElementById(steps[currentStep]).classList.remove('active')
-  document.getElementById(wfStates[currentStep]).classList.remove('active')
-  currentStep = idx
-  // Fade in new
-  document.getElementById(steps[currentStep]).classList.add('active')
-  document.getElementById(wfStates[currentStep]).classList.add('active')
+// Desktop scroll story
+const steps = ['s1','s2','s3','s4'], wfs = ['wf1','wf2','wf3','wf4']
+let cur = 0
+function setStep(i){
+  if(i===cur) return
+  document.getElementById(steps[cur]).classList.remove('on')
+  document.getElementById(wfs[cur]).classList.remove('on')
+  cur = i
+  document.getElementById(steps[cur]).classList.add('on')
+  document.getElementById(wfs[cur]).classList.add('on')
 }
-
-// Desktop: drive from scroll
-function onScroll() {
-  if(isMobile()) return
+window.addEventListener('scroll', () => {
+  if(window.innerWidth <= 768) return
   const track = document.getElementById('story')
   if(!track) return
-  const rect = track.getBoundingClientRect()
-  const progress = Math.max(0, Math.min(1, -rect.top / (rect.height - window.innerHeight)))
-  const idx = Math.min(steps.length - 1, Math.floor(progress * steps.length))
-  setStep(idx)
-}
-window.addEventListener('scroll', onScroll, {passive: true})
-
-// Mobile: auto-cycle every 3s
-let mobileTimer
-function startMobileCycle() {
-  if(!isMobile()) return
-  mobileTimer = setInterval(() => {
-    setStep((currentStep + 1) % steps.length)
-  }, 3000)
-}
-startMobileCycle()
-
-window.addEventListener('resize', () => {
-  if(isMobile()) { startMobileCycle() }
-  else { clearInterval(mobileTimer) }
-})
+  const r = track.getBoundingClientRect()
+  const p = Math.max(0,Math.min(1,-r.top/(r.height-window.innerHeight)))
+  setStep(Math.min(steps.length-1,Math.floor(p*steps.length)))
+}, {passive:true})
 </script>
 </body>
 </html>
