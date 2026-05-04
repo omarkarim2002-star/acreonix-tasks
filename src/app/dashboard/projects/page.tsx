@@ -2,176 +2,225 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, GitFork, Sparkles } from 'lucide-react'
-import { ProjectColourPicker } from '@/components/projects/ProjectColourPicker'
-import type { Project, Task } from '@/types'
+import { Plus, FolderKanban, Sparkles, Users, Share2 } from 'lucide-react'
 
-const DEFAULT_COLOUR = '#2d7a4f'
-const DEFAULT_ICON = '📁'
+type Project = {
+  id: string
+  name: string
+  colour: string
+  icon: string
+  description?: string
+  tasks?: { id: string; status: string }[]
+  access_type?: string
+  sharing_colour?: string | null
+}
+
+const SHARE_BADGE: Record<string, { label: string; color: string; bg: string; icon: typeof Users }> = {
+  pro_share:  { label: 'Pro shared',  color: '#7c3aed', bg: 'rgba(124,58,237,.08)', icon: Share2 },
+  team_share: { label: 'Team shared', color: '#2563eb', bg: 'rgba(37,99,235,.08)',  icon: Users },
+}
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<(Project & { tasks: Task[] })[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
   const [newName, setNewName] = useState('')
-  const [newColour, setNewColour] = useState(DEFAULT_COLOUR)
-  const [newIcon, setNewIcon] = useState(DEFAULT_ICON)
-  const [showPicker, setShowPicker] = useState(false)
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
-    fetch('/api/projects').then(r => r.json()).then(d => { setProjects(d); setLoading(false) })
+    fetch('/api/projects')
+      .then(r => r.json())
+      .then(data => {
+        // Safely normalise — ensure tasks is always an array
+        const safe = Array.isArray(data)
+          ? data.map((p: any) => ({ ...p, tasks: Array.isArray(p.tasks) ? p.tasks : [] }))
+          : []
+        setProjects(safe)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
   }, [])
 
   async function createProject() {
     if (!newName.trim()) return
     setCreating(true)
-    const res = await fetch('/api/projects', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newName, colour: newColour, icon: newIcon }),
-    })
-    const p = await res.json()
-    setProjects(prev => [{ ...p, tasks: [] }, ...prev])
-    setNewName(''); setNewColour(DEFAULT_COLOUR); setNewIcon(DEFAULT_ICON)
-    setShowNew(false); setShowPicker(false); setCreating(false)
+    try {
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName }),
+      })
+      const project = await res.json()
+      setProjects(prev => [{ ...project, tasks: [] }, ...prev])
+      setNewName('')
+      setShowNew(false)
+    } finally {
+      setCreating(false)
+    }
   }
 
   return (
-    <div className="px-6 py-8 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 gold-underline" style={{ fontFamily: 'Georgia, serif' }}>Projects</h1>
-        <button
-          onClick={() => setShowNew(true)}
-          className="flex items-center gap-1.5 text-sm bg-[#2d7a4f] text-white px-3 py-1.5 rounded-lg hover:bg-[#1f5537] transition-colors"
-        >
-          <Plus size={14} />New project
-        </button>
+    <div style={{ padding: '32px 32px 48px', maxWidth: 900, margin: '0 auto', fontFamily: 'DM Sans, sans-serif' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.02em', marginBottom: 6 }}>Projects</h1>
+          <div style={{ width: 24, height: 2, background: '#c9a84c', borderRadius: 2 }} />
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Link href="/dashboard/extract" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+            background: '#f0faf4', color: '#1f5537',
+            border: '1px solid rgba(45,122,79,0.2)', textDecoration: 'none',
+          }}>
+            <Sparkles size={13} />AI Extract
+          </Link>
+          <button
+            onClick={() => setShowNew(true)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+              background: '#2d7a4f', color: '#fff', border: 'none', cursor: 'pointer',
+            }}
+          >
+            <Plus size={13} />New project
+          </button>
+        </div>
       </div>
 
-      {/* New project form */}
+      {/* New project input */}
       {showNew && (
-        <div className="bg-white rounded-2xl border border-gray-200 px-5 py-4 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="relative">
-              <button
-                onClick={() => setShowPicker(!showPicker)}
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl hover:opacity-80 transition-opacity"
-                style={{ background: newColour + '22' }}
-              >
-                {newIcon}
-              </button>
-              {showPicker && (
-                <div className="absolute top-12 left-0 z-50">
-                  <ProjectColourPicker
-                    colour={newColour}
-                    icon={newIcon}
-                    onChange={(c, i) => { setNewColour(c); setNewIcon(i) }}
-                  />
-                </div>
-              )}
-            </div>
-            <input
-              autoFocus
-              type="text"
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && createProject()}
-              placeholder="Project name..."
-              className="flex-1 text-base font-medium focus:outline-none placeholder:text-gray-300"
-            />
-          </div>
-          <div className="flex gap-2 justify-end">
-            <button onClick={() => { setShowNew(false); setShowPicker(false) }} className="text-xs text-gray-400 hover:text-gray-600 px-3 py-1.5">Cancel</button>
-            <button
-              onClick={createProject}
-              disabled={!newName.trim() || creating}
-              className="text-xs bg-[#2d7a4f] text-white px-4 py-1.5 rounded-lg hover:bg-[#1f5537] disabled:opacity-50 transition-colors"
-            >
-              {creating ? 'Creating…' : 'Create project'}
-            </button>
-          </div>
+        <div style={{
+          background: '#fff', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)',
+          padding: '10px 14px', marginBottom: 16,
+          display: 'flex', gap: 8, alignItems: 'center',
+        }}>
+          <input
+            autoFocus
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') createProject(); if (e.key === 'Escape') setShowNew(false) }}
+            placeholder="Project name…"
+            style={{
+              flex: 1, border: 'none', outline: 'none',
+              fontSize: 14, color: '#1a1a1a', fontFamily: 'DM Sans, sans-serif',
+            }}
+          />
+          <button onClick={() => setShowNew(false)} style={{ fontSize: 12, color: '#aaa', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel</button>
+          <button
+            onClick={createProject}
+            disabled={!newName.trim() || creating}
+            style={{
+              fontSize: 12, fontWeight: 500, padding: '6px 14px', borderRadius: 7,
+              background: '#2d7a4f', color: '#fff', border: 'none', cursor: 'pointer',
+              opacity: !newName.trim() ? 0.5 : 1, fontFamily: 'DM Sans, sans-serif',
+            }}
+          >
+            {creating ? 'Creating…' : 'Create'}
+          </button>
         </div>
       )}
 
-      {loading ? (
-        <div className="grid md:grid-cols-2 gap-4">
-          {[...Array(4)].map((_, i) => <div key={i} className="h-32 bg-gray-100 rounded-2xl animate-pulse" />)}
+      {/* Loading */}
+      {loading && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+          {[...Array(4)].map((_, i) => (
+            <div key={i} style={{ height: 110, borderRadius: 12, background: '#f0f0ee', animation: 'shimmer 1.4s ease infinite', backgroundSize: '400px 100%', backgroundImage: 'linear-gradient(90deg,#f0f0ee 25%,#e8e8e5 50%,#f0f0ee 75%)' }} />
+          ))}
         </div>
-      ) : (
-        <div className="grid md:grid-cols-2 gap-4">
+      )}
+
+      {/* Empty */}
+      {!loading && projects.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <FolderKanban size={40} style={{ color: '#e0e0dd', margin: '0 auto 12px' }} />
+          <p style={{ fontSize: 14, color: '#aaa', marginBottom: 20 }}>No projects yet.</p>
+          <Link href="/dashboard/extract" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            background: '#2d7a4f', color: '#fff', padding: '9px 18px',
+            borderRadius: 8, fontSize: 13, fontWeight: 500, textDecoration: 'none',
+          }}>
+            <Sparkles size={13} />Add tasks with AI
+          </Link>
+        </div>
+      )}
+
+      {/* Grid */}
+      {!loading && projects.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
           {projects.map(project => {
             const tasks = project.tasks ?? []
             const done = tasks.filter(t => t.status === 'done').length
-            const inProgress = tasks.filter(t => t.status === 'in_progress').length
             const pct = tasks.length > 0 ? Math.round((done / tasks.length) * 100) : 0
+            const shareInfo = project.access_type ? SHARE_BADGE[project.access_type] : null
+            const ShareIcon = shareInfo?.icon
 
             return (
-              <div key={project.id} className="bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all group">
-                <Link href={`/dashboard/projects/${project.id}`} className="block px-5 pt-4 pb-3">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
-                        style={{ background: project.colour + '22' }}
-                      >
-                        {project.icon}
-                      </div>
-                      <div>
-                        <h2 className="text-sm font-semibold text-gray-900">{project.name}</h2>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {inProgress > 0 && (
-                            <span className="text-[10px] text-[#2d7a4f] bg-[#e8f5ee] px-1.5 py-0.5 rounded-full font-medium">
-                              {inProgress} in progress
-                            </span>
-                          )}
-                          <span className="text-[10px] text-gray-400">{tasks.length} tasks</span>
-                        </div>
-                      </div>
+              <Link
+                key={project.id}
+                href={`/dashboard/projects/${project.id}`}
+                style={{
+                  background: '#fff',
+                  border: `1px solid ${project.sharing_colour ? project.sharing_colour + '30' : 'rgba(0,0,0,0.08)'}`,
+                  borderRadius: 12, padding: '16px 18px',
+                  textDecoration: 'none', display: 'block',
+                  transition: 'border-color 0.12s, box-shadow 0.12s, transform 0.12s',
+                  boxShadow: project.sharing_colour ? `0 2px 8px ${project.sharing_colour}12` : 'none',
+                }}
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLElement
+                  el.style.transform = 'translateY(-2px)'
+                  el.style.boxShadow = '0 4px 14px rgba(0,0,0,0.09)'
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget as HTMLElement
+                  el.style.transform = 'none'
+                  el.style.boxShadow = project.sharing_colour ? `0 2px 8px ${project.sharing_colour}12` : 'none'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 9,
+                      background: (project.colour ?? '#2d7a4f') + '18',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 18, flexShrink: 0,
+                    }}>
+                      {project.icon}
                     </div>
-                    <div className="w-2 h-2 rounded-full mt-1 shrink-0" style={{ background: project.colour }} />
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', lineHeight: 1.2 }}>{project.name}</div>
+                      {project.description && (
+                        <div style={{ fontSize: 11, color: '#aaa', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>{project.description}</div>
+                      )}
+                    </div>
                   </div>
-
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-1">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: `${pct}%`, background: project.colour }}
-                    />
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                    <span style={{ fontSize: 11, color: '#bbb' }}>{tasks.length} tasks</span>
+                    {shareInfo && ShareIcon && (
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 3,
+                        background: shareInfo.bg, borderRadius: 5, padding: '2px 7px',
+                      }}>
+                        <ShareIcon size={9} style={{ color: shareInfo.color }} />
+                        <span style={{ fontSize: 9, fontWeight: 600, color: shareInfo.color }}>{shareInfo.label}</span>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-[11px] text-gray-400">{pct}% complete</p>
-                </Link>
-
-                {/* Footer actions */}
-                <div className="px-5 pb-3 flex items-center gap-2 border-t border-gray-50 pt-2.5">
-                  <Link
-                    href={`/dashboard/projects/${project.id}/mindmap`}
-                    className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-[#2d7a4f] transition-colors"
-                  >
-                    <GitFork size={11} />Mind map
-                  </Link>
-                  <span className="text-gray-200">·</span>
-                  <Link
-                    href={`/dashboard/projects/${project.id}`}
-                    className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    View tasks
-                  </Link>
                 </div>
-              </div>
+
+                {/* Progress */}
+                <div style={{ height: 3, background: 'rgba(0,0,0,0.07)', borderRadius: 2, overflow: 'hidden', marginBottom: 5 }}>
+                  <div style={{
+                    height: '100%', width: `${pct}%`,
+                    background: project.sharing_colour ?? project.colour ?? '#2d7a4f',
+                    borderRadius: 2, transition: 'width 0.5s ease',
+                  }} />
+                </div>
+                <p style={{ fontSize: 11, color: '#bbb' }}>{pct}% complete</p>
+              </Link>
             )
           })}
-
-          {projects.length === 0 && (
-            <div className="col-span-2 text-center py-16">
-              <p className="text-gray-400 text-sm mb-4">No projects yet</p>
-              <Link
-                href="/dashboard/extract"
-                className="inline-flex items-center gap-2 text-sm text-[#2d7a4f] bg-[#e8f5ee] px-4 py-2 rounded-lg hover:bg-[#d0e8da] transition-colors"
-              >
-                <Sparkles size={14} />Add tasks with AI to get started
-              </Link>
-            </div>
-          )}
         </div>
       )}
     </div>
