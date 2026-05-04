@@ -6,16 +6,16 @@ import { usePathname } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
 import { cn } from '@/lib/utils'
 import {
-  LayoutDashboard, FolderKanban, CheckSquare,
-  Sparkles, Calendar, BarChart2, GitFork,
+  FolderKanban, CheckSquare, Sparkles,
+  Calendar, GitFork, BarChart2, Timer,
 } from 'lucide-react'
 
 const nav = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, sub: 'Command centre' },
+  { href: '/dashboard/extract', label: 'AI Extract', icon: Sparkles, sub: 'Add tasks' },
   { href: '/dashboard/projects', label: 'Projects', icon: FolderKanban, sub: 'All projects' },
   { href: '/dashboard/tasks', label: 'Tasks', icon: CheckSquare, sub: 'All tasks' },
-  { href: '/dashboard/extract', label: 'AI Extract', icon: Sparkles, sub: 'Add with AI' },
   { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar, sub: 'Smart schedule' },
+  { href: '/dashboard/tracker', label: 'Time tracker', icon: Timer, sub: 'Log time' },
   { href: '/dashboard/mindmap', label: 'Mind map', icon: GitFork, sub: 'All projects view' },
 ]
 
@@ -39,16 +39,9 @@ export function Sidebar() {
 
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-0.5">
         {nav.map(({ href, label, icon: Icon, sub }) => {
-          const active = href === '/dashboard' ? path === href : path.startsWith(href)
+          const active = path === href || path.startsWith(href + '/')
           return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group',
-                active ? 'bg-[#e8f5ee]' : 'hover:bg-gray-50'
-              )}
-            >
+            <Link key={href} href={href} className={cn('relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group', active ? 'bg-[#e8f5ee]' : 'hover:bg-gray-50')}>
               {active && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-[#2d7a4f] rounded-r-full" />}
               <Icon size={16} className={cn('shrink-0 transition-colors', active ? 'text-[#2d7a4f]' : 'text-gray-400 group-hover:text-gray-600')} />
               <div className="flex flex-col leading-none">
@@ -68,7 +61,7 @@ export function Sidebar() {
               <span className="text-xs font-medium text-gray-700">{label}</span>
               <span className="text-[10px] text-gray-400 mt-0.5">{sub}</span>
             </div>
-            <span className="ml-auto text-[9px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded font-medium">P4</span>
+            <span className="ml-auto text-[9px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded font-medium">P5</span>
           </div>
         ))}
       </nav>
