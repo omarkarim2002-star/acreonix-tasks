@@ -194,30 +194,95 @@ footer{padding:56px 80px 40px;border-top:1px solid var(--border)}
 .reveal{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease}
 .reveal.visible{opacity:1;transform:none}
 @media(max-width:1100px){.hero{grid-template-columns:1fr;padding:90px 32px 56px;max-width:660px;margin:0 auto}.hero-right{height:400px}.how-inner{padding:0 32px}.how-anim-grid{gap:48px}section{padding:72px 32px}footer{padding:48px 32px 28px}.footer-grid{grid-template-columns:1fr 1fr;gap:32px}}
-@media(max-width:768px){.topbar{padding:0 20px;height:56px}.topbar-nav{display:none}.product-pills{display:none}.hero{padding:72px 20px 48px;text-align:center}.hero-sub{margin-left:auto;margin-right:auto}.hero-actions{justify-content:center}.hero-right{display:none}.stats-row{max-width:100%}section{padding:56px 20px}.features-grid{grid-template-columns:1fr 1fr}.pricing-grid{grid-template-columns:1fr}.roi-grid{grid-template-columns:1fr}.footer-grid{grid-template-columns:1fr 1fr}.how-anim-right{display:none}.how-cap{position:relative!important;opacity:1!important;transform:none!important;margin-bottom:24px}#how-captions{min-height:unset!important}#how-scroll-track{height:auto!important}#how-sticky{position:relative!important;height:auto!important}.how-inner{padding:48px 20px}footer{padding:40px 20px 24px}.cta-inner{padding:72px 20px}}
-@media(max-width:520px){.features-grid{grid-template-columns:1fr}.footer-grid{grid-template-columns:1fr}}
+@media(max-width:768px){
+  .topbar{padding:0 16px;height:56px;gap:8px}
+  .topbar-nav{display:none}
+  .product-pills{display:none}
+  .logo-text{font-size:17px}
+  .logo-badge{display:none}
+  .btn-ghost{display:none}
+  .btn-green{font-size:12px;padding:8px 14px}
+
+  .hero{grid-template-columns:1fr;padding:80px 20px 48px;text-align:center;max-width:100%;margin:0;gap:32px}
+  .hero-badge{margin:0 auto 20px;font-size:11px}
+  .hero-headline{font-size:clamp(36px,10vw,52px);margin-bottom:16px}
+  .hero-sub{font-size:14px;margin:0 auto 28px;max-width:100%}
+  .hero-actions{justify-content:center;gap:10px}
+  .hero-actions .btn-primary{font-size:14px;padding:12px 24px}
+  .hero-actions .btn-outline{font-size:14px;padding:12px 24px}
+  .hero-note{font-size:10px}
+  .hero-right{display:none}
+  .stats-row{max-width:100%;border-radius:10px}
+  .stat-num{font-size:18px}
+  .stat-label{font-size:9px}
+  .stat-item{padding:14px 8px}
+
+  section{padding:48px 20px}
+  .section-title{font-size:clamp(26px,8vw,38px)!important}
+  .section-sub{font-size:14px}
+
+  .roi-grid{grid-template-columns:1fr}
+  .roi-card{padding:28px 24px}
+  .roi-num{font-size:32px}
+
+  .features-grid{grid-template-columns:1fr}
+  .feature-card{padding:22px}
+
+  .how-anim-right{display:none}
+  .how-cap{position:relative!important;opacity:1!important;transform:none!important;margin-bottom:24px}
+  #how-captions{min-height:unset!important}
+  #how-scroll-track{height:auto!important}
+  #how-sticky{position:relative!important;height:auto!important}
+  .how-inner{padding:48px 20px}
+  .how-anim-grid{grid-template-columns:1fr;gap:32px}
+  .wireframe .wf-body{height:260px}
+
+  .pricing-grid{grid-template-columns:1fr;max-width:400px;margin:0 auto}
+  .plan-card{padding:24px 20px}
+
+  .cta-inner{padding:64px 20px}
+  .cta-title{font-size:clamp(28px,8vw,40px)}
+  .cta-sub{font-size:14px}
+
+  .footer-grid{grid-template-columns:1fr 1fr;gap:28px}
+  footer{padding:40px 20px 24px}
+  .footer-tagline{font-size:12px}
+
+  .how-cap-title{font-size:clamp(24px,7vw,34px)}
+  .how-cap-desc{font-size:14px}
+}
+@media(max-width:520px){
+  .topbar{padding:0 14px}
+  .hero{padding:72px 16px 40px}
+  .hero-headline{font-size:clamp(32px,11vw,46px)}
+  .features-grid{grid-template-columns:1fr}
+  .footer-grid{grid-template-columns:1fr}
+  .stats-row{flex-direction:column;border-radius:10px}
+  .stat-item{border-right:none!important;border-bottom:1px solid var(--border)}
+  .stat-item:last-child{border-bottom:none}
+  .hero-actions{flex-direction:column;align-items:stretch;max-width:280px;margin-left:auto;margin-right:auto}
+  .hero-actions .btn-primary,.hero-actions .btn-outline{text-align:center;justify-content:center}
+}
 </style>
 </head>
 <body>
 
 <nav class="topbar">
-  <div style="display:flex;align-items:center;gap:0;flex-shrink:0">
-    <a class="logo" href="/">
-      <img src="/logo.png" alt="Acreonix Tasks">
-      <span class="logo-text">Acreonix</span>
-      <span class="logo-badge">Tasks</span>
-    </a>
-    <div class="product-pills">
-      <a href="https://acreonix.co.uk/rms" class="pill pill-rms">RMS &#8599;</a>
-      <a href="https://ai.acreonix.co.uk" class="pill pill-ai">AI Lead Agent &#8599;</a>
-    </div>
-  </div>
+  <a class="logo" href="/">
+    <img src="/logo.png" alt="Acreonix Tasks">
+    <span class="logo-text">Acreonix</span>
+    <span class="logo-badge">Tasks</span>
+  </a>
   <div class="topbar-nav">
     <a href="#how">How it works</a>
     <a href="#features">Features</a>
     <a href="#pricing">Pricing</a>
   </div>
   <div class="topbar-right">
+    <div class="product-pills">
+      <a href="https://acreonix.co.uk/rms" class="pill pill-rms">RMS &#8599;</a>
+      <a href="https://acreonix.co.uk" class="pill pill-ai">AI Lead Agent &#8599;</a>
+    </div>
     <a href="/dashboard" class="btn-ghost">Sign in</a>
     <a href="/dashboard/extract" class="btn-green">Get started free &#8594;</a>
   </div>
@@ -562,7 +627,7 @@ footer{padding:56px 80px 40px;border-top:1px solid var(--border)}
     <div>
       <div class="footer-col-title">Acreonix Suite</div>
       <ul class="footer-links">
-        <li><a href="https://acreonix.co.uk" style="color:var(--green)">Acreonix Home &#8599;</a></li>
+        <li><a href="https://acreonix.co.uk" style="color:var(--green)">Acreonix Tasks &#8599;</a></li>
         <li><a href="https://ai.acreonix.co.uk" style="color:var(--blue)">AI Lead Agent &#8599;</a></li>
         <li><a href="https://acreonix.co.uk/rms" style="color:var(--red)">Acreonix RMS &#8599;</a></li>
       </ul>
