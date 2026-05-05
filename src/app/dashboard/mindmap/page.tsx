@@ -584,17 +584,42 @@ export default function GlobalMindMapPage() {
   }, [setNodes, setEdges])
 
   const loadData = useCallback(async () => {
-    const [projRes, taskRes] = await Promise.all([
+    const [projRes, taskRes, depsRes] = await Promise.all([
       fetch('/api/projects').then(r => r.json()),
       fetch('/api/tasks').then(r => r.json()),
+      fetch('/api/dependencies').then(r => r.json()).catch(() => []),
     ])
     const projs = Array.isArray(projRes) ? projRes : []
     const tasks = Array.isArray(taskRes) ? taskRes : []
+    const deps  = Array.isArray(depsRes) ? depsRes : []
     const enriched = projs.map((p: any) => ({
       ...p, tasks: tasks.filter((t: any) => t.project_id === p.id),
     }))
     setProjects(enriched)
     setAllTasks(tasks)
+    // Add dependency edges as dashed lines between task nodes
+    deps.forEach((dep: any) => {
+      const sourceId = `t-${dep.depends_on}`
+      const targetId = `t-${dep.task_id}`
+      setEdges(es => {
+        const edgeId = `dep-${dep.task_id}-${dep.depends_on}`
+        if (es.find(e => e.id === edgeId)) return es
+        return [...es, {
+          id: edgeId,
+          source: sourceId,
+          target: targetId,
+          zIndex: 0,
+          style: {
+            stroke: dep.status === 'done' ? '#16a34a80' : '#ef444480',
+            strokeWidth: 1.5,
+            strokeDasharray: '5 4',
+          },
+          label: 'blocked by',
+          labelStyle: { fontSize: 9, fill: '#aaa' },
+          type: 'default',
+        }]
+      })
+    })
     return enriched
   }, [])
 
