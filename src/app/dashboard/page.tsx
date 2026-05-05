@@ -261,9 +261,7 @@ export default async function DashboardPage() {
           { label: 'In progress', value: inProgressTasks.length, color: '#2d7a4f', bg: '#f0faf4', border: '#c6e6d4', href: '/dashboard/tasks?filter=in_progress' },
           { label: 'Projects', value: projects.length, color: '#2d7a4f', bg: '#f0faf4', border: '#c6e6d4', href: '/dashboard/projects' },
         ].map(({ label, value, color, bg, border, href }) => (
-          <Link key={label} href={href} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10, padding: '13px 16px', textDecoration: 'none', display: 'block', transition: 'transform 0.1s, box-shadow 0.1s' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 12px ${color}20` }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '' }}>
+          <Link key={label} href={href} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10, padding: '13px 16px', textDecoration: 'none', display: 'block' }}>
             <p style={{ fontSize: 11, color: '#aaa', fontWeight: 500, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
             <p style={{ fontSize: 26, fontWeight: 700, color, letterSpacing: '-0.04em', lineHeight: 1 }}>{value}</p>
           </Link>
