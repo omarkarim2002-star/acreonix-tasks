@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { UserButton, useUser } from '@clerk/nextjs'
+import { usePlan } from '@/lib/plan-context'
 import { Logo } from './Logo'
 import { cn } from '@/lib/utils'
 import {
@@ -29,6 +30,7 @@ const SECONDARY_NAV = [
 export function Sidebar() {
   const { user } = useUser()
   const path = usePathname()
+  const { plan, loading: planLoading } = usePlan()
 
   function active(href: string) {
     return href === '/dashboard' ? path === href : path.startsWith(href)
@@ -87,7 +89,17 @@ export function Sidebar() {
             )}
           >
             <Icon size={16} />
-            <span>{label}</span>
+            <span className="flex-1">{label}</span>
+            {href === '/dashboard/billing' && !planLoading && (
+              <span style={{
+                fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
+                textTransform: 'uppercase', padding: '2px 6px', borderRadius: 4,
+                background: plan === 'team' ? 'rgba(37,99,235,0.1)' : plan === 'pro' ? 'rgba(45,122,79,0.1)' : 'rgba(0,0,0,0.06)',
+                color: plan === 'team' ? '#1d4ed8' : plan === 'pro' ? '#2d7a4f' : '#888',
+              }}>
+                {plan}
+              </span>
+            )}
           </Link>
         ))}
       </nav>
