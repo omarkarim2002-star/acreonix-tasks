@@ -6,30 +6,37 @@ import { UserButton, useUser } from '@clerk/nextjs'
 import { Logo } from './Logo'
 import { cn } from '@/lib/utils'
 import {
-  LayoutDashboard,
-  FolderKanban,
-  CheckSquare,
-  Calendar,
-  BarChart2,
-  Sparkles,
-  Settings,
+  LayoutDashboard, FolderKanban, CheckSquare,
+  Calendar, BarChart2, Sparkles, Clock,
+  GitFork, Users, CreditCard,
 } from 'lucide-react'
 
-const nav = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/projects', label: 'Projects', icon: FolderKanban },
-  { href: '/dashboard/tasks', label: 'All tasks', icon: CheckSquare },
-  { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar, badge: 'Phase 3' },
-  { href: '/dashboard/insights', label: 'Insights', icon: BarChart2, badge: 'Phase 5' },
+const PRIMARY_NAV = [
+  { href: '/dashboard',           label: 'Dashboard',    icon: LayoutDashboard },
+  { href: '/dashboard/projects',  label: 'Projects',     icon: FolderKanban },
+  { href: '/dashboard/tasks',     label: 'Tasks',        icon: CheckSquare },
+  { href: '/dashboard/calendar',  label: 'Calendar',     icon: Calendar },
+  { href: '/dashboard/mindmap',   label: 'Mind map',     icon: GitFork },
+  { href: '/dashboard/insights',  label: 'Insights',     icon: BarChart2 },
+]
+
+const SECONDARY_NAV = [
+  { href: '/dashboard/tracker',   label: 'Time tracker', icon: Clock },
+  { href: '/dashboard/team',      label: 'Team',         icon: Users },
+  { href: '/dashboard/billing',   label: 'Plan',         icon: CreditCard },
 ]
 
 export function Sidebar() {
   const { user } = useUser()
-  const pathname = usePathname()
   const path = usePathname()
+
+  function active(href: string) {
+    return href === '/dashboard' ? path === href : path.startsWith(href)
+  }
 
   return (
     <aside className="w-60 h-screen flex flex-col bg-white border-r border-gray-100 shrink-0">
+
       {/* Logo */}
       <div className="px-5 py-5 border-b border-gray-100">
         <Logo />
@@ -46,45 +53,64 @@ export function Sidebar() {
         </Link>
       </div>
 
-      {/* Nav */}
+      {/* Primary nav */}
       <nav className="flex-1 px-3 py-2 overflow-y-auto">
-        {nav.map(({ href, label, icon: Icon, badge }) => {
-          const active = href === '/dashboard' ? path === href : path.startsWith(href)
-          return (
-            <Link
-              key={href}
-              href={badge ? '#' : href}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm mb-0.5 transition-all',
-                active
-                  ? 'bg-[#e8f5ee] text-[#2d7a4f] font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
-                badge && 'opacity-50 cursor-not-allowed'
-              )}
-              title={badge ? `Coming in ${badge}` : undefined}
-            >
-              <Icon size={16} />
-              <span className="flex-1">{label}</span>
-              {badge && (
-                <span className="text-[10px] bg-[#faf5e8] text-[#c9a84c] px-1.5 py-0.5 rounded font-medium">
-                  Soon
-                </span>
-              )}
-            </Link>
-          )
-        })}
+        {PRIMARY_NAV.map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className={cn(
+              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm mb-0.5 transition-all',
+              active(href)
+                ? 'bg-[#e8f5ee] text-[#2d7a4f] font-medium'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            )}
+          >
+            <Icon size={16} />
+            <span>{label}</span>
+          </Link>
+        ))}
+
+        {/* Divider */}
+        <div className="my-2 mx-2 border-t border-gray-100" />
+
+        {/* Secondary nav */}
+        {SECONDARY_NAV.map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className={cn(
+              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm mb-0.5 transition-all',
+              active(href)
+                ? 'bg-[#e8f5ee] text-[#2d7a4f] font-medium'
+                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+            )}
+          >
+            <Icon size={16} />
+            <span>{label}</span>
+          </Link>
+        ))}
       </nav>
 
-      {/* User */}
-      <Link href="/dashboard/account" className={cn("px-4 py-4 border-t border-gray-100 flex items-center gap-3 hover:bg-gray-50 transition-colors", pathname === '/dashboard/account' && 'bg-[#f0faf4]')}>
+      {/* User — links to account settings */}
+      <Link
+        href="/dashboard/account"
+        className={cn(
+          'px-4 py-4 border-t border-gray-100 flex items-center gap-3 hover:bg-gray-50 transition-colors',
+          path === '/dashboard/account' && 'bg-[#f0faf4]'
+        )}
+      >
         <UserButton afterSignOutUrl="/" />
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium text-gray-700 truncate">
-            {user ? [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Account' : 'Account'}
+            {user
+              ? [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Account'
+              : 'Account'}
           </p>
-          <p className="text-[10px] text-gray-400 truncate">Settings</p>
+          <p className="text-[10px] text-gray-400">Settings</p>
         </div>
       </Link>
+
     </aside>
   )
 }
