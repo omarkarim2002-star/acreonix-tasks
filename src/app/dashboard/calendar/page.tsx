@@ -105,6 +105,8 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<CalEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [scheduling, setScheduling] = useState(false)
+  const [showScheduleModal, setShowScheduleModal] = useState(false)
+  const [hasExistingAiEvents, setHasExistingAiEvents] = useState(false)
   const [focusTip, setFocusTip] = useState('')
   const [selectedEvent, setSelectedEvent] = useState<CalEvent | null>(null)
   const [showNewEvent, setShowNewEvent] = useState(false)
@@ -142,13 +144,36 @@ export default function CalendarPage() {
     setAnchor(d)
   }
 
-  async function generateSchedule() {
+  function handleScheduleClick() {
+    const aiEvents = events.filter(e => e.type === 'ai_generated')
+    if (aiEvents.length > 0) {
+      setHasExistingAiEvents(true)
+      setShowScheduleModal(true)
+    } else {
+      runSchedule('scratch')
+    }
+  }
+
+  async function runSchedule(mode: 'scratch' | 'around') {
+    setShowScheduleModal(false)
     setScheduling(true)
     try {
+      // If scratch — delete existing AI events from DB first
+      if (mode === 'scratch') {
+        const aiEvents = events.filter(e => e.type === 'ai_generated')
+        await Promise.all(aiEvents.map(e =>
+          fetch(`/api/calendar-events/${e.id}`, { method: 'DELETE' })
+        ))
+        setEvents(prev => prev.filter(e => e.type !== 'ai_generated'))
+      }
       const res = await fetch('/api/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: anchor.toISOString(), weekMode: view === 'week' }),
+        body: JSON.stringify({
+          date: anchor.toISOString(),
+          weekMode: view === 'week',
+          preserveExisting: mode === 'around',
+        }),
       })
       const data = await res.json()
       if (data.events) {
@@ -241,7 +266,7 @@ export default function CalendarPage() {
           <button onClick={() => setShowNewEvent(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 500, padding: '6px 12px', border: '1px solid #e5e7eb', borderRadius: 6, background: '#fff', cursor: 'pointer', color: '#374151' }}>
             <Plus size={13} />Add event
           </button>
-          <button onClick={generateSchedule} disabled={scheduling} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 500, padding: '6px 14px', borderRadius: 6, background: '#2d7a4f', color: '#fff', border: 'none', cursor: 'pointer', opacity: scheduling ? 0.7 : 1 }}>
+          <button onClick={handleScheduleClick} disabled={scheduling} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 500, padding: '6px 14px', borderRadius: 6, background: '#2d7a4f', color: '#fff', border: 'none', cursor: 'pointer', opacity: scheduling ? 0.7 : 1 }}>
             {scheduling ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Sparkles size={13} />}
             {scheduling ? 'Scheduling…' : 'AI schedule'}
           </button>
@@ -356,6 +381,50 @@ export default function CalendarPage() {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Schedule mode modal */}
+      {showScheduleModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.35)' }} onClick={() => setShowScheduleModal(false)}>
+          <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 400, margin: 20, boxShadow: '0 12px 48px rgba(0,0,0,0.18)', fontFamily: 'DM Sans, sans-serif', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '22px 24px 0' }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', marginBottom: 8 }}>Regenerate schedule?</h3>
+              <p style={{ fontSize: 13, color: '#888', lineHeight: 1.6, marginBottom: 20 }}>
+                You already have an AI-generated schedule. How would you like to proceed?
+              </p>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 20px 20px' }}>
+              <button onClick={() => runSchedule('scratch')} style={{
+                width: '100%', padding: '13px 16px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)',
+                background: '#fff', cursor: 'pointer', textAlign: 'left', fontFamily: 'DM Sans, sans-serif',
+                transition: 'background 0.12s',
+              }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#f7f7f5'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#fff'}
+              >
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', marginBottom: 3 }}>🗑 Start from scratch</div>
+                <div style={{ fontSize: 12, color: '#888' }}>Remove the current AI schedule and rebuild it fresh from your tasks</div>
+              </button>
+              <button onClick={() => runSchedule('around')} style={{
+                width: '100%', padding: '13px 16px', borderRadius: 10, border: '1px solid rgba(45,122,79,0.3)',
+                background: '#f0faf4', cursor: 'pointer', textAlign: 'left', fontFamily: 'DM Sans, sans-serif',
+                transition: 'background 0.12s',
+              }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#e6f7ed'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#f0faf4'}
+              >
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#1f5537', marginBottom: 3 }}>➕ Build around existing</div>
+                <div style={{ fontSize: 12, color: '#2d7a4f' }}>Keep your current events and fill remaining gaps with new AI suggestions</div>
+              </button>
+              <button onClick={() => setShowScheduleModal(false)} style={{
+                width: '100%', padding: '10px 0', background: 'none', border: 'none',
+                cursor: 'pointer', fontSize: 13, color: '#bbb', fontFamily: 'DM Sans, sans-serif',
+              }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Drag confirm */}
