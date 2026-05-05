@@ -864,83 +864,105 @@ function EventHoverTooltip({ event, anchorRect }: { event: CalEvent; anchorRect:
   const viewportW = window.innerWidth
   const viewportH = window.innerHeight
 
-  // Duration
   const durMins = timeToMins(event.end_time) - timeToMins(event.start_time)
   const durLabel = durMins >= 60
     ? `${Math.floor(durMins / 60)}h${durMins % 60 > 0 ? ` ${durMins % 60}m` : ''}`
     : `${durMins}m`
 
-  const TOOLTIP_W = 240
-  const TOOLTIP_H = 160 // estimated
+  const TOOLTIP_W = 232
+  const TOOLTIP_H = 140
 
-  // Position: prefer right of event, flip left if near edge
-  let left = anchorRect.right + 10
-  if (left + TOOLTIP_W > viewportW - 16) left = anchorRect.left - TOOLTIP_W - 10
-
-  // Vertically align with event top, clamp to viewport
-  let top = anchorRect.top
+  // Position right of event, flip left if near right edge
+  let left = anchorRect.right + 12
+  if (left + TOOLTIP_W > viewportW - 16) left = anchorRect.left - TOOLTIP_W - 12
+  let top = anchorRect.top - 4
   if (top + TOOLTIP_H > viewportH - 16) top = viewportH - TOOLTIP_H - 16
   if (top < 8) top = 8
 
   const isProvisional = event.type === 'ai_generated' && !event.confirmed
+  const c = event.colour   // the event's theme colour
+  const PRIO_COLOUR: Record<string,string> = { urgent:'#dc2626', high:'#ea580c', low:'#9ca3af' }
 
   return (
     <div style={{
       position: 'fixed', left, top, width: TOOLTIP_W, zIndex: 300,
       background: '#fff',
-      borderRadius: 10,
-      boxShadow: '0 4px 20px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06)',
-      border: '1px solid rgba(0,0,0,0.08)',
-      borderTop: `3px solid ${event.colour}`,
+      borderRadius: 12,
+      // Coloured left accent bar — matches event colour exactly
+      boxShadow: `0 2px 16px ${c}28, 0 1px 4px rgba(0,0,0,0.06)`,
+      border: `1px solid ${c}30`,
+      borderLeft: `4px solid ${c}`,
       overflow: 'hidden',
-      animation: 'tooltipIn 0.12s ease',
+      animation: 'tooltipIn 0.14s cubic-bezier(0.34,1.56,0.64,1)',
       pointerEvents: 'none',
       fontFamily: 'DM Sans, sans-serif',
     }}>
-      {/* Colour strip */}
-      <div style={{ height: 3, background: isProvisional ? `repeating-linear-gradient(90deg,${event.colour}80 0,${event.colour}80 8px,transparent 8px,transparent 14px)` : event.colour }} />
 
-      {/* Content */}
-      <div style={{ padding: '10px 12px 11px' }}>
-        {/* Title */}
-        <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', lineHeight: 1.35, marginBottom: 7, wordBreak: 'break-word' }}>
+      {/* Header — coloured tint background using event colour */}
+      <div style={{
+        background: isProvisional
+          ? `repeating-linear-gradient(135deg,${c}10 0,${c}10 4px,transparent 4px,transparent 10px)`
+          : `${c}0e`,
+        padding: '9px 12px 8px',
+        borderBottom: `1px solid ${c}18`,
+      }}>
+        <p style={{
+          fontSize: 12.5, fontWeight: 700, color: '#1a1a1a',
+          lineHeight: 1.3, margin: 0, wordBreak: 'break-word',
+        }}>
           {event.title}
         </p>
+        {isProvisional && (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 3,
+            fontSize: 9, fontWeight: 800, color: c,
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+            marginTop: 4,
+          }}>
+            ✦ Suggested
+          </span>
+        )}
+      </div>
 
-        {/* Time + duration */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#666', marginBottom: 6 }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-          </svg>
-          <span>{fmtTime(event.start_time)} – {fmtTime(event.end_time)}</span>
-          <span style={{ color: '#ddd' }}>·</span>
-          <span style={{ color: '#aaa' }}>{durLabel}</span>
+      {/* Body */}
+      <div style={{ padding: '8px 12px 10px' }}>
+
+        {/* Time row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+          <div style={{ width: 14, height: 14, borderRadius: '50%', background: `${c}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#333' }}>
+            {fmtTime(event.start_time)} – {fmtTime(event.end_time)}
+          </span>
+          <span style={{ fontSize: 11, color: `${c}99`, fontWeight: 500, marginLeft: 2 }}>
+            {durLabel}
+          </span>
         </div>
 
-        {/* Provisional badge */}
-        {isProvisional && (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: event.colour, background: event.colour + '12', padding: '2px 7px', borderRadius: 4, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            ✦ Suggested — tap to confirm
-          </div>
-        )}
-
-        {/* Description */}
+        {/* Description / project */}
         {event.description && (
-          <p style={{ fontSize: 11.5, color: '#888', lineHeight: 1.5, marginBottom: 6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+          <p style={{ fontSize: 11.5, color: '#777', lineHeight: 1.45, margin: '0 0 5px',
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
             {event.description}
           </p>
         )}
 
-        {/* Task priority */}
+        {/* Priority pill */}
         {event.task?.priority && event.task.priority !== 'medium' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#888' }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: { urgent: '#dc2626', high: '#ea580c', low: '#9ca3af' }[event.task.priority] ?? '#aaa' }} />
-            <span style={{ textTransform: 'capitalize' }}>{event.task.priority} priority</span>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4,
+            background: `${PRIO_COLOUR[event.task.priority] ?? '#aaa'}14`,
+            border: `1px solid ${PRIO_COLOUR[event.task.priority] ?? '#aaa'}30`,
+            borderRadius: 5, padding: '2px 7px' }}>
+            <div style={{ width: 5, height: 5, borderRadius: '50%', background: PRIO_COLOUR[event.task.priority] ?? '#aaa' }} />
+            <span style={{ fontSize: 10, fontWeight: 700, color: PRIO_COLOUR[event.task.priority] ?? '#aaa', textTransform: 'capitalize', letterSpacing: '0.04em' }}>
+              {event.task.priority}
+            </span>
           </div>
         )}
       </div>
-
-
     </div>
   )
 }

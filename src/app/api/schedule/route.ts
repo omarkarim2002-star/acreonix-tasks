@@ -1,224 +1,208 @@
-import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { anthropic } from '@/lib/anthropic'
 import { supabaseAdmin } from '@/lib/supabase'
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-function toMins(t: string) {
-  const [h, m] = t.split(':').map(Number)
-  return h * 60 + (m || 0)
-}
-function blockValid(start: string, end: string, min: number, max: number): boolean {
-  const s = toMins(start), e = toMins(end)
-  return s >= min && e <= max && e > s
+function parseTime(dateStr: string, timeStr: string): string {
+  const [h, m] = timeStr.split(':').map(Number)
+  const d = new Date(dateStr)
+  d.setHours(h, m, 0, 0)
+  return d.toISOString()
 }
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
 
-  const rl = await checkRateLimit(userId, 'schedule')
-  if (!rl.allowed) return rateLimitResponse(rl)
-
-  const { date, weekMode, preserveExisting, workStart, workEnd } = await req.json()
-
-  // Load user preferences (from request or DB)
-  let prefStart = workStart ?? '09:00'
-  let prefEnd   = workEnd   ?? '18:00'
-
-  if (!workStart) {
-    const { data: prefs } = await supabaseAdmin
-      .from('user_preferences').select('work_start, work_end').eq('user_id', userId).single()
-    if (prefs) { prefStart = prefs.work_start; prefEnd = prefs.work_end }
-  }
-
-  const workStartMins = toMins(prefStart)
-  const workEndMins   = toMins(prefEnd)
-
-  // Evening slot: after work until 22:00
-  const eveningStart = prefEnd
-  const eveningEnd   = '22:00'
-
-  const targetDate = date ? new Date(date) : new Date()
+  const { date, weekMode } = await req.json()
+  const now = new Date()
+  const targetDate = date ? new Date(date) : now
   const dateStr = targetDate.toISOString().split('T')[0]
 
-  const days: string[] = []
+  // ── Never schedule in the past ────────────────────────────────────────────
+  // If today, earliest slot is current time rounded up to next 15min
+  const nowStr = now.toISOString()
+  const todayStr = now.toISOString().split('T')[0]
+  const currentHour = now.getHours()
+  const currentMin = Math.ceil(now.getMinutes() / 15) * 15
+  const earliestToday = `${String(currentHour + (currentMin >= 60 ? 1 : 0)).padStart(2,'0')}:${String(currentMin >= 60 ? 0 : currentMin).padStart(2,'0')}`
+
+  // Build the dates array — skip dates that are fully in the past
+  const dates: string[] = []
   if (weekMode) {
-    const d = new Date(targetDate)
-    const monday = new Date(d)
-    monday.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1))
-    for (let i = 0; i < 5; i++) {
-      const dd = new Date(monday)
-      dd.setDate(monday.getDate() + i)
-      days.push(dd.toISOString().split('T')[0])
-    }
-    // Also include weekend for personal tasks
-    for (let i = 5; i < 7; i++) {
-      const dd = new Date(monday)
-      dd.setDate(monday.getDate() + i)
-      days.push(dd.toISOString().split('T')[0])
+    const dayOfWeek = targetDate.getDay()
+    const monday = new Date(targetDate)
+    monday.setDate(targetDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday)
+      d.setDate(monday.getDate() + i)
+      const ds = d.toISOString().split('T')[0]
+      // Only include today and future dates
+      if (ds >= todayStr) dates.push(ds)
     }
   } else {
-    days.push(dateStr)
+    if (dateStr >= todayStr) dates.push(dateStr)
   }
 
+  if (dates.length === 0) {
+    return NextResponse.json({ events: [], message: 'All dates are in the past — nothing to schedule.', focusScore: 'Choose a current or future date to generate a schedule.' })
+  }
+
+  const weekStart = dates[0]
+  const weekEnd = dates[dates.length - 1]
+
+  // Fetch tasks
   const { data: tasks } = await supabaseAdmin
     .from('tasks')
-    .select('id, title, priority, status, estimated_minutes, deadline, task_type, schedulable_outside_hours, project:projects(name, colour)')
+    .select('*, project:projects(name, colour)')
     .eq('user_id', userId)
     .neq('status', 'done')
     .order('deadline', { ascending: true, nullsFirst: false })
     .limit(40)
 
   if (!tasks?.length) {
-    return NextResponse.json({ events: [], focusScore: 'No pending tasks to schedule.' })
+    return NextResponse.json({ events: [], message: 'No tasks to schedule', focusScore: 'Add some tasks first to generate a schedule.' })
   }
+
+  // Fetch user work hours prefs
+  const { data: prefs } = await supabaseAdmin
+    .from('user_preferences')
+    .select('work_start, work_end, work_days')
+    .eq('user_id', userId)
+    .single()
+
+  const workStart = prefs?.work_start ?? '09:00'
+  const workEnd   = prefs?.work_end   ?? '18:00'
+  const workDays  = prefs?.work_days  ?? ['monday','tuesday','wednesday','thursday','friday']
+
+  // Fetch already-confirmed events in this period (imports, manual events)
+  // so AI can schedule AROUND them
+  const { data: existingEvents } = await supabaseAdmin
+    .from('calendar_events')
+    .select('title, start_time, end_time')
+    .eq('user_id', userId)
+    .eq('confirmed', true)
+    .neq('type', 'ai_generated')
+    .gte('start_time', `${weekStart}T00:00:00Z`)
+    .lte('start_time', `${weekEnd}T23:59:59Z`)
+
+  const blockedSlots = (existingEvents ?? []).map(e => ({
+    title: e.title,
+    start: new Date(e.start_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+    end: new Date(e.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+    date: e.start_time.split('T')[0],
+  }))
 
   const taskSummary = tasks.map(t => ({
     id: t.id,
     title: t.title,
     priority: t.priority,
-    estimatedMinutes: Math.min(t.estimated_minutes ?? 30, 120),
-    deadline: t.deadline ? t.deadline.split('T')[0] : null,
+    status: t.status,
+    estimatedMinutes: t.estimated_minutes ?? 30,
+    deadline: t.deadline,
     project: (t as any).project?.name ?? 'General',
     colour: (t as any).project?.colour ?? '#2d7a4f',
-    taskType: (t as any).task_type ?? 'work',
-    outsideHours: (t as any).schedulable_outside_hours ?? false,
   }))
 
-  const workTasks     = taskSummary.filter(t => !t.outsideHours)
-  const flexibleTasks = taskSummary.filter(t => t.outsideHours)
-
-  const daysStr = days.length > 1 ? `Mon ${days[0]} to Sun ${days[6]}` : dateStr
-
-  const prompt = `You are a smart personal scheduler. Schedule these tasks for ${daysStr}.
-
-USER'S WORK HOURS: ${prefStart} to ${prefEnd} (weekdays only)
-EVENING HOURS: ${eveningStart} to ${eveningEnd} (any day)
-WEEKEND: 09:00 to ${eveningEnd}
-
-SCHEDULING RULES — follow exactly:
-1. WORK TASKS (outsideHours: false): Schedule ONLY within ${prefStart}–${prefEnd} on weekdays.
-2. FLEXIBLE TASKS (outsideHours: true): Schedule in evenings (${eveningStart}–${eveningEnd}) or weekends. These are personal/business tasks that can flex.
-3. No overlaps within any single day. Blocks must be perfectly sequential.
-4. ONE lunch break per weekday at 13:00–13:30 (type: "lunch").
-5. Group same-project tasks consecutively.
-6. Urgent/deadline tasks go earlier in the week.
-7. All times HH:MM 24h. A 45-min task at 14:00 ends at 14:45.
-8. Nothing before 09:00 or after 22:00 ever.
-9. If tasks don't fit Mon–Fri work hours, use evenings or weekend for flexible tasks.
-
-WORK TASKS (schedule in ${prefStart}–${prefEnd} weekdays only):
-${JSON.stringify(workTasks, null, 2)}
-
-FLEXIBLE TASKS (evenings/weekends OK):
-${JSON.stringify(flexibleTasks, null, 2)}
-
-Return ONLY this JSON, no markdown:
-{
-  "schedule": [
-    {
-      "date": "YYYY-MM-DD",
-      "blocks": [
-        {
-          "taskId": "exact-uuid-or-null",
-          "title": "Task title",
-          "startTime": "09:00",
-          "endTime": "10:00",
-          "project": "Project name or null",
-          "colour": "#hex",
-          "type": "task|lunch|break",
-          "taskType": "work|business|personal",
-          "priority": "urgent|high|medium|low|null"
-        }
-      ]
-    }
-  ],
-  "focusTip": "One sentence personalised tip."
-}`
+  const isToday = dates.includes(todayStr)
 
   const message = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 4000,
-    messages: [{ role: 'user', content: prompt }],
+    max_tokens: 3000,
+    messages: [{
+      role: 'user',
+      content: `You are a smart calendar scheduler. Create an optimal schedule.
+
+TODAY IS: ${todayStr} ${now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+SCHEDULING FOR: ${weekMode ? `the week of ${weekStart} to ${weekEnd}` : dateStr}
+
+CRITICAL RULES — DO NOT BREAK THESE:
+- NEVER schedule any event before RIGHT NOW (${nowStr})
+- ${isToday ? `Today's earliest slot is ${earliestToday} — nothing before this time today` : ''}
+- Work hours per day: ${workStart} to ${workEnd}
+- Only schedule on these days: ${workDays.join(', ')}
+- Skip any dates before today (${todayStr})
+
+SCHEDULING RULES:
+- Group tasks from the SAME project on the SAME day to minimise context switching
+- Urgent/high priority tasks go earliest
+- Add a 30-min lunch break at 12:30 on each day
+- Add 10-min breaks every 90 minutes of focused work
+- Do NOT schedule over these existing confirmed events:
+${blockedSlots.length > 0 ? JSON.stringify(blockedSlots) : '  (none — full day available)'}
+- If task has no estimate, assume 30 minutes
+- Spread tasks so no day exceeds 7 hours of work
+
+Available dates: ${dates.join(', ')}
+
+Tasks to schedule:
+${JSON.stringify(taskSummary, null, 2)}
+
+Return ONLY valid JSON:
+{
+  "events": [
+    {
+      "taskId": "uuid or null for breaks",
+      "title": "Task or break title",
+      "date": "YYYY-MM-DD",
+      "startTime": "HH:MM",
+      "endTime": "HH:MM",
+      "project": "Project name or null",
+      "colour": "#2d7a4f",
+      "type": "task or break or lunch",
+      "priority": "low|medium|high|urgent or null"
+    }
+  ],
+  "focusScore": "One encouraging sentence about this schedule"
+}`,
+    }],
   })
 
-  const raw = message.content[0].type === 'text' ? message.content[0].text : ''
-  let parsed: any
+  const rawText = message.content[0].type === 'text' ? message.content[0].text : ''
+  let schedule: any
   try {
-    parsed = JSON.parse(raw.replace(/```json|```/g, '').trim())
+    schedule = JSON.parse(rawText.replace(/```json|```/g, '').trim())
   } catch {
-    return NextResponse.json({ error: 'Failed to parse AI schedule — please try again' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to parse schedule' }, { status: 500 })
   }
 
-  const scheduleArr = parsed.schedule ?? [{ date: dateStr, blocks: parsed.blocks ?? [] }]
-  const calEvents: any[] = []
+  // Extra safety: filter out any events with start_time before now
+  const validEvents = (schedule.events ?? []).filter((e: any) => {
+    const start = parseTime(e.date, e.startTime)
+    return new Date(start) >= now
+  })
 
-  for (const daySchedule of scheduleArr) {
-    const dayDate = daySchedule.date ?? dateStr
-    const dayOfWeek = new Date(dayDate).getDay() // 0=Sun, 6=Sat
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+  const eventsToSave = validEvents.map((e: any) => ({
+    user_id: userId,
+    task_id: e.taskId || null,
+    title: e.title,
+    start_time: parseTime(e.date, e.startTime),
+    end_time: parseTime(e.date, e.endTime),
+    colour: e.colour ?? '#2d7a4f',
+    type: 'ai_generated',
+    confirmed: false,
+    description: e.project ? `Project: ${e.project}` : null,
+  }))
 
-    const blocks = Array.isArray(daySchedule.blocks) ? daySchedule.blocks : []
-    let hadLunch = false
-    const seenStarts = new Set<string>()
+  // Delete old AI events for this period
+  await supabaseAdmin
+    .from('calendar_events')
+    .delete()
+    .eq('user_id', userId)
+    .eq('type', 'ai_generated')
+    .eq('confirmed', false)
+    .gte('start_time', `${weekStart}T00:00:00Z`)
+    .lte('start_time', `${weekEnd}T23:59:59Z`)
 
-    for (const block of blocks) {
-      if (!block.startTime || !block.endTime) continue
-
-      // For weekday work blocks: enforce work hours
-      // For flexible/personal: allow evening range
-      const isFlexible = block.taskType === 'personal' || block.taskType === 'business'
-      const isBreak = block.type === 'lunch' || block.type === 'break'
-
-      let valid = false
-      if (isWeekend) {
-        valid = blockValid(block.startTime, block.endTime, 540, 1320) // 09:00–22:00
-      } else if (isFlexible && !isBreak) {
-        // Flexible on weekday: work hours OR evening
-        valid = blockValid(block.startTime, block.endTime, workStartMins, workEndMins) ||
-                blockValid(block.startTime, block.endTime, toMins(eveningStart), 1320)
-      } else {
-        valid = blockValid(block.startTime, block.endTime, workStartMins, workEndMins)
-      }
-
-      if (!valid) continue
-
-      const key = `${dayDate}-${block.startTime}`
-      if (seenStarts.has(key)) continue
-      seenStarts.add(key)
-
-      if (block.type === 'lunch') { if (hadLunch || isWeekend) continue; hadLunch = true }
-
-      const taskTypeColour: Record<string, string> = {
-        personal: '#8b5cf6',
-        business: '#c9a84c',
-        work: block.colour ?? '#2d7a4f',
-      }
-
-      const { data: ev } = await supabaseAdmin
-        .from('calendar_events')
-        .insert({
-          user_id:    userId,
-          task_id:    block.taskId && block.taskId !== 'null' ? block.taskId : null,
-          title:      block.title ?? 'Untitled',
-          start_time: new Date(`${dayDate}T${block.startTime}:00`).toISOString(),
-          end_time:   new Date(`${dayDate}T${block.endTime}:00`).toISOString(),
-          colour:     isBreak ? '#9ca3af' : (taskTypeColour[block.taskType ?? 'work'] ?? block.colour ?? '#2d7a4f'),
-          type:       block.type === 'lunch' ? 'lunch' : block.type === 'break' ? 'break' : 'ai_generated',
-          all_day:    false,
-        })
-        .select()
-        .single()
-
-      if (ev) calEvents.push(ev)
-    }
-  }
+  const { data: saved } = await supabaseAdmin
+    .from('calendar_events')
+    .insert(eventsToSave)
+    .select()
 
   return NextResponse.json({
-    events: calEvents,
-    focusScore: parsed.focusTip ?? parsed.focusScore ?? '',
+    events: saved ?? [],
+    focusScore: schedule.focusScore,
+    weekStart,
+    weekEnd,
   })
 }
