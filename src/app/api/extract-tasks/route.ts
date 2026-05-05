@@ -21,6 +21,9 @@ export async function POST(req: NextRequest) {
         role: 'user',
         content: `You are a task extraction assistant. Extract all tasks from the following text and structure them into projects.
 
+TODAY'S DATE: ${new Date().toISOString().split('T')[0]} (${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })})
+Use this to calculate deadlines — "by Thursday" means the coming Thursday from today's date, "next week" means 7+ days from today, "end of month" means the last day of the current month. Always use future dates relative to TODAY.
+
 Rules:
 - Group related tasks into logical projects (e.g. "Website Redesign", "Client Work", "Personal")
 - If a task already implies a project, use that
@@ -42,7 +45,7 @@ Return this exact JSON structure:
       "description": "Optional extra detail if relevant",
       "priority": "low|medium|high|urgent",
       "estimatedMinutes": 30,
-      "deadline": "2026-05-10T00:00:00Z or null",
+      "deadline": "YYYY-MM-DDT00:00:00Z or null",
       "tags": ["tag1", "tag2"],
       "suggestedProject": "Project Name 1"
     }
