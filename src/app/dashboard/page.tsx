@@ -7,6 +7,7 @@ import {
   Calendar, BarChart2, ChevronRight, AlertTriangle,
 } from 'lucide-react'
 import { TodayFocusPanel } from '@/components/ui/TodayFocusPanel'
+import { PlanTodayButton } from '@/components/ui/PlanTodayButton'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type Task = {
@@ -348,6 +349,7 @@ export default async function DashboardPage() {
         <Link href="/dashboard/calendar" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: '#f0faf4', color: '#1f5537', border: '1px solid rgba(45,122,79,.2)', textDecoration: 'none' }}>
           <Calendar size={13} />Calendar
         </Link>
+        <PlanTodayButton />
         <Link href="/dashboard/mindmap" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: '#f3f3f1', color: '#555', border: '1px solid rgba(0,0,0,.1)', textDecoration: 'none' }}>
           <GitFork size={13} />Mind map
         </Link>
