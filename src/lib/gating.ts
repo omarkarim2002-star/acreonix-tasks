@@ -1,18 +1,24 @@
 import { supabaseAdmin } from './supabase'
 import { PLAN_LIMITS, Plan } from './plans'
 
-const ADMIN_EMAILS = ['omar@acreonix.co.uk']
+// Admin overrides — these emails always get the specified plan
+const PLAN_OVERRIDES: Record<string, Plan> = {
+  'omar@acreonix.co.uk':       'team',
+  'haroon_05@hotmail.co.uk':   'pro',
+}
 
 export async function getUserPlan(userId: string): Promise<Plan> {
-  // Admin bypass — always team plan regardless of subscription
+  // Check admin overrides first via Clerk email lookup
   try {
     const { clerkClient } = await import('@clerk/nextjs/server')
     const client = await clerkClient()
     const user = await client.users.getUser(userId)
     const emails = user.emailAddresses.map((e: any) => e.emailAddress.toLowerCase())
-    if (emails.some((e: string) => ADMIN_EMAILS.includes(e))) return 'team'
+    for (const email of emails) {
+      if (PLAN_OVERRIDES[email]) return PLAN_OVERRIDES[email]
+    }
   } catch {
-    // Clerk lookup failed — fall through to DB check
+    // Clerk lookup failed — fall through to DB
   }
 
   const { data } = await supabaseAdmin
@@ -52,8 +58,8 @@ export async function incrementUsage(userId: string, metric: 'ai_extracts' | 'ai
   const periodStartStr = periodStart.toISOString().split('T')[0]
 
   await supabaseAdmin.rpc('increment_usage', {
-    p_user_id: userId,
-    p_metric: metric,
+    p_user_id:     userId,
+    p_metric:      metric,
     p_period_start: periodStartStr,
   })
 }
