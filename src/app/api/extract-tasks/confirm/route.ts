@@ -1,3 +1,4 @@
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
@@ -19,6 +20,9 @@ function cleanDate(val: unknown): string | null {
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
+
+  const rl = await checkRateLimit(userId, 'extract-confirm')
+  if (!rl.allowed) return rateLimitResponse(rl)
 
   const { tasks, originalText } = await req.json()
   if (!Array.isArray(tasks) || tasks.length === 0) {

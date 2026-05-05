@@ -1,3 +1,4 @@
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
@@ -134,6 +135,9 @@ async function fetchICal(url: string): Promise<string> {
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
+
+  const rl = await checkRateLimit(userId, 'calendar-import')
+  if (!rl.allowed) return rateLimitResponse(rl)
 
   const formData = await req.formData()
   const file = formData.get('file') as File | null

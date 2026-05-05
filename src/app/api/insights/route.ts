@@ -1,3 +1,4 @@
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { anthropic } from '@/lib/anthropic'
@@ -6,6 +7,9 @@ import { supabaseAdmin } from '@/lib/supabase'
 export async function GET(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
+
+  const rl = await checkRateLimit(userId, 'insights')
+  if (!rl.allowed) return rateLimitResponse(rl)
 
   const { searchParams } = new URL(req.url)
   const period = searchParams.get('period') ?? 'week' // 'day' or 'week'
