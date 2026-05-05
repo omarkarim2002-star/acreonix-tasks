@@ -840,6 +840,94 @@ function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 }
 
+function EventHoverTooltip({ event, anchorRect }: { event: CalEvent; anchorRect: DOMRect }) {
+  const viewportW = window.innerWidth
+  const viewportH = window.innerHeight
+
+  // Duration
+  const durMins = timeToMins(event.end_time) - timeToMins(event.start_time)
+  const durLabel = durMins >= 60
+    ? `${Math.floor(durMins / 60)}h${durMins % 60 > 0 ? ` ${durMins % 60}m` : ''}`
+    : `${durMins}m`
+
+  const TOOLTIP_W = 240
+  const TOOLTIP_H = 160 // estimated
+
+  // Position: prefer right of event, flip left if near edge
+  let left = anchorRect.right + 10
+  if (left + TOOLTIP_W > viewportW - 16) left = anchorRect.left - TOOLTIP_W - 10
+
+  // Vertically align with event top, clamp to viewport
+  let top = anchorRect.top
+  if (top + TOOLTIP_H > viewportH - 16) top = viewportH - TOOLTIP_H - 16
+  if (top < 8) top = 8
+
+  const isProvisional = event.type === 'ai_generated' && !event.confirmed
+
+  return (
+    <div style={{
+      position: 'fixed', left, top, width: TOOLTIP_W, zIndex: 300,
+      background: '#fff',
+      borderRadius: 12,
+      boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.08)',
+      border: `1px solid ${event.colour}30`,
+      overflow: 'hidden',
+      animation: 'tooltipIn 0.15s cubic-bezier(0.4,0,0.2,1)',
+      pointerEvents: 'none',
+      fontFamily: 'DM Sans, sans-serif',
+    }}>
+      {/* Colour strip */}
+      <div style={{ height: 3, background: isProvisional ? `repeating-linear-gradient(90deg,${event.colour}80 0,${event.colour}80 8px,transparent 8px,transparent 14px)` : event.colour }} />
+
+      {/* Content */}
+      <div style={{ padding: '11px 13px' }}>
+        {/* Title */}
+        <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', lineHeight: 1.35, marginBottom: 7, wordBreak: 'break-word' }}>
+          {event.title}
+        </p>
+
+        {/* Time + duration */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#666', marginBottom: 6 }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span>{fmtTime(event.start_time)} – {fmtTime(event.end_time)}</span>
+          <span style={{ color: '#ddd' }}>·</span>
+          <span style={{ color: '#aaa' }}>{durLabel}</span>
+        </div>
+
+        {/* Provisional badge */}
+        {isProvisional && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: event.colour, background: event.colour + '12', padding: '2px 7px', borderRadius: 4, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            ✦ Suggested — tap to confirm
+          </div>
+        )}
+
+        {/* Description */}
+        {event.description && (
+          <p style={{ fontSize: 11.5, color: '#888', lineHeight: 1.5, marginBottom: 6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {event.description}
+          </p>
+        )}
+
+        {/* Task priority */}
+        {event.task?.priority && event.task.priority !== 'medium' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#888' }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: { urgent: '#dc2626', high: '#ea580c', low: '#9ca3af' }[event.task.priority] ?? '#aaa' }} />
+            <span style={{ textTransform: 'capitalize' }}>{event.task.priority} priority</span>
+          </div>
+        )}
+      </div>
+
+      {/* Click hint */}
+      <div style={{ padding: '6px 13px 9px', borderTop: '1px solid rgba(0,0,0,0.05)', fontSize: 10, color: '#ccc', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+        Click to open full details
+      </div>
+    </div>
+  )
+}
+
 function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, focusEventId, conflictIds, onConfirm, onClear }: {
   days: Date[]
   events: CalEvent[]
@@ -853,6 +941,8 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
   onClear?: (id: string) => void
 }) {
   const [dragEvent, setDragEvent] = useState<CalEvent | null>(null)
+  const [hovered, setHovered] = useState<{ event: CalEvent; rect: DOMRect } | null>(null)
+  const hoverTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const TIME_GUTTER = 52
 
   function handleDragStart(e: React.DragEvent, event: CalEvent) {
@@ -1063,8 +1153,23 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
                         animation: 'fadeSlideIn 0.3s ease both',
                         transition: 'box-shadow 0.15s, background 0.15s, opacity 0.2s',
                       }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = isBreak ? '#efefed' : event.colour + '22'; (e.currentTarget as HTMLElement).style.zIndex = '14' }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = focusEventId === event.id ? event.colour + '1a' : isBreak ? '#f5f5f3' : event.colour + '0e'; (e.currentTarget as HTMLElement).style.zIndex = focusEventId === event.id ? '11' : '10' }}
+                      onMouseEnter={e => {
+                        const el = e.currentTarget as HTMLElement
+                        el.style.background = event.colour + '22'
+                        el.style.zIndex = '14'
+                        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+                        const rect = el.getBoundingClientRect()
+                        hoverTimerRef.current = setTimeout(() => {
+                          if (!isBreak) setHovered({ event, rect })
+                        }, 420)
+                      }}
+                      onMouseLeave={e => {
+                        const el = e.currentTarget as HTMLElement
+                        el.style.background = focusEventId === event.id ? event.colour + '1a' : event.colour + '0e'
+                        el.style.zIndex = focusEventId === event.id ? '11' : '10'
+                        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+                        setHovered(null)
+                      }}
                     >
                       {isProvisional && height >= 32 && (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 1 }}>

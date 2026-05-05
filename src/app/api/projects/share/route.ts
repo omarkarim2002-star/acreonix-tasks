@@ -2,110 +2,117 @@ import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getUserPlan } from '@/lib/gating'
+import { sendEmail, proShareInviteEmail } from '@/lib/email'
 
-// POST /api/projects/share — invite another Pro user to a project
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
 
-  const { projectId, email } = await req.json()
-  if (!projectId || !email) return NextResponse.json({ error: 'projectId and email required' }, { status: 400 })
+  const body = await req.json()
+  const { project_id, sharing_type, invitee_email } = body
 
-  const plan = await getUserPlan(userId)
-  if (plan === 'free') {
-    return NextResponse.json({ error: 'Pro plan required to share projects', code: 'PRO_REQUIRED' }, { status: 402 })
-  }
+  if (!project_id) return NextResponse.json({ error: 'project_id required' }, { status: 400 })
 
   // Verify ownership
   const { data: project } = await supabaseAdmin
     .from('projects')
     .select('id, name, user_id')
-    .eq('id', projectId)
+    .eq('id', project_id)
     .eq('user_id', userId)
     .single()
 
-  if (!project) return NextResponse.json({ error: 'Project not found or not yours' }, { status: 404 })
+  if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
 
-  // Check Pro share limit (5 max for pro plan)
-  if (plan === 'pro') {
+  const plan = await getUserPlan(userId)
+
+  // Handle pro_share — invite a specific user by email
+  if (sharing_type === 'pro_share') {
+    if (plan !== 'pro' && plan !== 'team') {
+      return NextResponse.json({ error: 'Pro plan required', code: 'UPGRADE_REQUIRED' }, { status: 402 })
+    }
+    if (!invitee_email?.trim()) {
+      return NextResponse.json({ error: 'invitee_email required for pro share' }, { status: 400 })
+    }
+
+    // Check pro share limit (max 5)
     const { count } = await supabaseAdmin
-      .from('projects')
+      .from('pro_share_invites')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('sharing_type', 'pro_share')
-      .eq('status', 'active')
+      .eq('project_id', project_id)
+      .eq('owner_id', userId)
+      .in('status', ['pending', 'accepted'])
 
     if ((count ?? 0) >= 5) {
-      return NextResponse.json({ error: 'Pro sharing limit reached — maximum 5 shared lists', code: 'PRO_SHARE_LIMIT' }, { status: 402 })
+      return NextResponse.json({ error: 'Max 5 pro share invites per project', code: 'SHARE_LIMIT' }, { status: 402 })
     }
-  }
 
-  // Check not already shared
-  const { data: existing } = await supabaseAdmin
-    .from('pro_share_invites')
-    .select('id, status')
-    .eq('project_id', projectId)
-    .eq('invitee_email', email.toLowerCase())
-    .in('status', ['pending', 'accepted'])
-    .single()
+    // Create invite
+    const { data: invite, error } = await supabaseAdmin
+      .from('pro_share_invites')
+      .insert({
+        project_id,
+        owner_id: userId,
+        invitee_email: invitee_email.toLowerCase().trim(),
+        status: 'pending',
+      })
+      .select()
+      .single()
 
-  if (existing) return NextResponse.json({ error: 'Already shared with this user' }, { status: 400 })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Create invite
-  const { data: invite } = await supabaseAdmin
-    .from('pro_share_invites')
-    .insert({
-      project_id: projectId,
-      owner_id: userId,
-      invitee_email: email.toLowerCase().trim(),
+    // Update project sharing_type
+    await supabaseAdmin
+      .from('projects')
+      .update({ sharing_type: 'pro_share' })
+      .eq('id', project_id)
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+    const inviteUrl = `${appUrl}/invite/pro/${invite.token}`
+
+    // Get inviter name
+    const { clerkClient } = await import('@clerk/nextjs/server')
+    const client = await clerkClient()
+    const inviter = await client.users.getUser(userId)
+    const inviterName = [inviter.firstName, inviter.lastName].filter(Boolean).join(' ') || 'Someone'
+
+    // Send email
+    const { subject, html } = proShareInviteEmail({
+      inviterName,
+      projectName: project.name,
+      inviteUrl,
+      recipientEmail: invitee_email,
     })
-    .select()
-    .single()
 
-  const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invite/project/${invite.token}`
+    const emailResult = await sendEmail({ to: invitee_email, subject, html })
 
-  // Update project sharing_type
-  await supabaseAdmin
-    .from('projects')
-    .update({ sharing_type: 'pro_share' })
-    .eq('id', projectId)
-
-  return NextResponse.json({ invite, inviteUrl }, { status: 201 })
-}
-
-// POST /api/projects/share/accept — accept a pro share invite
-export async function PUT(req: NextRequest) {
-  const { userId } = await auth()
-  if (!userId) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
-
-  const { token } = await req.json()
-
-  const { data: invite } = await supabaseAdmin
-    .from('pro_share_invites')
-    .select('*, projects(name, user_id)')
-    .eq('token', token)
-    .eq('status', 'pending')
-    .single()
-
-  if (!invite) return NextResponse.json({ error: 'Invite not found or already used' }, { status: 404 })
-
-  // Check invitee has Pro plan (must be Pro to access shared projects)
-  const inviteePlan = await getUserPlan(userId)
-  if (inviteePlan === 'free') {
-    return NextResponse.json({ error: 'Pro plan required to join shared projects', code: 'PRO_REQUIRED' }, { status: 402 })
+    return NextResponse.json({
+      invite,
+      inviteUrl,
+      emailSent: emailResult.success,
+    }, { status: 201 })
   }
 
-  // Update invite + project
-  await supabaseAdmin.from('pro_share_invites').update({
-    status: 'accepted',
-    invitee_user_id: userId,
-    accepted_at: new Date().toISOString(),
-  }).eq('id', invite.id)
+  // Handle team_share — share with whole team
+  if (sharing_type === 'team_share') {
+    if (plan !== 'team') {
+      return NextResponse.json({ error: 'Team plan required', code: 'UPGRADE_REQUIRED' }, { status: 402 })
+    }
+    await supabaseAdmin
+      .from('projects')
+      .update({ sharing_type: 'team_share', shared_with_team: true })
+      .eq('id', project_id)
 
-  await supabaseAdmin.from('projects').update({
-    shared_with_user_id: userId,
-    sharing_type: 'pro_share',
-  }).eq('id', invite.project_id)
+    return NextResponse.json({ success: true, sharing_type: 'team_share' })
+  }
 
-  return NextResponse.json({ projectName: (invite as any).projects?.name })
+  // Handle private
+  if (sharing_type === 'private') {
+    await supabaseAdmin
+      .from('projects')
+      .update({ sharing_type: 'private', shared_with_team: false })
+      .eq('id', project_id)
+    return NextResponse.json({ success: true, sharing_type: 'private' })
+  }
+
+  return NextResponse.json({ error: 'Invalid sharing_type' }, { status: 400 })
 }

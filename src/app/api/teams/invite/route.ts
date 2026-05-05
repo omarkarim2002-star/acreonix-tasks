@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { PLAN_LIMITS } from '@/lib/plans'
 import { getUserPlan } from '@/lib/gating'
+import { sendEmail, teamInviteEmail } from '@/lib/email'
 
-// POST /api/teams/invite — send invite
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   const { email } = await req.json()
   if (!email?.trim()) return NextResponse.json({ error: 'Email required' }, { status: 400 })
 
-  // Get team
+  // Get team membership
   const { data: membership } = await supabaseAdmin
     .from('team_members')
     .select('team_id, role')
@@ -29,7 +29,6 @@ export async function POST(req: NextRequest) {
   // Check member limit
   const plan = await getUserPlan(userId)
   const limit = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS]?.teamMembers ?? 1
-
   const { count } = await supabaseAdmin
     .from('team_members')
     .select('*', { count: 'exact', head: true })
@@ -66,7 +65,7 @@ export async function POST(req: NextRequest) {
 
   if (existingInvite) return NextResponse.json({ error: 'Invite already sent' }, { status: 400 })
 
-  // Create invite
+  // Create invite record
   const { data: invite, error } = await supabaseAdmin
     .from('team_invites')
     .insert({
@@ -82,8 +81,34 @@ export async function POST(req: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!
   const inviteUrl = `${appUrl}/invite/${invite.token}`
 
-  // TODO: send email via Resend when enabled
-  // For now return the invite URL so it can be shared manually
+  // Get inviter name + team name for email
+  const { clerkClient } = await import('@clerk/nextjs/server')
+  const client = await clerkClient()
+  const inviter = await client.users.getUser(userId)
+  const inviterName = [inviter.firstName, inviter.lastName].filter(Boolean).join(' ') || 'Someone'
 
-  return NextResponse.json({ invite, inviteUrl }, { status: 201 })
+  const { data: team } = await supabaseAdmin
+    .from('teams')
+    .select('name')
+    .eq('id', teamId)
+    .single()
+
+  const teamName = team?.name ?? 'a team'
+
+  // Send email via Resend
+  const { subject, html } = teamInviteEmail({
+    inviterName,
+    teamName,
+    inviteUrl,
+    recipientEmail: email,
+  })
+
+  const emailResult = await sendEmail({ to: email, subject, html })
+
+  return NextResponse.json({
+    invite,
+    inviteUrl,
+    emailSent: emailResult.success,
+    // Return inviteUrl so UI can show fallback copy if email fails
+  }, { status: 201 })
 }
