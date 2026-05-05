@@ -7,7 +7,6 @@ import {
   Calendar, BarChart2, ChevronRight, AlertTriangle,
 } from 'lucide-react'
 import { TodayFocusPanel } from '@/components/ui/TodayFocusPanel'
-import { PlanTodayButton } from '@/components/ui/PlanTodayButton'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type Task = {
@@ -58,11 +57,36 @@ function daysSinceUpdated(iso: string): number {
 }
 
 // ── Nudge engine ─────────────────────────────────────────────────────────────
-type Nudge = { id: string; type: 'deadline_risk' | 'stale' | 'overdue' | 'overload'; message: string; taskId?: string; projectId?: string; severity: 'high' | 'medium' }
+type Nudge = { id: string; type: 'deadline_risk' | 'stale' | 'overdue' | 'overload' | 'reschedule'; message: string; taskId?: string; projectId?: string; severity: 'high' | 'medium'; actionLabel?: string; actionHref?: string }
 
-function computeNudges(tasks: Task[], totalScheduledMins: number): Nudge[] {
+function computeNudges(
+  tasks: Task[],
+  totalScheduledMins: number,
+  missedEvents: { task_id: string; title: string; type: string }[] = []
+): Nudge[] {
   const nudges: Nudge[] = []
   const now = Date.now()
+
+  // Reschedule nudges — tasks that were scheduled yesterday but still pending
+  const pendingIds = new Set(tasks.map(t => t.id))
+  const missed = missedEvents.filter(e => e.task_id && pendingIds.has(e.task_id))
+  // Deduplicate by task_id
+  const seenMissed = new Set<string>()
+  for (const ev of missed) {
+    if (!ev.task_id || seenMissed.has(ev.task_id)) continue
+    seenMissed.add(ev.task_id)
+    const task = tasks.find(t => t.id === ev.task_id)
+    nudges.push({
+      id: `reschedule-${ev.task_id}`,
+      type: 'reschedule',
+      severity: task?.priority === 'urgent' || task?.priority === 'high' ? 'high' : 'medium',
+      message: `"${ev.title}" was scheduled yesterday but wasn't completed.`,
+      taskId: ev.task_id,
+      actionLabel: 'Reschedule →',
+      actionHref: `/dashboard/tasks/${ev.task_id}`,
+    })
+    if (nudges.filter(n => n.type === 'reschedule').length >= 2) break // max 2 reschedule nudges
+  }
 
   // Overload warning — if scheduled work exceeds 7h
   if (totalScheduledMins > 420) {
@@ -152,7 +176,12 @@ export default async function DashboardPage() {
   const todayStr = now.toDateString()
 
   // Fetch everything in parallel
-  const [projectsRes, allTasksRes, calEventsRes] = await Promise.all([
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStart = new Date(yesterday.setHours(0, 0, 0, 0)).toISOString()
+  const yesterdayEnd   = new Date(yesterday.setHours(23, 59, 59, 999)).toISOString()
+
+  const [projectsRes, allTasksRes, calEventsRes, missedEventsRes] = await Promise.all([
     supabaseAdmin
       .from('projects')
       .select('id, name, colour, icon, description, status')
@@ -173,9 +202,19 @@ export default async function DashboardPage() {
       .eq('user_id', userId)
       .gte('start_time', new Date(now.setHours(0, 0, 0, 0)).toISOString())
       .lte('end_time', new Date(now.setHours(23, 59, 59, 999)).toISOString()),
+    // Yesterday's scheduled tasks that weren't completed
+    supabaseAdmin
+      .from('calendar_events')
+      .select('task_id, title, type')
+      .eq('user_id', userId)
+      .eq('type', 'ai_generated')
+      .gte('start_time', yesterdayStart)
+      .lte('end_time', yesterdayEnd)
+      .not('task_id', 'is', null),
   ])
 
   const projects = (projectsRes.data ?? []) as Project[]
+  const missedEvents = missedEventsRes.data ?? []
   const tasks = ((allTasksRes.data ?? []) as any[]).map(t => ({
     ...t,
     project: Array.isArray(t.project) ? t.project[0] ?? null : t.project ?? null,
@@ -201,7 +240,7 @@ export default async function DashboardPage() {
   const inProgressTasks = tasks.filter(t => t.status === 'in_progress')
   const isOverloaded = totalWorkLoad > 420 // 7h+
 
-  const nudges = computeNudges(tasks, totalWorkLoad)
+  const nudges = computeNudges(tasks, totalWorkLoad, missedEvents)
   const todayOrder = computeTodayOrder(tasks)
   const isEmpty = tasks.length === 0 && projects.length === 0
 
@@ -228,16 +267,19 @@ export default async function DashboardPage() {
             <div key={nudge.id} style={{
               display: 'flex', alignItems: 'flex-start', gap: 10,
               padding: '10px 14px', borderRadius: 9,
-              background: nudge.severity === 'high' ? '#fff5f5' : '#fdf8ee',
-              border: `1px solid ${nudge.severity === 'high' ? '#fecaca' : '#e8d5a0'}`,
+              background: nudge.type === 'reschedule' ? '#f5f3ff' : nudge.severity === 'high' ? '#fff5f5' : '#fdf8ee',
+              border: `1px solid ${nudge.type === 'reschedule' ? '#ddd6fe' : nudge.severity === 'high' ? '#fecaca' : '#e8d5a0'}`,
             }}>
-              <AlertTriangle size={13} style={{ color: nudge.severity === 'high' ? '#dc2626' : '#c9a84c', flexShrink: 0, marginTop: 1 }} />
-              <p style={{ fontSize: 12.5, color: nudge.severity === 'high' ? '#7f1d1d' : '#7a5e1a', flex: 1, lineHeight: 1.5 }}>
+              <AlertTriangle size={13} style={{ color: nudge.type === 'reschedule' ? '#7c3aed' : nudge.severity === 'high' ? '#dc2626' : '#c9a84c', flexShrink: 0, marginTop: 1 }} />
+              <p style={{ fontSize: 12.5, color: nudge.type === 'reschedule' ? '#4c1d95' : nudge.severity === 'high' ? '#7f1d1d' : '#7a5e1a', flex: 1, lineHeight: 1.5 }}>
                 {nudge.message}
               </p>
-              {nudge.taskId && (
-                <Link href={`/dashboard/tasks/${nudge.taskId}`} style={{ fontSize: 11, color: '#2d7a4f', textDecoration: 'none', flexShrink: 0, fontWeight: 500 }}>
-                  View →
+              {(nudge.actionHref || nudge.taskId) && (
+                <Link
+                  href={nudge.actionHref ?? `/dashboard/tasks/${nudge.taskId}`}
+                  style={{ fontSize: 11, color: nudge.type === 'reschedule' ? '#7c3aed' : '#2d7a4f', textDecoration: 'none', flexShrink: 0, fontWeight: 600, whiteSpace: 'nowrap' }}
+                >
+                  {nudge.actionLabel ?? 'View →'}
                 </Link>
               )}
             </div>
@@ -349,7 +391,6 @@ export default async function DashboardPage() {
         <Link href="/dashboard/calendar" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: '#f0faf4', color: '#1f5537', border: '1px solid rgba(45,122,79,.2)', textDecoration: 'none' }}>
           <Calendar size={13} />Calendar
         </Link>
-        <PlanTodayButton />
         <Link href="/dashboard/mindmap" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: '#f3f3f1', color: '#555', border: '1px solid rgba(0,0,0,.1)', textDecoration: 'none' }}>
           <GitFork size={13} />Mind map
         </Link>
