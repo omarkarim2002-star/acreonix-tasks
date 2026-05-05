@@ -7,6 +7,7 @@ import {
   Calendar, BarChart2, ChevronRight, AlertTriangle,
 } from 'lucide-react'
 import { TodayFocusPanel } from '@/components/ui/TodayFocusPanel'
+import { NudgePanel } from '@/components/ui/NudgePanel'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type Task = {
@@ -57,64 +58,110 @@ function daysSinceUpdated(iso: string): number {
 }
 
 // ── Nudge engine ─────────────────────────────────────────────────────────────
-type Nudge = { id: string; type: 'deadline_risk' | 'stale' | 'overdue' | 'overload'; message: string; taskId?: string; projectId?: string; severity: 'high' | 'medium' }
+type Nudge = { id: string; type: 'deadline_risk' | 'stale' | 'overdue' | 'overload' | 'reschedule'; message: string; taskId?: string; projectId?: string; severity: 'high' | 'medium'; actionLabel?: string; actionHref?: string }
 
-function computeNudges(tasks: Task[], totalScheduledMins: number): Nudge[] {
+function computeNudges(
+  tasks: Task[],
+  totalScheduledMins: number,
+  missedEvents: { task_id: string; title: string }[] = []
+): Nudge[] {
   const nudges: Nudge[] = []
   const now = Date.now()
+  const startOfToday = new Date(); startOfToday.setHours(0,0,0,0)
 
-  // Overload warning — if scheduled work exceeds 7h
-  if (totalScheduledMins > 420) {
+  // ── CRITICAL: Overdue tasks (already past deadline) ──────────────────────
+  const overdue = tasks.filter(t =>
+    t.deadline && new Date(t.deadline) < startOfToday && t.status !== 'done'
+  )
+  if (overdue.length === 1) {
     nudges.push({
-      id: 'overload',
-      type: 'overload',
-      severity: 'high',
-      message: `${Math.round(totalScheduledMins / 60)}h of work estimated today — consider moving lower-priority tasks.`,
+      id: `overdue-${overdue[0].id}`,
+      type: 'overdue', severity: 'high',
+      message: `"${overdue[0].title}" is overdue — needs attention today.`,
+      taskId: overdue[0].id,
+      actionLabel: 'Open →',
+      actionHref: `/dashboard/tasks/${overdue[0].id}`,
+    })
+  } else if (overdue.length > 1) {
+    nudges.push({
+      id: 'overdue-many',
+      type: 'overdue', severity: 'high',
+      message: `${overdue.length} tasks are overdue — oldest: "${overdue[0].title}".`,
+      actionLabel: 'View tasks →',
+      actionHref: '/dashboard/tasks',
     })
   }
 
-  for (const task of tasks) {
-    if (task.status === 'done') continue
+  // ── HIGH: Urgent tasks due TODAY not started ──────────────────────────────
+  const urgentToday = tasks.filter(t => {
+    if (!t.deadline || t.status !== 'todo') return false
+    const diff = Math.ceil((new Date(t.deadline).getTime() - now) / 86400000)
+    return diff === 0 && (t.priority === 'urgent' || t.priority === 'high')
+  })
+  for (const task of urgentToday.slice(0, 1)) {
+    nudges.push({
+      id: `today-${task.id}`,
+      type: 'deadline_risk', severity: 'high',
+      message: `"${task.title}" is due today and hasn't been started.`,
+      taskId: task.id,
+      actionLabel: 'Start now →',
+      actionHref: `/dashboard/tasks/${task.id}`,
+    })
+  }
 
-    // Deadline risk — high priority, deadline in 1–2 days, not started
-    if (task.deadline && task.priority === 'urgent' || task.priority === 'high') {
-      const diff = Math.ceil((new Date(task.deadline!).getTime() - now) / 86400000)
-      if (diff >= 0 && diff <= 2 && task.status === 'todo') {
-        nudges.push({
-          id: `risk-${task.id}`,
-          type: 'deadline_risk',
-          severity: 'high',
-          message: `"${task.title}" is due ${diff === 0 ? 'today' : diff === 1 ? 'tomorrow' : 'in 2 days'} and hasn't been started.`,
-          taskId: task.id,
-        })
-      }
-    }
+  // ── HIGH: Overload ────────────────────────────────────────────────────────
+  if (totalScheduledMins > 480) { // 8h+, not 7h
+    nudges.push({
+      id: 'overload',
+      type: 'overload', severity: 'high',
+      message: `${Math.round(totalScheduledMins / 60)}h scheduled today — that's a lot. Consider moving lower-priority tasks.`,
+      actionLabel: 'View calendar →',
+      actionHref: '/dashboard/calendar',
+    })
+  }
 
-    // Stale task — not touched in 5+ days, not completed
-    if (task.priority !== 'low' && daysSinceUpdated(task.updated_at) >= 5) {
+  // ── MEDIUM: Reschedule nudges (missed yesterday) ──────────────────────────
+  const pendingIds = new Set(tasks.map(t => t.id))
+  const seenMissed = new Set<string>()
+  for (const ev of missedEvents) {
+    if (!ev.task_id || seenMissed.has(ev.task_id) || !pendingIds.has(ev.task_id)) continue
+    seenMissed.add(ev.task_id)
+    nudges.push({
+      id: `reschedule-${ev.task_id}`,
+      type: 'reschedule', severity: 'medium',
+      message: `"${ev.title}" was scheduled yesterday but wasn't completed.`,
+      taskId: ev.task_id,
+      actionLabel: 'Reschedule →',
+      actionHref: `/dashboard/tasks/${ev.task_id}`,
+    })
+    if (nudges.filter(n => n.type === 'reschedule').length >= 2) break
+  }
+
+  // ── MEDIUM: Stale tasks (7+ days, not 5) ─────────────────────────────────
+  // Only surface if no other higher-priority nudges dominate
+  if (nudges.length < 3) {
+    const stale = tasks.filter(t =>
+      t.priority !== 'low' &&
+      t.status !== 'done' &&
+      daysSinceUpdated(t.updated_at) >= 7
+    )
+    if (stale.length > 0) {
       nudges.push({
-        id: `stale-${task.id}`,
-        type: 'stale',
-        severity: 'medium',
-        message: `"${task.title}" hasn't been touched in ${daysSinceUpdated(task.updated_at)} days.`,
-        taskId: task.id,
+        id: `stale-${stale[0].id}`,
+        type: 'stale', severity: 'medium',
+        message: `"${stale[0].title}" hasn't moved in ${daysSinceUpdated(stale[0].updated_at)} days${stale.length > 1 ? ` (+${stale.length - 1} more)` : ''}.`,
+        taskId: stale[0].id,
+        actionLabel: 'Review →',
+        actionHref: `/dashboard/tasks/${stale[0].id}`,
       })
     }
   }
 
-  // Overdue tasks (separate from risk)
-  const overdue = tasks.filter(t => t.deadline && new Date(t.deadline) < new Date() && t.status !== 'done')
-  if (overdue.length > 0 && !nudges.find(n => n.type === 'overdue')) {
-    nudges.push({
-      id: 'overdue',
-      type: 'overdue',
-      severity: 'high',
-      message: `${overdue.length} task${overdue.length > 1 ? 's are' : ' is'} overdue and need${overdue.length === 1 ? 's' : ''} attention.`,
-    })
-  }
-
-  // Cap at 3 nudges, prioritise high severity
-  return nudges.sort((a, b) => (a.severity === 'high' ? -1 : 1)).slice(0, 3)
+  // Sort: critical first, then cap at 5 total (collapsible handles the rest)
+  const priority = { overdue: 4, deadline_risk: 3, overload: 2, reschedule: 1, stale: 0 }
+  return nudges
+    .sort((a, b) => (priority[b.type as keyof typeof priority] ?? 0) - (priority[a.type as keyof typeof priority] ?? 0))
+    .slice(0, 5)
 }
 
 // ── Today's best order ────────────────────────────────────────────────────────
@@ -230,28 +277,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Smart nudges ── */}
-      {nudges.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 22 }}>
-          {nudges.map(nudge => (
-            <div key={nudge.id} style={{
-              display: 'flex', alignItems: 'flex-start', gap: 10,
-              padding: '10px 14px', borderRadius: 9,
-              background: nudge.severity === 'high' ? '#fff5f5' : '#fdf8ee',
-              border: `1px solid ${nudge.severity === 'high' ? '#fecaca' : '#e8d5a0'}`,
-            }}>
-              <AlertTriangle size={13} style={{ color: nudge.severity === 'high' ? '#dc2626' : '#c9a84c', flexShrink: 0, marginTop: 1 }} />
-              <p style={{ fontSize: 12.5, color: nudge.severity === 'high' ? '#7f1d1d' : '#7a5e1a', flex: 1, lineHeight: 1.5 }}>
-                {nudge.message}
-              </p>
-              {nudge.taskId && (
-                <Link href={`/dashboard/tasks/${nudge.taskId}`} style={{ fontSize: 11, color: '#2d7a4f', textDecoration: 'none', flexShrink: 0, fontWeight: 500 }}>
-                  View →
-                </Link>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+            <NudgePanel nudges={nudges} />
 
       {/* ── Stats ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 24 }}>
