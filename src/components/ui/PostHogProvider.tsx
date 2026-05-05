@@ -22,7 +22,9 @@ export const track = {
   csvExported:     (count: number) => posthog.capture('csv_exported', { task_count: count }),
 }
 
-function PostHogIdentify() {
+// PostHogIdentify must be used INSIDE ClerkProvider — add to dashboard layout
+// Export it separately so it can be placed correctly
+export function PostHogIdentify() {
   const { user, isLoaded } = useUser()
   useEffect(() => {
     if (!isLoaded || !user) return
@@ -51,9 +53,10 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY
   if (!key) return <>{children}</>
 
+  // Don't render PostHogIdentify here — it needs ClerkProvider above it
+  // Add <PostHogIdentify /> inside dashboard/layout.tsx instead
   return (
     <PHProvider client={posthog}>
-      <PostHogIdentify />
       {children}
     </PHProvider>
   )

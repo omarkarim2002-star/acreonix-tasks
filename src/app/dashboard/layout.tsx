@@ -1,7 +1,9 @@
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileNav } from '@/components/layout/MobileNav'
 import { DailyCheckInModal } from '@/components/ui/DailyCheckInModal'
+import { OnboardingFlow } from '@/components/ui/OnboardingFlow'
 import { PlanProvider } from '@/lib/plan-context'
+import { PostHogIdentify } from '@/components/ui/PostHogProvider'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -19,6 +21,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <MobileNav />
           <DailyCheckInModal />
+          <PostHogIdentify />
+          <OnboardingFlow />
 
           <main className="flex-1 overflow-y-auto min-h-0">
             <div className="pb-24 md:pb-0">
