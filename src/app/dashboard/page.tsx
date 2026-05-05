@@ -269,11 +269,11 @@ export default async function DashboardPage() {
   const S = { fontFamily: 'DM Sans, sans-serif' }
 
   return (
-    <div style={{ padding: '28px 32px 60px', maxWidth: 1060, margin: '0 auto', ...S }}>
+    <div style={{ padding: 'clamp(14px, 4vw, 28px) clamp(14px, 4vw, 32px) 60px', maxWidth: 1060, margin: '0 auto', ...S }}>
 
       {/* ── Greeting ── */}
       <div style={{ marginBottom: 22 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.03em', marginBottom: 4 }}>
+        <h1 style={{ fontSize: 'clamp(18px, 5vw, 24px)', fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.03em', marginBottom: 4 }}>
           {greet()}{firstName ? `, ${firstName}` : ''} 👋
         </h1>
         <p style={{ fontSize: 13, color: '#aaa' }}>
@@ -281,8 +281,8 @@ export default async function DashboardPage() {
           {isOverloaded && <span style={{ color: '#ea580c', fontWeight: 500, marginLeft: 12 }}>⚠ Heavy day ahead</span>}
         </p>
         {/* Quick links */}
-        <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
-          <Link href="/dashboard/extract" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, background: '#2d7a4f', color: '#fff', textDecoration: 'none', boxShadow: '0 2px 6px rgba(45,122,79,0.2)' }}>
+        <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
+          <Link href="/dashboard/extract" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: 'clamp(6px,1.5vw,7px) clamp(10px,3vw,14px)', borderRadius: 8, fontSize: 'clamp(11px,3vw,12.5px)', fontWeight: 600, background: '#2d7a4f', color: '#fff', textDecoration: 'none', boxShadow: '0 2px 6px rgba(45,122,79,0.2)' }}>
             <Sparkles size={12} />AI Extract
           </Link>
           <Link href="/dashboard/calendar" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 500, background: '#f0faf4', color: '#1f5537', border: '1px solid rgba(45,122,79,.2)', textDecoration: 'none' }}>
@@ -301,14 +301,14 @@ export default async function DashboardPage() {
             <NudgePanel nudges={nudges} />
 
       {/* ── Stats ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginBottom: 20 }}>
         {[
           { label: 'Due today', value: todayTasks.length, color: '#c9a84c', bg: '#fdf8ee', border: '#e8d5a0', href: '/dashboard/tasks?filter=today' },
           { label: 'Overdue', value: overdueTasks.length, color: '#dc2626', bg: '#fff5f5', border: '#fecaca', href: '/dashboard/tasks?filter=overdue' },
           { label: 'In progress', value: inProgressTasks.length, color: '#2d7a4f', bg: '#f0faf4', border: '#c6e6d4', href: '/dashboard/tasks?filter=in_progress' },
           { label: 'Projects', value: projects.length, color: '#2d7a4f', bg: '#f0faf4', border: '#c6e6d4', href: '/dashboard/projects' },
         ].map(({ label, value, color, bg, border, href }) => (
-          <Link key={label} href={href} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10, padding: '13px 16px', textDecoration: 'none', display: 'block' }}>
+          <Link key={label} href={href} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10, padding: 'clamp(10px,2.5vw,13px) clamp(12px,3vw,16px)', textDecoration: 'none', display: 'block' }}>
             <p style={{ fontSize: 11, color: '#aaa', fontWeight: 500, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
             <p style={{ fontSize: 26, fontWeight: 700, color, letterSpacing: '-0.04em', lineHeight: 1 }}>{value}</p>
           </Link>

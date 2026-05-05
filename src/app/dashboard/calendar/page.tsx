@@ -382,7 +382,7 @@ function DaySnapshot({ events, anchor }: { events: CalEvent[]; anchor: Date }) {
 }
 
 export default function CalendarPage() {
-  const [view, setView] = useState<ViewMode>('week')
+  const [view, setView] = useState<ViewMode>(typeof window !== 'undefined' && window.innerWidth < 768 ? 'day' : 'week')
   const [anchor, setAnchor] = useState(new Date())
   const [events, setEvents] = useState<CalEvent[]>([])
   const [loading, setLoading] = useState(true)
@@ -563,7 +563,7 @@ export default function CalendarPage() {
 
       {/* Toolbar */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px',
+        display: 'flex', alignItems: 'center', gap: 6, padding: 'clamp(8px,2vw,10px) clamp(10px,3vw,20px)',
         background: '#fff', borderBottom: '1px solid #e5e7eb', flexShrink: 0, flexWrap: 'wrap',
       }}>
         <h1 style={{ fontSize: 16, fontWeight: 600, color: '#0f172a', marginRight: 4 }}>Calendar</h1>
@@ -583,7 +583,7 @@ export default function CalendarPage() {
         <div style={{ display: 'flex', background: '#f1f3f5', borderRadius: 6, padding: 2, gap: 1 }}>
           {(['week','day','month'] as ViewMode[]).map(v => (
             <button key={v} onClick={() => setView(v)} style={{
-              padding: '4px 12px', fontSize: 12, fontWeight: view === v ? 500 : 400,
+              padding: 'clamp(3px,1vw,4px) clamp(7px,2vw,12px)', fontSize: 'clamp(10px,3vw,12px)', fontWeight: view === v ? 500 : 400,
               borderRadius: 4, border: 'none', cursor: 'pointer', transition: 'all 0.1s', textTransform: 'capitalize',
               background: view === v ? '#fff' : 'transparent',
               color: view === v ? '#0f172a' : '#6b7280',
@@ -676,7 +676,9 @@ export default function CalendarPage() {
           />
         )}
         </div>
-        <DaySnapshot events={events} anchor={anchor} />
+        <div style={{ display: 'var(--cal-panel, flex)' }}>
+          <DaySnapshot events={events} anchor={anchor} />
+        </div>
       </div>
 
       {/* Event detail modal */}

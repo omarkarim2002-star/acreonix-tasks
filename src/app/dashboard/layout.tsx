@@ -4,6 +4,7 @@ import { DailyCheckInModal } from '@/components/ui/DailyCheckInModal'
 import { OnboardingFlow } from '@/components/ui/OnboardingFlow'
 import { PlanProvider } from '@/lib/plan-context'
 import { PostHogIdentify } from '@/components/ui/PostHogProvider'
+import { PWAInstallPrompt } from '@/components/ui/PWAInstallPrompt'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -22,6 +23,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <MobileNav />
           <DailyCheckInModal />
           <PostHogIdentify />
+          <PWAInstallPrompt />
           <OnboardingFlow />
 
           <main className="flex-1 overflow-y-auto min-h-0">

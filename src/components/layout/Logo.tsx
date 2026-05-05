@@ -1,11 +1,12 @@
 import Link from 'next/link'
 
 export function Logo({ size = 'default' }: { size?: 'default' | 'small' | 'large' }) {
-  const imgSize = size === 'small' ? 22 : size === 'large' ? 36 : 28
-  const textSize = size === 'small' ? '13px' : size === 'large' ? '20px' : '15px'
+  const imgSize = size === 'small' ? 24 : size === 'large' ? 40 : 32
+  const nameSize = size === 'small' ? '12px' : size === 'large' ? '19px' : '15px'
+  const tagSize  = size === 'small' ? '7.5px' : size === 'large' ? '10px' : '8.5px'
 
   return (
-    <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none', opacity: 1 }}>
+    <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/logo.png"
@@ -14,23 +15,28 @@ export function Logo({ size = 'default' }: { size?: 'default' | 'small' | 'large
         height={imgSize}
         style={{ objectFit: 'contain', flexShrink: 0 }}
       />
-      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+        {/* Bold black-weight sans — matches "Acreonix" in the AI Lead Agent branding */}
         <span style={{
-          fontFamily: 'Georgia, serif',
-          fontSize: textSize,
-          fontWeight: 700,
-          color: '#2d7a4f',
-          letterSpacing: '0.1em',
+          fontFamily: '"DM Sans", -apple-system, BlinkMacSystemFont, sans-serif',
+          fontSize: nameSize,
+          fontWeight: 900,
+          color: '#1a1a1a',
+          letterSpacing: '0.08em',
           textTransform: 'uppercase',
+          lineHeight: 1.2,
         }}>
           Acreonix
         </span>
+        {/* Gold spaced small-caps subtitle — matches "AI LEAD AGENT" treatment */}
         <span style={{
-          fontFamily: 'Georgia, serif',
-          fontSize: '9px',
+          fontFamily: '"DM Sans", -apple-system, BlinkMacSystemFont, sans-serif',
+          fontSize: tagSize,
+          fontWeight: 600,
           color: '#c9a84c',
-          letterSpacing: '0.18em',
+          letterSpacing: '0.28em',
           textTransform: 'uppercase',
+          lineHeight: 1.4,
         }}>
           Tasks
         </span>

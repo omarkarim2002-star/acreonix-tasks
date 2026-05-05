@@ -685,7 +685,7 @@ export default function GlobalMindMapPage() {
     <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', background: '#f7f7f5', zIndex: 40, fontFamily: 'DM Sans, sans-serif' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 24px', background: '#fff', borderBottom: '1px solid rgba(0,0,0,.07)', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'clamp(8px,2vw,11px) clamp(12px,3vw,24px)', background: '#fff', borderBottom: '1px solid rgba(0,0,0,.07)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <button onClick={() => router.back()} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
             <ArrowLeft size={14} />Back
@@ -737,6 +737,7 @@ export default function GlobalMindMapPage() {
           >
             <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="rgba(0,0,0,.07)" />
             <Controls showInteractive={false} />
+            {typeof window === 'undefined' || window.innerWidth >= 768 ? (
             <MiniMap
               nodeColor={n => {
                 if (n.type === 'rootNode') return '#2d7a4f'
@@ -747,6 +748,7 @@ export default function GlobalMindMapPage() {
               }}
               maskColor="rgba(247,247,245,.75)"
             />
+          ) : null}
           </ReactFlow>
         )}
       </div>
