@@ -1,48 +1,24 @@
 import { Sidebar } from '@/components/layout/Sidebar'
-import { MobileHeader } from '@/components/layout/MobileNav'
-import { PlanProvider } from '@/lib/plan-context'
-import { ToastProvider } from '@/components/ui/Toast'
-import { OnboardingWrapper } from '@/components/ui/OnboardingWrapper'
-import { FloatingTimer } from '@/components/ui/FloatingTimer'
+import { MobileNav } from '@/components/layout/MobileNav'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <PlanProvider>
-      <ToastProvider>
-        <div style={{
-          display: 'flex',
-          height: '100vh',
-          overflow: 'hidden',
-          background: '#f7f7f5',
-        }}>
-          {/* Sidebar — always visible on md+ */}
-          <Sidebar />
+    <div className="flex h-screen overflow-hidden bg-[#f8faf9]">
+      {/* Sidebar — hidden on mobile */}
+      <div className="hidden md:flex">
+        <Sidebar />
+      </div>
 
-          {/* Main content area */}
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            minWidth: 0,
-            overflow: 'hidden',
-          }}>
-            {/* Mobile header — only shows on mobile via CSS */}
-            <MobileHeader />
+      {/* Mobile top + bottom nav */}
+      <MobileNav />
 
-            {/* Scrollable page content */}
-            <main style={{
-              flex: 1,
-              overflowY: 'auto',
-              overflowX: 'hidden',
-            }}>
-              {children}
-            </main>
-          </div>
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto">
+        {/* Desktop padding, mobile also accounts for bottom nav */}
+        <div className="pb-24 md:pb-0">
+          {children}
         </div>
-
-        <FloatingTimer />
-        <OnboardingWrapper />
-      </ToastProvider>
-    </PlanProvider>
+      </main>
+    </div>
   )
 }
