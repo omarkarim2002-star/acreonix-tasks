@@ -493,6 +493,7 @@ function buildGraph(
     edges.push({
       id: `ep-${p.id}`, source: 'root', target: `p-${p.id}`,
       style: { stroke: edgeColor + '90', strokeWidth: shareColour ? 2 : 1.8 },
+      zIndex: -1,
       animated: (p.tasks ?? []).some((t: any) => t.status === 'in_progress'),
     })
 
@@ -545,6 +546,7 @@ function buildGraph(
       edges.push({
         id: `et-${task.id}`, source: `p-${p.id}`, target: tId,
         style: { stroke: shareColour ? shareColour + '60' : '#c4cdd8', strokeWidth: 1.5 },
+        zIndex: -1,
       })
     })
   })
@@ -648,7 +650,13 @@ export default function GlobalMindMapPage() {
     <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, background: '#f7f7f5', zIndex: 40 }}>
       <Loader2 size={22} style={{ color: '#2d7a4f', animation: 'spin 1s linear infinite' }} />
       <p style={{ color: '#9aa3b4', fontSize: 13, fontFamily: 'DM Sans, sans-serif' }}>Loading mind map…</p>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .react-flow__edge-path { pointer-events: none; }
+        .react-flow__edges { z-index: 0 !important; }
+        .react-flow__nodes { z-index: 1 !important; }
+        .react-flow__edge { z-index: 0 !important; }
+      `}</style>
 
       {/* Task detail modal — rendered at page level, outside ReactFlow transform */}
       {modalTaskId && (
@@ -721,6 +729,8 @@ export default function GlobalMindMapPage() {
             fitView fitViewOptions={{ padding: 0.2 }}
             minZoom={0.1} maxZoom={2}
             proOptions={{ hideAttribution: true }}
+            elevateEdgesOnSelect={false}
+            elevateNodesOnSelect={false}
           >
             <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="rgba(0,0,0,.07)" />
             <Controls showInteractive={false} />
@@ -737,7 +747,13 @@ export default function GlobalMindMapPage() {
           </ReactFlow>
         )}
       </div>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .react-flow__edge-path { pointer-events: none; }
+        .react-flow__edges { z-index: 0 !important; }
+        .react-flow__nodes { z-index: 1 !important; }
+        .react-flow__edge { z-index: 0 !important; }
+      `}</style>
 
       {/* Task detail modal — rendered at page level, outside ReactFlow transform */}
       {modalTaskId && (
