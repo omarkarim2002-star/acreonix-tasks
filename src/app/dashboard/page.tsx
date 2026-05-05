@@ -57,36 +57,11 @@ function daysSinceUpdated(iso: string): number {
 }
 
 // ── Nudge engine ─────────────────────────────────────────────────────────────
-type Nudge = { id: string; type: 'deadline_risk' | 'stale' | 'overdue' | 'overload' | 'reschedule'; message: string; taskId?: string; projectId?: string; severity: 'high' | 'medium'; actionLabel?: string; actionHref?: string }
+type Nudge = { id: string; type: 'deadline_risk' | 'stale' | 'overdue' | 'overload'; message: string; taskId?: string; projectId?: string; severity: 'high' | 'medium' }
 
-function computeNudges(
-  tasks: Task[],
-  totalScheduledMins: number,
-  missedEvents: { task_id: string; title: string; type: string }[] = []
-): Nudge[] {
+function computeNudges(tasks: Task[], totalScheduledMins: number): Nudge[] {
   const nudges: Nudge[] = []
   const now = Date.now()
-
-  // Reschedule nudges — tasks that were scheduled yesterday but still pending
-  const pendingIds = new Set(tasks.map(t => t.id))
-  const missed = missedEvents.filter(e => e.task_id && pendingIds.has(e.task_id))
-  // Deduplicate by task_id
-  const seenMissed = new Set<string>()
-  for (const ev of missed) {
-    if (!ev.task_id || seenMissed.has(ev.task_id)) continue
-    seenMissed.add(ev.task_id)
-    const task = tasks.find(t => t.id === ev.task_id)
-    nudges.push({
-      id: `reschedule-${ev.task_id}`,
-      type: 'reschedule',
-      severity: task?.priority === 'urgent' || task?.priority === 'high' ? 'high' : 'medium',
-      message: `"${ev.title}" was scheduled yesterday but wasn't completed.`,
-      taskId: ev.task_id,
-      actionLabel: 'Reschedule →',
-      actionHref: `/dashboard/tasks/${ev.task_id}`,
-    })
-    if (nudges.filter(n => n.type === 'reschedule').length >= 2) break // max 2 reschedule nudges
-  }
 
   // Overload warning — if scheduled work exceeds 7h
   if (totalScheduledMins > 420) {
@@ -174,14 +149,11 @@ export default async function DashboardPage() {
 
   const now = new Date()
   const todayStr = now.toDateString()
+  const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0)
+  const endOfDay = new Date(now); endOfDay.setHours(23, 59, 59, 999)
 
   // Fetch everything in parallel
-  const yesterday = new Date(now)
-  yesterday.setDate(yesterday.getDate() - 1)
-  const yesterdayStart = new Date(yesterday.setHours(0, 0, 0, 0)).toISOString()
-  const yesterdayEnd   = new Date(yesterday.setHours(23, 59, 59, 999)).toISOString()
-
-  const [projectsRes, allTasksRes, calEventsRes, missedEventsRes] = await Promise.all([
+  const [projectsRes, allTasksRes, calEventsRes] = await Promise.all([
     supabaseAdmin
       .from('projects')
       .select('id, name, colour, icon, description, status')
@@ -200,21 +172,11 @@ export default async function DashboardPage() {
       .from('calendar_events')
       .select('start_time, end_time, type')
       .eq('user_id', userId)
-      .gte('start_time', new Date(now.setHours(0, 0, 0, 0)).toISOString())
-      .lte('end_time', new Date(now.setHours(23, 59, 59, 999)).toISOString()),
-    // Yesterday's scheduled tasks that weren't completed
-    supabaseAdmin
-      .from('calendar_events')
-      .select('task_id, title, type')
-      .eq('user_id', userId)
-      .eq('type', 'ai_generated')
-      .gte('start_time', yesterdayStart)
-      .lte('end_time', yesterdayEnd)
-      .not('task_id', 'is', null),
+      .gte('start_time', startOfDay.toISOString())
+      .lte('end_time', endOfDay.toISOString()),
   ])
 
   const projects = (projectsRes.data ?? []) as Project[]
-  const missedEvents = missedEventsRes.data ?? []
   const tasks = ((allTasksRes.data ?? []) as any[]).map(t => ({
     ...t,
     project: Array.isArray(t.project) ? t.project[0] ?? null : t.project ?? null,
@@ -235,12 +197,19 @@ export default async function DashboardPage() {
     : tasks.filter(t => t.deadline && new Date(t.deadline).toDateString() === todayStr)
         .reduce((s, t) => s + (t.estimated_minutes ?? 30), 0)
 
-  const todayTasks = tasks.filter(t => t.deadline && new Date(t.deadline).toDateString() === todayStr)
-  const overdueTasks = tasks.filter(t => t.deadline && new Date(t.deadline) < now)
+  const todayTasks = tasks.filter(t => {
+    if (!t.deadline) return false
+    const d = new Date(t.deadline)
+    // Compare date parts only (ignore time) to handle UTC vs local timezone
+    return d.getUTCFullYear() === now.getFullYear() &&
+           d.getUTCMonth() === now.getMonth() &&
+           d.getUTCDate() === now.getDate()
+  })
+  const overdueTasks = tasks.filter(t => t.deadline && new Date(t.deadline) < startOfDay)
   const inProgressTasks = tasks.filter(t => t.status === 'in_progress')
   const isOverloaded = totalWorkLoad > 420 // 7h+
 
-  const nudges = computeNudges(tasks, totalWorkLoad, missedEvents)
+  const nudges = computeNudges(tasks, totalWorkLoad)
   const todayOrder = computeTodayOrder(tasks)
   const isEmpty = tasks.length === 0 && projects.length === 0
 
@@ -267,19 +236,16 @@ export default async function DashboardPage() {
             <div key={nudge.id} style={{
               display: 'flex', alignItems: 'flex-start', gap: 10,
               padding: '10px 14px', borderRadius: 9,
-              background: nudge.type === 'reschedule' ? '#f5f3ff' : nudge.severity === 'high' ? '#fff5f5' : '#fdf8ee',
-              border: `1px solid ${nudge.type === 'reschedule' ? '#ddd6fe' : nudge.severity === 'high' ? '#fecaca' : '#e8d5a0'}`,
+              background: nudge.severity === 'high' ? '#fff5f5' : '#fdf8ee',
+              border: `1px solid ${nudge.severity === 'high' ? '#fecaca' : '#e8d5a0'}`,
             }}>
-              <AlertTriangle size={13} style={{ color: nudge.type === 'reschedule' ? '#7c3aed' : nudge.severity === 'high' ? '#dc2626' : '#c9a84c', flexShrink: 0, marginTop: 1 }} />
-              <p style={{ fontSize: 12.5, color: nudge.type === 'reschedule' ? '#4c1d95' : nudge.severity === 'high' ? '#7f1d1d' : '#7a5e1a', flex: 1, lineHeight: 1.5 }}>
+              <AlertTriangle size={13} style={{ color: nudge.severity === 'high' ? '#dc2626' : '#c9a84c', flexShrink: 0, marginTop: 1 }} />
+              <p style={{ fontSize: 12.5, color: nudge.severity === 'high' ? '#7f1d1d' : '#7a5e1a', flex: 1, lineHeight: 1.5 }}>
                 {nudge.message}
               </p>
-              {(nudge.actionHref || nudge.taskId) && (
-                <Link
-                  href={nudge.actionHref ?? `/dashboard/tasks/${nudge.taskId}`}
-                  style={{ fontSize: 11, color: nudge.type === 'reschedule' ? '#7c3aed' : '#2d7a4f', textDecoration: 'none', flexShrink: 0, fontWeight: 600, whiteSpace: 'nowrap' }}
-                >
-                  {nudge.actionLabel ?? 'View →'}
+              {nudge.taskId && (
+                <Link href={`/dashboard/tasks/${nudge.taskId}`} style={{ fontSize: 11, color: '#2d7a4f', textDecoration: 'none', flexShrink: 0, fontWeight: 500 }}>
+                  View →
                 </Link>
               )}
             </div>
@@ -290,15 +256,17 @@ export default async function DashboardPage() {
       {/* ── Stats ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 24 }}>
         {[
-          { label: 'Due today', value: todayTasks.length, color: '#c9a84c', bg: '#fdf8ee', border: '#e8d5a0' },
-          { label: 'Overdue', value: overdueTasks.length, color: '#dc2626', bg: '#fff5f5', border: '#fecaca' },
-          { label: 'In progress', value: inProgressTasks.length, color: '#2d7a4f', bg: '#f0faf4', border: '#c6e6d4' },
-          { label: 'Projects', value: projects.length, color: '#2d7a4f', bg: '#f0faf4', border: '#c6e6d4' },
-        ].map(({ label, value, color, bg, border }) => (
-          <div key={label} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10, padding: '13px 16px' }}>
+          { label: 'Due today', value: todayTasks.length, color: '#c9a84c', bg: '#fdf8ee', border: '#e8d5a0', href: '/dashboard/tasks?filter=today' },
+          { label: 'Overdue', value: overdueTasks.length, color: '#dc2626', bg: '#fff5f5', border: '#fecaca', href: '/dashboard/tasks?filter=overdue' },
+          { label: 'In progress', value: inProgressTasks.length, color: '#2d7a4f', bg: '#f0faf4', border: '#c6e6d4', href: '/dashboard/tasks?filter=in_progress' },
+          { label: 'Projects', value: projects.length, color: '#2d7a4f', bg: '#f0faf4', border: '#c6e6d4', href: '/dashboard/projects' },
+        ].map(({ label, value, color, bg, border, href }) => (
+          <Link key={label} href={href} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10, padding: '13px 16px', textDecoration: 'none', display: 'block', transition: 'transform 0.1s, box-shadow 0.1s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 12px ${color}20` }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '' }}>
             <p style={{ fontSize: 11, color: '#aaa', fontWeight: 500, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
             <p style={{ fontSize: 26, fontWeight: 700, color, letterSpacing: '-0.04em', lineHeight: 1 }}>{value}</p>
-          </div>
+          </Link>
         ))}
       </div>
 

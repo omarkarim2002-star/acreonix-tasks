@@ -886,11 +886,12 @@ function EventHoverTooltip({ event, anchorRect }: { event: CalEvent; anchorRect:
     <div style={{
       position: 'fixed', left, top, width: TOOLTIP_W, zIndex: 300,
       background: '#fff',
-      borderRadius: 12,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.08)',
-      border: `1px solid ${event.colour}30`,
+      borderRadius: 10,
+      boxShadow: '0 4px 20px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06)',
+      border: '1px solid rgba(0,0,0,0.08)',
+      borderTop: `3px solid ${event.colour}`,
       overflow: 'hidden',
-      animation: 'tooltipIn 0.15s cubic-bezier(0.4,0,0.2,1)',
+      animation: 'tooltipIn 0.12s ease',
       pointerEvents: 'none',
       fontFamily: 'DM Sans, sans-serif',
     }}>
@@ -898,7 +899,7 @@ function EventHoverTooltip({ event, anchorRect }: { event: CalEvent; anchorRect:
       <div style={{ height: 3, background: isProvisional ? `repeating-linear-gradient(90deg,${event.colour}80 0,${event.colour}80 8px,transparent 8px,transparent 14px)` : event.colour }} />
 
       {/* Content */}
-      <div style={{ padding: '11px 13px' }}>
+      <div style={{ padding: '10px 12px 11px' }}>
         {/* Title */}
         <p style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', lineHeight: 1.35, marginBottom: 7, wordBreak: 'break-word' }}>
           {event.title}
@@ -937,11 +938,7 @@ function EventHoverTooltip({ event, anchorRect }: { event: CalEvent; anchorRect:
         )}
       </div>
 
-      {/* Click hint */}
-      <div style={{ padding: '6px 13px 9px', borderTop: '1px solid rgba(0,0,0,0.05)', fontSize: 10, color: '#ccc', display: 'flex', alignItems: 'center', gap: 4 }}>
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-        Click to open full details
-      </div>
+
     </div>
   )
 }
@@ -1148,15 +1145,15 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
                         width: `calc(${colWidth}% - 4px)`,
                         borderRadius: 6,
                         borderLeft: isProvisional
-                          ? `2px dashed ${event.colour}80`
+                          ? `2px dashed ${event.colour}bb`
                           : focusEventId === event.id
                           ? `3px solid ${event.colour}`
                           : `2.5px solid ${event.colour + 'cc'}`,
                         background: isProvisional
-                          ? event.colour + '07'
+                          ? event.colour + '14'
                           : focusEventId === event.id
-                          ? event.colour + '1a'
-                          : event.colour + '0e',
+                          ? event.colour + '22'
+                          : event.colour + '18',
                         boxShadow: focusEventId === event.id && !isProvisional
                           ? `0 1px 6px ${event.colour}18`
                           : 'none',
@@ -1173,13 +1170,13 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
                       }}
                       onMouseEnter={e => {
                         const el = e.currentTarget as HTMLElement
-                        el.style.background = event.colour + '22'
+                        el.style.background = event.colour + '2e'
                         el.style.zIndex = '14'
                         if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
                         const rect = el.getBoundingClientRect()
                         hoverTimerRef.current = setTimeout(() => {
                           if (!isBreak) setHovered({ event, rect })
-                        }, 420)
+                        }, 280)
                       }}
                       onMouseLeave={e => {
                         const el = e.currentTarget as HTMLElement
