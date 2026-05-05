@@ -6,6 +6,7 @@ import {
   TrendingUp, Zap, CheckCircle2, GitFork,
   Calendar, BarChart2, ChevronRight, AlertTriangle,
 } from 'lucide-react'
+import { TodayFocusPanel } from '@/components/ui/TodayFocusPanel'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type Task = {
@@ -280,86 +281,9 @@ export default async function DashboardPage() {
       {!isEmpty && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
 
-          {/* TODAY'S FOCUS — Sprint 1 hero */}
+          {/* TODAY'S FOCUS — Sprint 3: AI-powered with reasoning */}
           <div style={{ gridColumn: '1 / -1' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#2d7a4f' }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                  Today's focus
-                </span>
-                {isOverloaded && (
-                  <span style={{ fontSize: 10, fontWeight: 600, background: '#fff4ee', color: '#ea580c', border: '1px solid #fed7aa', borderRadius: 5, padding: '2px 7px' }}>
-                    {Math.round(totalWorkLoad / 60)}h estimated — heavy day
-                  </span>
-                )}
-              </div>
-              <Link href="/dashboard/calendar" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#2d7a4f', textDecoration: 'none', fontWeight: 500 }}>
-                <Calendar size={12} />Schedule week
-              </Link>
-            </div>
-
-            {todayOrder.length === 0 ? (
-              <div style={{ padding: '20px', background: '#f9f9f7', borderRadius: 10, border: '1px solid rgba(0,0,0,0.06)', textAlign: 'center' }}>
-                <p style={{ fontSize: 13, color: '#bbb' }}>No tasks prioritised for today.</p>
-                <Link href="/dashboard/extract" style={{ fontSize: 12, color: '#2d7a4f', textDecoration: 'none', marginTop: 8, display: 'inline-block' }}>Add tasks with AI →</Link>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {todayOrder.map((task, idx) => {
-                  const isFirst = idx === 0
-                  const PRIORITY_DOT: Record<string, string> = { urgent: '#dc2626', high: '#ea580c', medium: '#3b82f6', low: '#9ca3af' }
-                  return (
-                    <Link
-                      key={task.id}
-                      href={`/dashboard/tasks/${task.id}`}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: isFirst ? '11px 14px' : '9px 14px',
-                        borderRadius: 9, textDecoration: 'none',
-                        background: isFirst ? '#f0faf4' : '#fff',
-                        border: isFirst ? '1px solid #c6e6d4' : '1px solid rgba(0,0,0,0.07)',
-                        transition: 'border-color 0.12s',
-                      }}
-                    >
-                      {/* Rank */}
-                      <span style={{ fontSize: 11, fontWeight: 700, color: isFirst ? '#2d7a4f' : '#ccc', width: 16, flexShrink: 0, textAlign: 'center' }}>
-                        {isFirst ? '→' : idx + 1}
-                      </span>
-
-                      {/* Priority dot */}
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: PRIORITY_DOT[task.priority] ?? '#aaa', flexShrink: 0 }} />
-
-                      {/* Title */}
-                      <span style={{ flex: 1, fontSize: isFirst ? 14 : 13, fontWeight: isFirst ? 600 : 400, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {task.title}
-                      </span>
-
-                      {/* Project */}
-                      {task.project && (
-                        <span style={{ fontSize: 11, color: '#bbb', flexShrink: 0, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {(task.project as any).name}
-                        </span>
-                      )}
-
-                      {/* Deadline */}
-                      {task.deadline && (
-                        <span style={{ fontSize: 11, color: deadlineColor(task.deadline), flexShrink: 0, fontWeight: 500 }}>
-                          {fmtDeadline(task.deadline)}
-                        </span>
-                      )}
-
-                      {/* Estimate */}
-                      {task.estimated_minutes && (
-                        <span style={{ fontSize: 10, color: '#ccc', flexShrink: 0 }}>
-                          {task.estimated_minutes}m
-                        </span>
-                      )}
-                    </Link>
-                  )
-                })}
-              </div>
-            )}
+            <TodayFocusPanel tasks={todayOrder} />
           </div>
 
           {/* All tasks column */}
