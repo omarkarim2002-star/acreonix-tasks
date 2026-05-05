@@ -69,24 +69,28 @@ function layoutEvents(events: CalEvent[]) {
   )
 
   for (const ev of sorted) {
-    const evStart = new Date(ev.start_time).getTime()
-    const evEnd = new Date(ev.end_time).getTime()
+    // Breaks and lunch always render full-width — never participate in column layout
+    if (ev.type === 'break' || ev.type === 'lunch') {
+      placed.push({ ...ev, col: 0, totalCols: 1 })
+      continue
+    }
 
-    // Find all events that overlap with this one
+    const evStart = new Date(ev.start_time).getTime()
+    const evEnd   = new Date(ev.end_time).getTime()
+
+    // Only consider non-break events for overlap detection
     const overlapping = placed.filter(p => {
+      if (p.type === 'break' || p.type === 'lunch') return false
       const pStart = new Date(p.start_time).getTime()
-      const pEnd = new Date(p.end_time).getTime()
+      const pEnd   = new Date(p.end_time).getTime()
       return evStart < pEnd && evEnd > pStart
     })
 
-    // Find first available column
     const usedCols = new Set(overlapping.map(p => p.col))
     let col = 0
     while (usedCols.has(col)) col++
 
     const totalCols = Math.max(col + 1, ...overlapping.map(p => p.totalCols), 1)
-
-    // Update totalCols for all overlapping events
     for (const p of overlapping) p.totalCols = Math.max(p.totalCols, totalCols)
     for (const p of placed) {
       if (overlapping.find(o => o.id === p.id)) p.totalCols = Math.max(p.totalCols, totalCols)
@@ -421,9 +425,18 @@ export default function CalendarPage() {
       .then(d => { setEvents((() => {
           const now = new Date()
           const arr = Array.isArray(d) ? d : []
+          // Remove stale provisional events and deduplicate lunch breaks
+          const lunchSeen = new Set<string>()
           return arr.filter((e: CalEvent) => {
+            // Remove stale unconfirmed AI events from past days
             if (e.type === 'ai_generated' && !e.confirmed) {
               return new Date(e.start_time).toDateString() >= now.toDateString()
+            }
+            // Keep only first lunch per day
+            if (e.type === 'lunch') {
+              const day = e.start_time.split('T')[0]
+              if (lunchSeen.has(day)) return false
+              lunchSeen.add(day)
             }
             return true
           })
@@ -961,7 +974,10 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
                   const priority = event.task?.priority ?? ''
                   const durationMins = timeToMins(event.end_time) - timeToMins(event.start_time)
 
-                  // COMPACT PILL for very short events (< 20px ≈ < 25 min)
+                  // Skip tiny break/lunch rendering noise
+                  if (isBreak && height < 12) return null
+
+                  // COMPACT PILL for very short non-break events (< 20px ≈ < 25 min)
                   if (height < 20 && !isBreak) {
                     return (
                       <div
@@ -969,18 +985,43 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
                         onClick={() => onEventClick(event)}
                         title={`${event.title} · ${fmtTime(event.start_time)}–${fmtTime(event.end_time)}`}
                         style={{
-                          position: 'absolute', top: top + 1, height: Math.max(height, 8),
+                          position: 'absolute', top: top + 1, height: Math.max(height, 6),
                           left: `calc(${leftPct}% + 2px)`, width: `calc(${colWidth}% - 4px)`,
-                          borderRadius: 3, background: event.colour + (isProvisional ? '40' : '99'),
+                          borderRadius: 3,
+                          background: event.colour + (isProvisional ? '50' : 'bb'),
                           cursor: 'pointer', overflow: 'hidden', boxSizing: 'border-box',
-                          display: 'flex', alignItems: 'center', paddingLeft: 3,
-                          animation: 'fadeSlideIn 0.25s ease both',
-                          zIndex: 10,
+                          display: 'flex', alignItems: 'center', paddingLeft: 4,
+                          animation: 'fadeSlideIn 0.25s ease both', zIndex: 10,
                         }}
                       >
                         <span style={{ fontSize: 8, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1 }}>
                           {event.title}
                         </span>
+                      </div>
+                    )
+                  }
+
+                  // Break/lunch — minimal full-width band, no competing with task blocks
+                  if (isBreak) {
+                    return (
+                      <div
+                        key={event.id}
+                        style={{
+                          position: 'absolute', top: top + 1, height: Math.max(height - 2, 4),
+                          left: '2px', width: 'calc(100% - 4px)',
+                          borderRadius: 4,
+                          background: 'rgba(0,0,0,0.04)',
+                          borderLeft: '2px solid rgba(0,0,0,0.1)',
+                          boxSizing: 'border-box',
+                          display: 'flex', alignItems: 'center', paddingLeft: 6,
+                          zIndex: 5, pointerEvents: height > 16 ? 'auto' : 'none',
+                        }}
+                      >
+                        {height > 16 && (
+                          <span style={{ fontSize: 9, color: '#bbb', fontWeight: 500, fontFamily: 'DM Sans, sans-serif' }}>
+                            {event.type === 'lunch' ? '🍽 Lunch' : '☕ Break'}
+                          </span>
+                        )}
                       </div>
                     )
                   }
@@ -1002,19 +1043,19 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
                           ? `2px dashed ${event.colour}80`
                           : focusEventId === event.id
                           ? `3px solid ${event.colour}`
-                          : `2.5px solid ${isBreak ? '#e0e0dd' : event.colour + 'cc'}`,
+                          : `2.5px solid ${event.colour + 'cc'}`,
                         background: isProvisional
                           ? event.colour + '07'
                           : focusEventId === event.id
                           ? event.colour + '1a'
-                          : isBreak ? '#f5f5f3' : event.colour + '0e',
+                          : event.colour + '0e',
                         boxShadow: focusEventId === event.id && !isProvisional
                           ? `0 1px 6px ${event.colour}18`
                           : 'none',
                         opacity: isProvisional ? 0.85 : isPast ? 0.4 : 1,
                         padding: '3px 5px',
                         cursor: 'pointer',
-                        zIndex: focusEventId === event.id ? 11 : 10,
+                        zIndex: focusEventId === event.id ? 11 : isProvisional ? 9 : 10,
                         outline: focusEventId === event.id ? `1.5px solid ${event.colour}60` : 'none',
                         outlineOffset: '1px',
                         overflow: 'hidden',
@@ -1056,7 +1097,7 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
                           ⚡ Overlap
                         </div>
                       )}
-                      <div style={{ fontSize: 11.5, fontWeight: focusEventId === event.id ? 600 : 500, color: isBreak ? '#b0b0aa' : event.colour, lineHeight: 1.25, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontSize: 11.5, fontWeight: focusEventId === event.id ? 600 : 500, color: event.colour, lineHeight: 1.25, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', textDecoration: isPast ? 'line-through' : 'none', opacity: isPast ? 0.6 : 1 }}>
                         {event.title}
                       </div>
                       {durationMins >= 30 && (
