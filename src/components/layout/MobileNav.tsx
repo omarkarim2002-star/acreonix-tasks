@@ -3,11 +3,12 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
+import { usePlan } from '@/lib/plan-context'
 import { Logo } from './Logo'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, FolderKanban, CheckSquare,
-  Sparkles, Calendar, GitFork, BarChart2, Clock,
+  Sparkles, Calendar, GitFork, BarChart2, Clock, CreditCard,
 } from 'lucide-react'
 
 const PRIMARY = [
@@ -26,6 +27,7 @@ const SECONDARY = [
 
 export function MobileNav() {
   const path = usePathname()
+  const { plan, loading: planLoading } = usePlan()
 
   function active(href: string) {
     return href === '/dashboard' ? path === href : path.startsWith(href)
@@ -34,7 +36,7 @@ export function MobileNav() {
   return (
     <>
       {/* Top bar — md:hidden keeps it off desktop */}
-      <header className="md:hidden flex items-center justify-between px-4 bg-white border-b border-gray-100 shrink-0" style={{ height: 52 }}>
+      <header className="md:hidden flex items-center justify-between px-4 bg-white border-b border-gray-100 shrink-0" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 8px)', height: 'calc(52px + max(env(safe-area-inset-top, 0px), 8px))' }}>
         <Logo size="small" />
         <div className="flex items-center gap-1">
           {SECONDARY.map(({ href, label, icon: Icon }) => (
@@ -52,6 +54,24 @@ export function MobileNav() {
               <Icon size={17} />
             </Link>
           ))}
+
+          {/* Plan pill — links to billing */}
+          {!planLoading && (
+            <Link
+              href="/dashboard/billing"
+              title="Your plan"
+              style={{
+                fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
+                textTransform: 'uppercase', padding: '3px 7px', borderRadius: 5,
+                background: plan === 'team' ? 'rgba(37,99,235,0.1)' : plan === 'pro' ? 'rgba(45,122,79,0.1)' : 'rgba(0,0,0,0.06)',
+                color: plan === 'team' ? '#1d4ed8' : plan === 'pro' ? '#2d7a4f' : '#888',
+                textDecoration: 'none', marginLeft: 2,
+              }}
+            >
+              {plan}
+            </Link>
+          )}
+
           <div className="ml-1">
             <UserButton afterSignOutUrl="/" />
           </div>
