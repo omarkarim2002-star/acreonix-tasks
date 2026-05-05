@@ -7,6 +7,7 @@ import {
   Plus, Trash2, RefreshCw, Zap, Mic, Square,
 } from 'lucide-react'
 import Link from 'next/link'
+import { TopUpModal } from '@/components/ui/TopUpModal'
 
 type ExtractedTask = {
   title: string
@@ -37,6 +38,8 @@ export default function ExtractPage() {
   const [saved, setSaved] = useState(false)
   const [existingProjects, setExistingProjects] = useState<string[]>([])
   const [extractsRemaining, setExtractsRemaining] = useState<number | null>(null)
+  const [showTopUp, setShowTopUp] = useState(false)
+  const [topUpMeta, setTopUpMeta] = useState<{ used: number; limit: number }>({ used: 0, limit: 3 })
 
   // Voice state
   const [voiceState, setVoiceState] = useState<VoiceState>('idle')
@@ -139,7 +142,15 @@ export default function ExtractPage() {
         body: JSON.stringify({ text }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.message ?? data.error ?? 'Something went wrong'); return }
+      if (!res.ok) {
+        if (data.code === 'AI_EXTRACT_LIMIT') {
+          setTopUpMeta({ used: data.used ?? 0, limit: data.limit ?? 3 })
+          setShowTopUp(true)
+          return
+        }
+        setError(data.message ?? data.error ?? 'Something went wrong')
+        return
+      }
       setPreview({
         tasks: Array.isArray(data.tasks) ? data.tasks : [],
         projects: Array.isArray(data.projects) ? data.projects : [],
@@ -379,6 +390,14 @@ export default function ExtractPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showTopUp && (
+        <TopUpModal
+          onClose={() => setShowTopUp(false)}
+          creditsUsed={topUpMeta.used}
+          creditsLimit={topUpMeta.limit}
+        />
       )}
 
       <style>{`

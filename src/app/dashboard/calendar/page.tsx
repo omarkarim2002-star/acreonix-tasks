@@ -1,9 +1,10 @@
 'use client'
 import React from 'react'
 import { WorkHoursModal } from '@/components/ui/WorkHoursModal'
+import { CalendarImportModal } from '@/components/ui/CalendarImportModal'
 
 import { useState, useEffect, useRef } from 'react'
-import { ChevronLeft, ChevronRight, Sparkles, Loader2, Plus, X, Clock, Zap } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Sparkles, Loader2, Plus, X, Clock, Zap, Download } from 'lucide-react'
 import Link from 'next/link'
 
 type CalEvent = {
@@ -389,6 +390,7 @@ export default function CalendarPage() {
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [hasExistingAiEvents, setHasExistingAiEvents] = useState(false)
   const [showWorkHoursModal, setShowWorkHoursModal] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
   const [workHours, setWorkHours] = useState<{ start: string; end: string } | null>(null)
   const [focusTip, setFocusTip] = useState('')
 
@@ -594,6 +596,9 @@ export default function CalendarPage() {
           <button onClick={() => setShowNewEvent(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 500, padding: '6px 12px', border: '1px solid #e5e7eb', borderRadius: 6, background: '#fff', cursor: 'pointer', color: '#374151' }}>
             <Plus size={13} />Add event
           </button>
+          <button onClick={() => setShowImportModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 500, padding: '6px 12px', border: '1px solid #e5e7eb', borderRadius: 6, background: '#fff', cursor: 'pointer', color: '#374151' }}>
+            <Download size={13} />Import
+          </button>
           <button onClick={handleScheduleClick} disabled={scheduling} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 500, padding: '6px 14px', borderRadius: 6, background: '#2d7a4f', color: '#fff', border: 'none', cursor: 'pointer', opacity: scheduling ? 0.7 : 1 }}>
             {scheduling ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Sparkles size={13} />}
             {scheduling ? 'Scheduling…' : 'AI schedule'}
@@ -750,6 +755,19 @@ export default function CalendarPage() {
       )}
 
       {/* Work hours modal */}
+      {showImportModal && (
+        <CalendarImportModal
+          onClose={() => setShowImportModal(false)}
+          onImported={() => {
+            setShowImportModal(false)
+            // Reload events to show imported ones
+            fetch('/api/calendar-events').then(r => r.json()).then(d => {
+              if (Array.isArray(d)) setEvents(d)
+            })
+          }}
+        />
+      )}
+
       {showWorkHoursModal && (
         <WorkHoursModal
           onConfirm={(start, end) => {
