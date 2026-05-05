@@ -3,9 +3,11 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
+import { Logo } from './Logo'
+import { cn } from '@/lib/utils'
 import {
-  LayoutDashboard, CheckSquare, Sparkles,
-  Calendar, FolderKanban, GitFork, BarChart2, Clock,
+  LayoutDashboard, FolderKanban, CheckSquare,
+  Sparkles, Calendar, GitFork, BarChart2, Clock,
 } from 'lucide-react'
 
 const PRIMARY = [
@@ -31,105 +33,60 @@ export function MobileNav() {
 
   return (
     <>
-      {/* ── Top bar — normal flow, renders above <main> ── */}
-      <header className="md:hidden" style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 16px',
-        height: 52,
-        background: '#fff',
-        borderBottom: '1px solid rgba(0,0,0,0.07)',
-        fontFamily: 'DM Sans, sans-serif',
-        flexShrink: 0,
-      }}>
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="" style={{ width: 22, height: 22, objectFit: 'contain' }} />
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#111', letterSpacing: '-0.01em' }}>
-            Acreonix
-          </span>
-          <span style={{
-            fontSize: 9, fontWeight: 600, color: '#c9a84c',
-            letterSpacing: '0.1em', textTransform: 'uppercase',
-            padding: '2px 5px', background: 'rgba(201,168,76,0.1)', borderRadius: 4,
-          }}>
-            Tasks
-          </span>
-        </div>
-
-        {/* Secondary icons + user avatar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      {/* Top bar — md:hidden keeps it off desktop */}
+      <header className="md:hidden flex items-center justify-between px-4 bg-white border-b border-gray-100 shrink-0" style={{ height: 52 }}>
+        <Logo size="small" />
+        <div className="flex items-center gap-1">
           {SECONDARY.map(({ href, label, icon: Icon }) => (
-            <Link key={href} href={href} title={label} style={{
-              width: 34, height: 34, borderRadius: 8,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: active(href) ? 'rgba(45,122,79,0.1)' : 'transparent',
-              color: active(href) ? '#2d7a4f' : '#bbb',
-            }}>
-              <Icon size={18} />
+            <Link
+              key={href}
+              href={href}
+              title={label}
+              className={cn(
+                'w-8 h-8 rounded-lg flex items-center justify-center transition-colors',
+                active(href)
+                  ? 'bg-[rgba(45,122,79,0.1)] text-[#2d7a4f]'
+                  : 'text-gray-300'
+              )}
+            >
+              <Icon size={17} />
             </Link>
           ))}
-          <div style={{ marginLeft: 4 }}>
+          <div className="ml-1">
             <UserButton afterSignOutUrl="/" />
           </div>
         </div>
       </header>
 
-      {/* ── Bottom tab bar — fixed, always on top ── */}
-      <nav className="md:hidden" style={{
-        position: 'fixed',
-        bottom: 0, left: 0, right: 0,
-        zIndex: 50,
-        background: '#fff',
-        borderTop: '1px solid rgba(0,0,0,0.08)',
-        display: 'flex',
-        alignItems: 'stretch',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        fontFamily: 'DM Sans, sans-serif',
-      }}>
+      {/* Bottom tab bar — fixed, md:hidden */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 flex items-stretch"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
         {PRIMARY.map(({ href, label, icon: Icon, special }) => {
           const isActive = active(href)
           return (
-            <Link key={href} href={href} style={{
-              flex: 1,
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-              gap: 3, padding: '8px 0 10px',
-              color: isActive ? '#2d7a4f' : '#aaa',
-              textDecoration: 'none',
-              position: 'relative',
-            }}>
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                'flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[9.5px] font-medium transition-colors relative',
+                isActive ? 'text-[#2d7a4f]' : 'text-gray-400'
+              )}
+            >
               {special ? (
-                /* AI Add — floating pill */
-                <div style={{
-                  width: 42, height: 42, borderRadius: '50%',
-                  background: isActive ? '#2d7a4f' : '#f0f0ee',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  marginTop: -16,
-                  boxShadow: isActive
-                    ? '0 3px 10px rgba(45,122,79,0.35)'
-                    : '0 2px 6px rgba(0,0,0,0.1)',
-                  transition: 'all 0.15s',
-                }}>
+                <div className={cn(
+                  'w-10 h-10 rounded-full flex items-center justify-center -mt-4 shadow-md transition-all',
+                  isActive ? 'bg-[#2d7a4f]' : 'bg-[#f0f0ee]'
+                )}>
                   <Icon size={20} color={isActive ? '#fff' : '#2d7a4f'} />
                 </div>
               ) : (
-                <Icon size={isActive ? 22 : 20} />
+                <Icon size={isActive ? 21 : 19} />
               )}
-              <span style={{
-                fontSize: 9.5, fontWeight: isActive ? 600 : 400,
-                marginTop: special ? 2 : 0,
-              }}>
-                {label}
-              </span>
+              <span className={special ? 'mt-0.5' : ''}>{label}</span>
               {isActive && !special && (
-                <div style={{
-                  position: 'absolute', bottom: 5,
-                  width: 4, height: 4, borderRadius: '50%',
-                  background: '#2d7a4f',
-                }} />
+                <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-[#2d7a4f]" />
               )}
             </Link>
           )
