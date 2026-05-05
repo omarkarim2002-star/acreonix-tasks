@@ -10,6 +10,7 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { ArrowLeft, Loader2, Plus, Sparkles, Check, X, Users, Share2, Lock } from 'lucide-react'
+import { TaskDetailModal } from '@/components/ui/TaskDetailModal'
 import Link from 'next/link'
 
 // ── Colour constants ────────────────────────────────────────────────────────
@@ -350,9 +351,9 @@ function ProjectNode({ data }: NodeProps) {
 }
 
 function TaskNode({ data }: NodeProps) {
-  const router = useRouter()
   const [status, setStatus] = useState(data.status ?? 'todo')
-  const [completing, setCompleting] = useState(false)
+  const [visible, setVisible] = useState(true)
+  const [showModal, setShowModal] = useState(false)
 
   const CYCLE: Record<string, string> = {
     todo: 'in_progress', in_progress: 'done', done: 'todo', blocked: 'todo',
@@ -361,71 +362,83 @@ function TaskNode({ data }: NodeProps) {
   async function cycleStatus(e: React.MouseEvent) {
     e.stopPropagation()
     const next = CYCLE[status] ?? 'todo'
-    setCompleting(next === 'done')
     setStatus(next)
     await fetch(`/api/tasks/${data.taskId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: next, completed_at: next === 'done' ? new Date().toISOString() : null }),
     })
-    setTimeout(() => setCompleting(false), 600)
     data.onStatusChange?.(data.taskId, next)
+    if (next === 'done') {
+      setTimeout(() => setVisible(false), 1200)
+      setTimeout(() => data.onRemoveNode?.(data.taskId), 1800)
+    }
   }
 
   const isDone = status === 'done'
+  if (!visible) return null
 
   return (
-    <div
-      style={{
-        background: isDone ? '#f0faf4' : '#fff',
-        border: `1px solid ${isDone ? '#c6e6d4' : '#e8edf2'}`,
-        borderRadius: 8, padding: '7px 10px',
-        minWidth: 138, maxWidth: 185,
-        fontFamily: 'DM Sans, sans-serif',
-        opacity: isDone ? 0.75 : 1,
-        transition: 'all 0.25s',
-      }}
-    >
-      <Handle type="target" position={Position.Top} style={{ background: '#d1d5db', border: 'none', width: 5, height: 5 }} />
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
-        {/* Completion circle */}
-        <button
-          onClick={cycleStatus}
-          title={isDone ? 'Mark as to-do' : status === 'in_progress' ? 'Mark as done' : 'Mark in progress'}
-          style={{
-            width: 16, height: 16, borderRadius: '50%', flexShrink: 0, marginTop: 1,
-            border: `1.5px solid ${isDone ? '#2d7a4f' : status === 'in_progress' ? '#2d7a4f' : '#d1d5db'}`,
-            background: isDone ? '#2d7a4f' : status === 'in_progress' ? 'rgba(45,122,79,0.1)' : 'transparent',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'all 0.2s', padding: 0,
-            transform: completing ? 'scale(1.3)' : 'scale(1)',
-          }}
-        >
-          {isDone && (
-            <svg width="8" height="7" viewBox="0 0 10 8" fill="none">
-              <path d="M1 4l2.5 3L9 1" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          )}
-          {status === 'in_progress' && !isDone && (
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#2d7a4f' }} />
-          )}
-        </button>
-        <span style={{
-          fontSize: 10.5, color: isDone ? '#888' : '#2d3748', lineHeight: 1.4, cursor: 'pointer',
-          textDecoration: isDone ? 'line-through' : 'none',
+    <>
+      <div
+        style={{
+          background: '#fff', border: '1px solid #e8edf2',
+          borderRadius: 8, padding: '7px 10px',
+          minWidth: 138, maxWidth: 185,
+          fontFamily: 'DM Sans, sans-serif',
+          opacity: isDone ? 0 : 1,
+          transform: isDone ? 'scale(0.88)' : 'scale(1)',
+          transition: 'opacity 0.55s ease, transform 0.55s ease',
+          cursor: isDone ? 'default' : 'pointer',
         }}
-          onClick={() => router.push(`/dashboard/tasks/${data.taskId}`)}
-        >
-          {data.label}
-        </span>
-      </div>
-      {data.priority && data.priority !== 'medium' && !isDone && (
-        <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 3, marginLeft: 23 }}>
-          <div style={{ width: 5, height: 5, borderRadius: '50%', background: PRIORITY_COLOUR[data.priority] ?? '#9ca3af' }} />
-          <span style={{ fontSize: 9, color: '#bbb', textTransform: 'capitalize' }}>{data.priority}</span>
+        onClick={() => !isDone && setShowModal(true)}
+      >
+        <Handle type="target" position={Position.Top} style={{ background: '#d1d5db', border: 'none', width: 5, height: 5 }} />
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
+          <button
+            onClick={cycleStatus}
+            title={status === 'in_progress' ? 'Mark as done' : status === 'done' ? 'Undo' : 'Start'}
+            style={{
+              width: 16, height: 16, borderRadius: '50%', flexShrink: 0, marginTop: 1,
+              border: `1.5px solid ${status === 'in_progress' ? '#2d7a4f' : '#d1d5db'}`,
+              background: status === 'in_progress' ? 'rgba(45,122,79,0.1)' : 'transparent',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.2s', padding: 0,
+            }}
+          >
+            {status === 'in_progress' && (
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#2d7a4f' }} />
+            )}
+          </button>
+          <span style={{ fontSize: 10.5, color: '#2d3748', lineHeight: 1.4, flex: 1, userSelect: 'none' }}>
+            {data.label}
+          </span>
         </div>
+        {data.priority && data.priority !== 'medium' && (
+          <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 3, marginLeft: 23 }}>
+            <div style={{ width: 5, height: 5, borderRadius: '50%', background: PRIORITY_COLOUR[data.priority] ?? '#9ca3af' }} />
+            <span style={{ fontSize: 9, color: '#bbb', textTransform: 'capitalize' }}>{data.priority}</span>
+          </div>
+        )}
+      </div>
+
+      {showModal && (
+        <TaskDetailModal
+          taskId={data.taskId}
+          onClose={() => setShowModal(false)}
+          onStatusChange={(id, s) => {
+            setStatus(s)
+            data.onStatusChange?.(id, s)
+            if (s === 'done') {
+              setShowModal(false)
+              setTimeout(() => setVisible(false), 1200)
+              setTimeout(() => data.onRemoveNode?.(id), 1800)
+            }
+          }}
+          onDelete={(id) => { setVisible(false); data.onRemoveNode?.(id) }}
+        />
       )}
-    </div>
+    </>
   )
 }
 
@@ -447,7 +460,7 @@ function saveLayout(nodes: Node[]) {
 function buildGraph(
   projects: any[],
   savedPos: Record<string, { x: number; y: number }>,
-  callbacks: { onRefresh: () => void; onRename: (id: string, name: string) => void; onTaskAdded: (t: any) => void; onStatusChange: (taskId: string, status: string) => void }
+  callbacks: { onRefresh: () => void; onRename: (id: string, name: string) => void; onTaskAdded: (t: any) => void; onStatusChange: (taskId: string, status: string) => void; onRemoveNode: (taskId: string) => void }
 ): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = []
   const edges: Edge[] = []
@@ -495,7 +508,7 @@ function buildGraph(
       nodes.push({
         id: tId, type: 'taskNode',
         position: savedPos[tId] ?? defaultTPos,
-        data: { label: task.title, status: task.status, taskId: task.id, priority: task.priority, onStatusChange: callbacks.onStatusChange },
+        data: { label: task.title, status: task.status, taskId: task.id, priority: task.priority, onStatusChange: callbacks.onStatusChange, onRemoveNode: callbacks.onRemoveNode },
       })
       edges.push({
         id: `et-${task.id}`, source: `p-${p.id}`, target: tId,
@@ -522,6 +535,11 @@ export default function GlobalMindMapPage() {
       n.id === `t-${taskId}` ? { ...n, data: { ...n.data, status: newStatus } } : n
     ))
   }, [setNodes])
+
+  const handleRemoveNode = useCallback((taskId: string) => {
+    setNodes(ns => ns.filter(n => n.id !== `t-${taskId}`))
+    setEdges(es => es.filter(e => e.target !== `t-${taskId}`))
+  }, [setNodes, setEdges])
 
   const loadData = useCallback(async () => {
     const [projRes, taskRes] = await Promise.all([
@@ -550,7 +568,7 @@ export default function GlobalMindMapPage() {
     if (task?._refresh) {
       loadData().then(enriched => {
         const saved = loadLayout()
-        const { nodes: n, edges: e } = buildGraph(enriched, saved, { onRefresh: () => loadData(), onRename: handleRename, onTaskAdded: handleTaskAdded, onStatusChange: handleStatusChange })
+        const { nodes: n, edges: e } = buildGraph(enriched, saved, { onRefresh: () => loadData(), onRename: handleRename, onTaskAdded: handleTaskAdded, onStatusChange: handleStatusChange, onRemoveNode: handleRemoveNode })
         setNodes(n); setEdges(e)
       })
     } else {
@@ -565,7 +583,7 @@ export default function GlobalMindMapPage() {
     setLoading(true)
     loadData().then(enriched => {
       const saved = loadLayout()
-      const { nodes: n, edges: e } = buildGraph(enriched, saved, { onRefresh: () => loadData(), onRename: handleRename, onTaskAdded: handleTaskAdded, onStatusChange: handleStatusChange })
+      const { nodes: n, edges: e } = buildGraph(enriched, saved, { onRefresh: () => loadData(), onRename: handleRename, onTaskAdded: handleTaskAdded, onStatusChange: handleStatusChange, onRemoveNode: handleRemoveNode })
       setNodes(n); setEdges(e)
       setLoading(false)
     }).catch(() => setLoading(false))

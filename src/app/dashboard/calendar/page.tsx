@@ -103,19 +103,120 @@ const PRIORITY_COLOURS: Record<string, string> = {
 
 
 // ── Day Snapshot Panel ──────────────────────────────────────────────────────
+// ── Calendar intelligence helpers ──────────────────────────────────────────
+
+function computeFocusScore(events: CalEvent[], dayStr: string): { score: number; label: string; colour: string } {
+  const dayEvents = events.filter(e => e.start_time.startsWith(dayStr) && e.type !== 'break' && e.type !== 'lunch')
+  if (dayEvents.length === 0) return { score: 0, label: 'No tasks scheduled', colour: '#bbb' }
+
+  // Score components
+  const urgentCount  = dayEvents.filter(e => e.task?.priority === 'urgent' || e.task?.priority === 'high').length
+  const totalCount   = dayEvents.length
+  const urgentRatio  = urgentCount / totalCount
+  const projectIds   = new Set(dayEvents.map(e => e.colour ?? e.id))
+  const variety      = projectIds.size / totalCount // low variety = better focus
+  const durationMins = dayEvents.reduce((sum, e) => {
+    return sum + (timeToMins(e.end_time) - timeToMins(e.start_time))
+  }, 0)
+  const workdayMins = (18 - 9) * 60 // 9am–6pm
+  const density = Math.min(durationMins / workdayMins, 1)
+
+  // Scoring logic
+  let score = 60
+  if (urgentRatio > 0.3) score += 15 // good: tackling important work
+  if (variety < 0.4)     score += 12 // good: focused on few projects
+  if (density > 0.3 && density < 0.85) score += 13 // sweet spot
+  if (density > 0.9)     score -= 10 // overpacked
+  score = Math.min(100, Math.max(0, Math.round(score)))
+
+  let label = 'Focused day'
+  let colour = '#2d7a4f'
+  if (score >= 80) { label = 'Excellent focus'; colour = '#16a34a' }
+  else if (score >= 65) { label = 'Focused day'; colour = '#2d7a4f' }
+  else if (score >= 50) { label = 'Balanced day'; colour = '#c9a84c' }
+  else if (density > 0.88) { label = 'Packed — protect your focus'; colour = '#ef4444' }
+  else { label = 'Light day'; colour = '#9ca3af' }
+
+  return { score, label, colour }
+}
+
+function findBestFreeSlot(events: CalEvent[], dayStr: string): string | null {
+  // Find the best free slot in the working day
+  const dayEvents = events
+    .filter(e => e.start_time.startsWith(dayStr))
+    .sort((a, b) => timeToMins(a.start_time) - timeToMins(b.start_time))
+
+  const workStart = 9 * 60, workEnd = 18 * 60
+  const busy: [number, number][] = dayEvents.map(e => [timeToMins(e.start_time), timeToMins(e.end_time)])
+
+  let bestSlot: number | null = null
+  let bestLen = 0
+  let cursor = workStart
+
+  for (const [bs, be] of busy) {
+    if (bs > cursor && bs - cursor > bestLen) {
+      bestLen = bs - cursor
+      bestSlot = cursor
+    }
+    cursor = Math.max(cursor, be)
+  }
+  if (workEnd > cursor && workEnd - cursor > bestLen) {
+    bestSlot = cursor
+  }
+
+  if (bestSlot === null || bestLen < 20) return null
+  const h = Math.floor(bestSlot / 60)
+  const m = bestSlot % 60
+  const period = h >= 12 ? 'pm' : 'am'
+  const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h
+  return m === 0 ? `${h12}${period}` : `${h12}:${String(m).padStart(2,'0')}${period}`
+}
+
+function detectConflicts(events: CalEvent[], dayStr: string): Set<string> {
+  // Returns IDs of events that are tightly packed (< 5 min gap) with next event
+  const dayEvents = events
+    .filter(e => e.start_time.startsWith(dayStr) && e.type !== 'break')
+    .sort((a, b) => timeToMins(a.start_time) - timeToMins(b.start_time))
+  const tight = new Set<string>()
+  for (let i = 0; i < dayEvents.length - 1; i++) {
+    const gap = timeToMins(dayEvents[i+1].start_time) - timeToMins(dayEvents[i].end_time)
+    if (gap < 5 && gap >= 0) { tight.add(dayEvents[i].id); tight.add(dayEvents[i+1].id) }
+  }
+  return tight
+}
+
+function findFocusEvent(events: CalEvent[], dayStr: string): CalEvent | null {
+  // Pick the single most important event of the day to highlight
+  const dayEvents = events.filter(e =>
+    e.start_time.startsWith(dayStr) && e.type !== 'break' && e.type !== 'lunch'
+  )
+  if (dayEvents.length === 0) return null
+  const scored = dayEvents.map(e => {
+    let s = 0
+    if (e.task?.priority === 'urgent') s += 40
+    else if (e.task?.priority === 'high') s += 25
+    else if (e.task?.priority === 'medium') s += 10
+    const dur = timeToMins(e.end_time) - timeToMins(e.start_time)
+    if (dur >= 60) s += 15
+    if (dur >= 90) s += 10
+    return { event: e, score: s }
+  })
+  scored.sort((a, b) => b.score - a.score)
+  return scored[0]?.event ?? null
+}
+
 function DaySnapshot({ events, anchor }: { events: CalEvent[]; anchor: Date }) {
   const now = new Date()
   const todayStr = now.toISOString().split('T')[0]
   const anchorStr = anchor.toISOString().split('T')[0]
-  const displayDate = anchorStr === todayStr ? anchor : now
-  const displayStr = displayDate.toISOString().split('T')[0]
+  const isToday = anchorStr === todayStr
+  const displayStr = isToday ? todayStr : anchorStr
 
-  // Get today's events sorted
   const todayEvents = events
     .filter(e => e.start_time.startsWith(displayStr))
-    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+    .sort((a, b) => timeToMins(a.start_time) - timeToMins(b.start_time))
 
-  const [tick, setTick] = React.useState(0)
+  const [, setTick] = React.useState(0)
   React.useEffect(() => {
     const iv = setInterval(() => setTick(t => t + 1), 60000)
     return () => clearInterval(iv)
@@ -123,118 +224,152 @@ function DaySnapshot({ events, anchor }: { events: CalEvent[]; anchor: Date }) {
 
   const nowMins = now.getHours() * 60 + now.getMinutes()
 
-  // Find current and next event
   const current = todayEvents.find(e => {
-    const s = new Date(e.start_time), en = new Date(e.end_time)
-    return now >= s && now < en
+    const s = timeToMins(e.start_time), en = timeToMins(e.end_time)
+    return nowMins >= s && nowMins < en
   })
-  const upcoming = todayEvents.filter(e => new Date(e.start_time) > now).slice(0, 4)
+
+  // Split upcoming into "Next" (next 2) and "Later" (rest), skip breaks unless nothing else
+  const upcoming = todayEvents.filter(e => timeToMins(e.start_time) > nowMins)
+  const workItems = upcoming.filter(e => e.type !== 'break' && e.type !== 'lunch')
+  const nextItems = workItems.slice(0, 2)
+  const laterItems = workItems.slice(2, 5)
 
   function fmtTime(iso: string) {
     return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
   }
   function minsUntil(iso: string) {
-    const diff = Math.round((new Date(iso).getTime() - now.getTime()) / 60000)
-    if (diff < 1) return 'Now'
-    if (diff < 60) return `${diff}m`
-    return `${Math.floor(diff / 60)}h ${diff % 60}m`
+    const diff = Math.round((timeToMins(iso) - nowMins))
+    if (diff <= 0) return 'Now'
+    if (diff < 60) return `in ${diff}m`
+    const h = Math.floor(diff / 60), m = diff % 60
+    return m === 0 ? `in ${h}h` : `in ${h}h ${m}m`
   }
 
-  const isToday = displayStr === todayStr
+  // Intelligence
+  const { score, label: scoreLabel, colour: scoreColour } = computeFocusScore(events, displayStr)
+  const bestSlot = findBestFreeSlot(events, displayStr)
+  const endOfDay = 18 * 60
+  const scheduledMins = todayEvents
+    .filter(e => e.type !== 'break' && e.type !== 'lunch')
+    .reduce((acc, e) => acc + Math.max(0, Math.min(timeToMins(e.end_time), endOfDay) - Math.max(timeToMins(e.start_time), isToday ? nowMins : 9*60)), 0)
+  const freeAfterNow = Math.max(0, endOfDay - Math.max(nowMins, 9 * 60) - scheduledMins)
 
   return (
     <div style={{
-      width: 220, flexShrink: 0, borderLeft: '1px solid rgba(0,0,0,0.07)',
+      width: 224, flexShrink: 0, borderLeft: '1px solid rgba(0,0,0,0.07)',
       background: '#fbfbfa', display: 'flex', flexDirection: 'column',
-      height: '100%', overflow: 'hidden',
-      fontFamily: 'DM Sans, sans-serif',
+      height: '100%', overflow: 'hidden', fontFamily: 'DM Sans, sans-serif',
     }}>
-      {/* Header */}
+
+      {/* ── Header: time + focus score ── */}
       <div style={{ padding: '12px 14px 10px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>
-          {isToday ? 'Today' : new Date(displayStr).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
-        </div>
-        {isToday && (
-          <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.04em', lineHeight: 1 }}>
-            {now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: '#bbb', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 3 }}>
+              {isToday ? "Today's flow" : new Date(displayStr).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+            </div>
+            {isToday && (
+              <div style={{ fontSize: 21, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                {now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
           </div>
-        )}
+          {/* Focus score pill */}
+          {score > 0 && (
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2,
+            }}>
+              <div style={{
+                fontSize: 16, fontWeight: 700, color: scoreColour,
+                letterSpacing: '-0.03em', lineHeight: 1,
+              }}>{score}%</div>
+              <div style={{ fontSize: 9, fontWeight: 600, color: scoreColour, opacity: 0.8, textAlign: 'right', lineHeight: 1.2, maxWidth: 70 }}>
+                {scoreLabel}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Current event */}
+      {/* ── Current block ── */}
       {current && (
-        <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: '#2d7a4f', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>
-            ● Now
+        <div style={{
+          padding: '9px 14px',
+          borderBottom: '1px solid rgba(0,0,0,0.05)',
+          background: `${current.colour ?? '#2d7a4f'}08`,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+            <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#16a34a', boxShadow: '0 0 0 3px rgba(22,163,74,0.2)', animation: 'pulseGreen 2s infinite' }} />
+            <span style={{ fontSize: 9, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Now</span>
+            <span style={{ fontSize: 9, color: '#bbb', marginLeft: 'auto' }}>until {fmtTime(current.end_time)}</span>
           </div>
-          <div style={{
-            borderLeft: `3px solid ${current.colour ?? '#2d7a4f'}`,
-            paddingLeft: 8,
-          }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', lineHeight: 1.3, marginBottom: 2 }}>{current.title}</div>
-            <div style={{ fontSize: 10, color: '#aaa' }}>
-              {fmtTime(current.start_time)} – {fmtTime(current.end_time)}
-            </div>
+          <div style={{ borderLeft: `2.5px solid ${current.colour ?? '#2d7a4f'}`, paddingLeft: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#111', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{current.title}</div>
           </div>
         </div>
       )}
 
-      {/* Upcoming events */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
-        {upcoming.length === 0 && !current && (
-          <div style={{ padding: '20px 14px', textAlign: 'center' }}>
-            <p style={{ fontSize: 12, color: '#ccc' }}>
-              {isToday ? 'Nothing scheduled for today' : 'No events'}
-            </p>
+      {/* ── Next / Later ── */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0' }}>
+        {nextItems.length === 0 && !current && (
+          <div style={{ padding: '18px 14px', textAlign: 'center' }}>
+            <p style={{ fontSize: 12, color: '#ddd' }}>Nothing scheduled</p>
           </div>
         )}
-        {upcoming.map((ev, i) => {
-          const isBreak = ev.type === 'break' || ev.type === 'lunch'
-          return (
-            <div key={ev.id} style={{
-              padding: '7px 14px',
-              borderBottom: i < upcoming.length - 1 ? '1px solid rgba(0,0,0,0.04)' : 'none',
-              opacity: isBreak ? 0.55 : 1,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                <div style={{ width: 3, height: 32, borderRadius: 2, background: ev.colour ?? '#2d7a4f', flexShrink: 0, marginTop: 2 }} />
+
+        {nextItems.length > 0 && (
+          <>
+            <div style={{ padding: '8px 14px 4px', fontSize: 9, fontWeight: 700, color: '#bbb', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Next
+            </div>
+            {nextItems.map(ev => (
+              <div key={ev.id} style={{ padding: '6px 14px', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ width: 2.5, height: 34, borderRadius: 2, background: ev.colour ?? '#2d7a4f', flexShrink: 0, marginTop: 1 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 11.5, fontWeight: 500, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
-                    {ev.title}
-                  </div>
-                  <div style={{ fontSize: 10, color: '#aaa', marginTop: 2 }}>
-                    {fmtTime(ev.start_time)}
-                  </div>
+                  <div style={{ fontSize: 11.5, fontWeight: 500, color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</div>
+                  <div style={{ fontSize: 10, color: '#bbb', marginTop: 1 }}>{fmtTime(ev.start_time)}</div>
                 </div>
-                <div style={{ fontSize: 9.5, color: '#bbb', flexShrink: 0, marginTop: 2, fontWeight: 500 }}>
+                <div style={{ fontSize: 9.5, color: '#2d7a4f', flexShrink: 0, marginTop: 2, fontWeight: 600, opacity: 0.8 }}>
                   {minsUntil(ev.start_time)}
                 </div>
               </div>
+            ))}
+          </>
+        )}
+
+        {laterItems.length > 0 && (
+          <>
+            <div style={{ padding: '10px 14px 4px', fontSize: 9, fontWeight: 700, color: '#bbb', textTransform: 'uppercase', letterSpacing: '0.08em', borderTop: '1px solid rgba(0,0,0,0.05)', marginTop: 4 }}>
+              Later
             </div>
-          )
-        })}
+            {laterItems.map(ev => (
+              <div key={ev.id} style={{ padding: '5px 14px', display: 'flex', alignItems: 'center', gap: 8, opacity: 0.65 }}>
+                <div style={{ width: 2.5, height: 26, borderRadius: 2, background: ev.colour ?? '#e0e0dd', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 400, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</div>
+                  <div style={{ fontSize: 9.5, color: '#bbb', marginTop: 1 }}>{fmtTime(ev.start_time)}</div>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
       </div>
 
-      {/* Free time remaining */}
-      {isToday && (() => {
-        const endOfDay = 18 * 60
-        const scheduledMins = todayEvents
-          .filter(e => e.type === 'ai_generated' || e.type === 'event')
-          .reduce((acc, e) => {
-            const s = Math.max(new Date(e.start_time).getHours() * 60 + new Date(e.start_time).getMinutes(), nowMins)
-            const en = new Date(e.end_time).getHours() * 60 + new Date(e.end_time).getMinutes()
-            return acc + Math.max(0, en - s)
-          }, 0)
-        const free = Math.max(0, endOfDay - Math.max(nowMins, 9 * 60) - scheduledMins)
-        return free > 0 ? (
-          <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: 10, color: '#bbb', marginBottom: 2 }}>Free today</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#2d7a4f' }}>
-              {Math.floor(free / 60)}h {free % 60}m
+      {/* ── Free time footer ── */}
+      <div style={{ padding: '10px 14px 12px', borderTop: '1px solid rgba(0,0,0,0.06)', flexShrink: 0 }}>
+        {freeAfterNow > 20 ? (
+          <>
+            <div style={{ fontSize: 9.5, color: '#bbb', marginBottom: 1 }}>Free today</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#2d7a4f', letterSpacing: '-0.02em' }}>
+              {Math.floor(freeAfterNow / 60)}h {freeAfterNow % 60 > 0 ? `${freeAfterNow % 60}m` : ''}
+              {bestSlot && <span style={{ fontSize: 10.5, fontWeight: 400, color: '#888', marginLeft: 4 }}>— best at {bestSlot}</span>}
             </div>
-          </div>
-        ) : null
-      })()}
+          </>
+        ) : (
+          <div style={{ fontSize: 10, color: '#ccc' }}>Day fully scheduled</div>
+        )}
+      </div>
     </div>
   )
 }
@@ -460,6 +595,8 @@ export default function CalendarPage() {
             onEventClick={setSelectedEvent}
             onDrop={(ev, ns, ne) => setDragConfirm({ event: ev, newStart: ns, newEnd: ne })}
             isToday={isToday}
+            focusEventId={findFocusEvent(events, anchor.toISOString().split('T')[0])?.id ?? null}
+            conflictIds={detectConflicts(events, anchor.toISOString().split('T')[0])}
           />
         )}
         </div>
@@ -628,13 +765,15 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
   )
 }
 
-function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday }: {
+function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, focusEventId, conflictIds }: {
   days: Date[]
   events: CalEvent[]
   scrollRef: React.RefObject<HTMLDivElement>
   onEventClick: (e: CalEvent) => void
   onDrop: (event: CalEvent, newStart: string, newEnd: string) => void
   isToday: (d: Date) => boolean
+  focusEventId?: string | null
+  conflictIds?: Set<string>
 }) {
   const [dragEvent, setDragEvent] = useState<CalEvent | null>(null)
   const TIME_GUTTER = 52
@@ -754,20 +893,38 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday }:
                         height: height,
                         left: `calc(${leftPct}% + 2px)`,
                         width: `calc(${colWidth}% - 4px)`,
-                        borderRadius: 5,
-                        borderLeft: `3px solid ${isBreak ? '#d1d5db' : event.colour}`,
-                        background: isBreak ? '#f8f9fa' : event.colour + '14',
+                        borderRadius: 6,
+                        borderLeft: focusEventId === event.id
+                          ? `3px solid ${event.colour}`
+                          : `3px solid ${isBreak ? '#d1d5db' : event.colour}`,
+                        background: focusEventId === event.id
+                          ? event.colour + '22'
+                          : isBreak ? '#f8f9fa' : event.colour + '12',
+                        boxShadow: focusEventId === event.id
+                          ? `0 0 0 1.5px ${event.colour}40, 0 2px 8px ${event.colour}20`
+                          : conflictIds?.has(event.id) ? 'inset 2px 0 0 #f59e0b' : 'none',
                         padding: '3px 5px',
                         cursor: 'pointer',
-                        zIndex: 10,
+                        zIndex: focusEventId === event.id ? 12 : 10,
                         overflow: 'hidden',
                         boxSizing: 'border-box',
-                        transition: 'opacity 0.1s',
+                        animation: 'fadeSlideIn 0.3s ease both',
+                        transition: 'box-shadow 0.15s, background 0.15s',
                       }}
-                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.85'}
-                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = (isBreak ? '#f0f0ee' : event.colour + '26'); (e.currentTarget as HTMLElement).style.zIndex = '14' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = focusEventId === event.id ? event.colour + '22' : isBreak ? '#f8f9fa' : event.colour + '12'; (e.currentTarget as HTMLElement).style.zIndex = focusEventId === event.id ? '12' : '10' }}
                     >
-                      <div style={{ fontSize: 11, fontWeight: 500, color: isBreak ? '#9ca3af' : event.colour, lineHeight: 1.3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                      {focusEventId === event.id && (
+                        <div style={{ fontSize: 8.5, fontWeight: 700, color: event.colour, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8, marginBottom: 1 }}>
+                          ★ Focus
+                        </div>
+                      )}
+                      {conflictIds?.has(event.id) && focusEventId !== event.id && (
+                        <div style={{ fontSize: 8, fontWeight: 700, color: '#f59e0b', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.9, marginBottom: 1 }}>
+                          ⚡ Tight
+                        </div>
+                      )}
+                      <div style={{ fontSize: 11, fontWeight: focusEventId === event.id ? 600 : 500, color: isBreak ? '#9ca3af' : event.colour, lineHeight: 1.3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                         {event.title}
                       </div>
                       {durationMins >= 30 && (
