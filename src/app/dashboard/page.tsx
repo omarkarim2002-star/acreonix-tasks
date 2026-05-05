@@ -194,6 +194,12 @@ export default async function DashboardPage() {
   const { userId } = await auth()
   if (!userId) return null
 
+  // Get user's first name for personalised greeting
+  const { clerkClient } = await import('@clerk/nextjs/server')
+  const client = await clerkClient()
+  const clerkUser = await client.users.getUser(userId)
+  const firstName = clerkUser.firstName ?? ''
+
   const now = new Date()
   const todayStr = now.toDateString()
   const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0)
@@ -268,12 +274,27 @@ export default async function DashboardPage() {
       {/* ── Greeting ── */}
       <div style={{ marginBottom: 22 }}>
         <h1 style={{ fontSize: 24, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.03em', marginBottom: 4 }}>
-          {greet()} 👋
+          {greet()}{firstName ? `, ${firstName}` : ''} 👋
         </h1>
         <p style={{ fontSize: 13, color: '#aaa' }}>
           {now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
           {isOverloaded && <span style={{ color: '#ea580c', fontWeight: 500, marginLeft: 12 }}>⚠ Heavy day ahead</span>}
         </p>
+        {/* Quick links */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+          <Link href="/dashboard/extract" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, background: '#2d7a4f', color: '#fff', textDecoration: 'none', boxShadow: '0 2px 6px rgba(45,122,79,0.2)' }}>
+            <Sparkles size={12} />AI Extract
+          </Link>
+          <Link href="/dashboard/calendar" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 500, background: '#f0faf4', color: '#1f5537', border: '1px solid rgba(45,122,79,.2)', textDecoration: 'none' }}>
+            <Calendar size={12} />Calendar
+          </Link>
+          <Link href="/dashboard/mindmap" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 500, background: '#f3f3f1', color: '#555', border: '1px solid rgba(0,0,0,.1)', textDecoration: 'none' }}>
+            <GitFork size={12} />Mind map
+          </Link>
+          <Link href="/dashboard/insights" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 500, background: '#f3f3f1', color: '#555', border: '1px solid rgba(0,0,0,.1)', textDecoration: 'none' }}>
+            <BarChart2 size={12} />Insights
+          </Link>
+        </div>
       </div>
 
       {/* ── Smart nudges ── */}
@@ -376,20 +397,7 @@ export default async function DashboardPage() {
       )}
 
       {/* ── Quick actions ── */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 28, flexWrap: 'wrap' }}>
-        <Link href="/dashboard/extract" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: '#2d7a4f', color: '#fff', textDecoration: 'none' }}>
-          <Sparkles size={13} />AI Extract
-        </Link>
-        <Link href="/dashboard/calendar" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: '#f0faf4', color: '#1f5537', border: '1px solid rgba(45,122,79,.2)', textDecoration: 'none' }}>
-          <Calendar size={13} />Calendar
-        </Link>
-        <Link href="/dashboard/mindmap" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: '#f3f3f1', color: '#555', border: '1px solid rgba(0,0,0,.1)', textDecoration: 'none' }}>
-          <GitFork size={13} />Mind map
-        </Link>
-        <Link href="/dashboard/insights" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: '#f3f3f1', color: '#555', border: '1px solid rgba(0,0,0,.1)', textDecoration: 'none' }}>
-          <BarChart2 size={13} />Insights
-        </Link>
-      </div>
+
 
     </div>
   )

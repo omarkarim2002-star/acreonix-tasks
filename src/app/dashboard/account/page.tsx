@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { Camera, Check, Loader2, ArrowLeft, User, Clock } from 'lucide-react'
+import { PushNotificationSetup } from '@/components/ui/PushNotificationSetup'
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const DAY_VALUES = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
@@ -225,6 +226,11 @@ export default function AccountPage() {
         <button onClick={savePrefs} disabled={prefsSaving} style={{ width: '100%', padding: '10px 0', borderRadius: 9, background: prefsSaved ? '#16a34a' : prefsSaving ? '#e8e8e5' : '#2d7a4f', color: prefsSaving ? '#aaa' : '#fff', border: 'none', cursor: prefsSaving ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 500, fontFamily: 'DM Sans, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, transition: 'background 0.2s' }}>
           {prefsSaving ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />Saving…</> : prefsSaved ? <><Check size={14} />Saved!</> : 'Save work hours'}
         </button>
+      </div>
+
+      {/* Push notifications */}
+      <div style={{ marginBottom: 16 }}>
+        <PushNotificationSetup />
       </div>
 
       {/* Danger zone */}

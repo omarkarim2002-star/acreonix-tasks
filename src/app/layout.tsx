@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
+import { PostHogProvider } from '@/components/ui/PostHogProvider'
 import { OnboardingEmailTrigger } from '@/components/ui/OnboardingEmailTrigger'
 import './globals.css'
 
@@ -18,6 +19,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
+    <PostHogProvider>
     <ClerkProvider
       signInFallbackRedirectUrl="/dashboard"
       signUpFallbackRedirectUrl="/dashboard"
@@ -29,5 +31,6 @@ export default function RootLayout({
         </body>
       </html>
     </ClerkProvider>
+    </PostHogProvider>
   )
 }
