@@ -173,14 +173,15 @@ function findBestFreeSlot(events: CalEvent[], dayStr: string): string | null {
 }
 
 function detectConflicts(events: CalEvent[], dayStr: string): Set<string> {
-  // Returns IDs of events that are tightly packed (< 5 min gap) with next event
+  // Only flag actual overlaps (negative gap = events overlap in time)
+  // Tight-but-not-overlapping is normal in a busy schedule, not an error
   const dayEvents = events
-    .filter(e => e.start_time.startsWith(dayStr) && e.type !== 'break')
+    .filter(e => e.start_time.startsWith(dayStr) && e.type !== 'break' && e.type !== 'lunch')
     .sort((a, b) => timeToMins(a.start_time) - timeToMins(b.start_time))
   const tight = new Set<string>()
   for (let i = 0; i < dayEvents.length - 1; i++) {
     const gap = timeToMins(dayEvents[i+1].start_time) - timeToMins(dayEvents[i].end_time)
-    if (gap < 5 && gap >= 0) { tight.add(dayEvents[i].id); tight.add(dayEvents[i+1].id) }
+    if (gap < 0) { tight.add(dayEvents[i].id); tight.add(dayEvents[i+1].id) }
   }
   return tight
 }
@@ -896,35 +897,37 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
                         borderRadius: 6,
                         borderLeft: focusEventId === event.id
                           ? `3px solid ${event.colour}`
-                          : `3px solid ${isBreak ? '#d1d5db' : event.colour}`,
+                          : `2.5px solid ${isBreak ? '#e0e0dd' : event.colour + 'cc'}`,
                         background: focusEventId === event.id
-                          ? event.colour + '22'
-                          : isBreak ? '#f8f9fa' : event.colour + '12',
+                          ? event.colour + '1a'
+                          : isBreak ? '#f5f5f3' : event.colour + '0e',
                         boxShadow: focusEventId === event.id
-                          ? `0 0 0 1.5px ${event.colour}40, 0 2px 8px ${event.colour}20`
-                          : conflictIds?.has(event.id) ? 'inset 2px 0 0 #f59e0b' : 'none',
+                          ? `0 1px 6px ${event.colour}18`
+                          : 'none',
                         padding: '3px 5px',
                         cursor: 'pointer',
-                        zIndex: focusEventId === event.id ? 12 : 10,
+                        zIndex: focusEventId === event.id ? 11 : 10,
+                        outline: focusEventId === event.id ? `1.5px solid ${event.colour}60` : 'none',
+                        outlineOffset: '1px',
                         overflow: 'hidden',
                         boxSizing: 'border-box',
                         animation: 'fadeSlideIn 0.3s ease both',
                         transition: 'box-shadow 0.15s, background 0.15s',
                       }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = (isBreak ? '#f0f0ee' : event.colour + '26'); (e.currentTarget as HTMLElement).style.zIndex = '14' }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = focusEventId === event.id ? event.colour + '22' : isBreak ? '#f8f9fa' : event.colour + '12'; (e.currentTarget as HTMLElement).style.zIndex = focusEventId === event.id ? '12' : '10' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = isBreak ? '#efefed' : event.colour + '22'; (e.currentTarget as HTMLElement).style.zIndex = '14' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = focusEventId === event.id ? event.colour + '1a' : isBreak ? '#f5f5f3' : event.colour + '0e'; (e.currentTarget as HTMLElement).style.zIndex = focusEventId === event.id ? '11' : '10' }}
                     >
-                      {focusEventId === event.id && (
-                        <div style={{ fontSize: 8.5, fontWeight: 700, color: event.colour, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8, marginBottom: 1 }}>
+                      {focusEventId === event.id && height >= 40 && (
+                        <div style={{ fontSize: 8.5, fontWeight: 700, color: event.colour, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.75, marginBottom: 1 }}>
                           ★ Focus
                         </div>
                       )}
-                      {conflictIds?.has(event.id) && focusEventId !== event.id && (
-                        <div style={{ fontSize: 8, fontWeight: 700, color: '#f59e0b', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.9, marginBottom: 1 }}>
-                          ⚡ Tight
+                      {conflictIds?.has(event.id) && focusEventId !== event.id && height >= 36 && (
+                        <div style={{ fontSize: 8, fontWeight: 700, color: '#f59e0b', letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.85, marginBottom: 1 }}>
+                          ⚡ Overlap
                         </div>
                       )}
-                      <div style={{ fontSize: 11, fontWeight: focusEventId === event.id ? 600 : 500, color: isBreak ? '#9ca3af' : event.colour, lineHeight: 1.3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontSize: 11.5, fontWeight: focusEventId === event.id ? 600 : 500, color: isBreak ? '#b0b0aa' : event.colour, lineHeight: 1.25, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                         {event.title}
                       </div>
                       {durationMins >= 30 && (

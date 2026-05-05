@@ -353,7 +353,6 @@ function ProjectNode({ data }: NodeProps) {
 function TaskNode({ data }: NodeProps) {
   const [status, setStatus] = useState(data.status ?? 'todo')
   const [visible, setVisible] = useState(true)
-  const [showModal, setShowModal] = useState(false)
 
   const CYCLE: Record<string, string> = {
     todo: 'in_progress', in_progress: 'done', done: 'todo', blocked: 'todo',
@@ -379,8 +378,7 @@ function TaskNode({ data }: NodeProps) {
   if (!visible) return null
 
   return (
-    <>
-      <div
+    <div
         style={{
           background: '#fff', border: '1px solid #e8edf2',
           borderRadius: 8, padding: '7px 10px',
@@ -391,7 +389,7 @@ function TaskNode({ data }: NodeProps) {
           transition: 'opacity 0.55s ease, transform 0.55s ease',
           cursor: isDone ? 'default' : 'pointer',
         }}
-        onClick={() => !isDone && setShowModal(true)}
+        onClick={() => !isDone && data.onOpenModal?.(data.taskId)}
       >
         <Handle type="target" position={Position.Top} style={{ background: '#d1d5db', border: 'none', width: 5, height: 5 }} />
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
@@ -420,25 +418,7 @@ function TaskNode({ data }: NodeProps) {
             <span style={{ fontSize: 9, color: '#bbb', textTransform: 'capitalize' }}>{data.priority}</span>
           </div>
         )}
-      </div>
-
-      {showModal && (
-        <TaskDetailModal
-          taskId={data.taskId}
-          onClose={() => setShowModal(false)}
-          onStatusChange={(id, s) => {
-            setStatus(s)
-            data.onStatusChange?.(id, s)
-            if (s === 'done') {
-              setShowModal(false)
-              setTimeout(() => setVisible(false), 1200)
-              setTimeout(() => data.onRemoveNode?.(id), 1800)
-            }
-          }}
-          onDelete={(id) => { setVisible(false); data.onRemoveNode?.(id) }}
-        />
-      )}
-    </>
+    </div>
   )
 }
 
@@ -460,7 +440,7 @@ function saveLayout(nodes: Node[]) {
 function buildGraph(
   projects: any[],
   savedPos: Record<string, { x: number; y: number }>,
-  callbacks: { onRefresh: () => void; onRename: (id: string, name: string) => void; onTaskAdded: (t: any) => void; onStatusChange: (taskId: string, status: string) => void; onRemoveNode: (taskId: string) => void }
+  callbacks: { onRefresh: () => void; onRename: (id: string, name: string) => void; onTaskAdded: (t: any) => void; onStatusChange: (taskId: string, status: string) => void; onRemoveNode: (taskId: string) => void; onOpenModal: (taskId: string) => void }
 ): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = []
   const edges: Edge[] = []
@@ -508,7 +488,7 @@ function buildGraph(
       nodes.push({
         id: tId, type: 'taskNode',
         position: savedPos[tId] ?? defaultTPos,
-        data: { label: task.title, status: task.status, taskId: task.id, priority: task.priority, onStatusChange: callbacks.onStatusChange, onRemoveNode: callbacks.onRemoveNode },
+        data: { label: task.title, status: task.status, taskId: task.id, priority: task.priority, onStatusChange: callbacks.onStatusChange, onRemoveNode: callbacks.onRemoveNode, onOpenModal: callbacks.onOpenModal },
       })
       edges.push({
         id: `et-${task.id}`, source: `p-${p.id}`, target: tId,
@@ -529,6 +509,11 @@ export default function GlobalMindMapPage() {
   const [nodes, setNodes] = useNodesState([])
   const [edges, setEdges] = useEdgesState([])
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [modalTaskId, setModalTaskId] = useState<string | null>(null)
+
+  const handleOpenModal = useCallback((taskId: string) => {
+    setModalTaskId(taskId)
+  }, [])
 
   const handleStatusChange = useCallback((taskId: string, newStatus: string) => {
     setNodes(ns => ns.map(n =>
@@ -568,7 +553,7 @@ export default function GlobalMindMapPage() {
     if (task?._refresh) {
       loadData().then(enriched => {
         const saved = loadLayout()
-        const { nodes: n, edges: e } = buildGraph(enriched, saved, { onRefresh: () => loadData(), onRename: handleRename, onTaskAdded: handleTaskAdded, onStatusChange: handleStatusChange, onRemoveNode: handleRemoveNode })
+        const { nodes: n, edges: e } = buildGraph(enriched, saved, { onRefresh: () => loadData(), onRename: handleRename, onTaskAdded: handleTaskAdded, onStatusChange: handleStatusChange, onRemoveNode: handleRemoveNode, onOpenModal: handleOpenModal })
         setNodes(n); setEdges(e)
       })
     } else {
@@ -583,7 +568,7 @@ export default function GlobalMindMapPage() {
     setLoading(true)
     loadData().then(enriched => {
       const saved = loadLayout()
-      const { nodes: n, edges: e } = buildGraph(enriched, saved, { onRefresh: () => loadData(), onRename: handleRename, onTaskAdded: handleTaskAdded, onStatusChange: handleStatusChange, onRemoveNode: handleRemoveNode })
+      const { nodes: n, edges: e } = buildGraph(enriched, saved, { onRefresh: () => loadData(), onRename: handleRename, onTaskAdded: handleTaskAdded, onStatusChange: handleStatusChange, onRemoveNode: handleRemoveNode, onOpenModal: handleOpenModal })
       setNodes(n); setEdges(e)
       setLoading(false)
     }).catch(() => setLoading(false))
@@ -612,6 +597,25 @@ export default function GlobalMindMapPage() {
       <Loader2 size={22} style={{ color: '#2d7a4f', animation: 'spin 1s linear infinite' }} />
       <p style={{ color: '#9aa3b4', fontSize: 13, fontFamily: 'DM Sans, sans-serif' }}>Loading mind map…</p>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+
+      {/* Task detail modal — rendered at page level, outside ReactFlow transform */}
+      {modalTaskId && (
+        <TaskDetailModal
+          taskId={modalTaskId}
+          onClose={() => setModalTaskId(null)}
+          onStatusChange={(id, s) => {
+            handleStatusChange(id, s)
+            if (s === 'done') {
+              setModalTaskId(null)
+              setTimeout(() => handleRemoveNode(id), 1200)
+            }
+          }}
+          onDelete={(id) => {
+            handleRemoveNode(id)
+            setModalTaskId(null)
+          }}
+        />
+      )}
     </div>
   )
 
@@ -682,6 +686,25 @@ export default function GlobalMindMapPage() {
         )}
       </div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+
+      {/* Task detail modal — rendered at page level, outside ReactFlow transform */}
+      {modalTaskId && (
+        <TaskDetailModal
+          taskId={modalTaskId}
+          onClose={() => setModalTaskId(null)}
+          onStatusChange={(id, s) => {
+            handleStatusChange(id, s)
+            if (s === 'done') {
+              setModalTaskId(null)
+              setTimeout(() => handleRemoveNode(id), 1200)
+            }
+          }}
+          onDelete={(id) => {
+            handleRemoveNode(id)
+            setModalTaskId(null)
+          }}
+        />
+      )}
     </div>
   )
 }

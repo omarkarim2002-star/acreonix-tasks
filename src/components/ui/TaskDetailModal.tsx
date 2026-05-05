@@ -117,7 +117,7 @@ export function TaskDetailModal({ taskId, onClose, onStatusChange, onDelete }: P
         backdropFilter: 'blur(6px)',
         WebkitBackdropFilter: 'blur(6px)',
         fontFamily: 'DM Sans, sans-serif',
-        padding: 20,
+        padding: '16px 20px',
       }}
       onClick={onClose}
     >
@@ -143,8 +143,9 @@ export function TaskDetailModal({ taskId, onClose, onStatusChange, onDelete }: P
             {/* Project stripe */}
             {merged.project && (
               <div style={{
-                height: 4,
+                height: 3,
                 background: merged.project.colour ?? '#2d7a4f',
+                flexShrink: 0,
               }} />
             )}
 
@@ -179,18 +180,13 @@ export function TaskDetailModal({ taskId, onClose, onStatusChange, onDelete }: P
                   value={merged.title}
                   onChange={e => update('title', e.target.value)}
                   onBlur={save}
-                  rows={1}
+                  rows={2}
                   style={{
                     flex: 1, border: 'none', outline: 'none', resize: 'none',
-                    fontSize: 16, fontWeight: 600, color: merged.status === 'done' ? '#999' : '#111',
+                    fontSize: 15, fontWeight: 600, color: merged.status === 'done' ? '#999' : '#111',
                     lineHeight: 1.4, fontFamily: 'DM Sans, sans-serif',
                     textDecoration: merged.status === 'done' ? 'line-through' : 'none',
-                    background: 'transparent', overflow: 'hidden',
-                  }}
-                  onInput={e => {
-                    const el = e.target as HTMLTextAreaElement
-                    el.style.height = 'auto'
-                    el.style.height = el.scrollHeight + 'px'
+                    background: 'transparent', overflow: 'hidden', padding: 0,
                   }}
                 />
 
@@ -218,9 +214,11 @@ export function TaskDetailModal({ taskId, onClose, onStatusChange, onDelete }: P
                   value={merged.status}
                   onChange={e => { update('status', e.target.value); setTimeout(save, 100) }}
                   style={{
-                    fontSize: 12, padding: '4px 10px', borderRadius: 7, border: 'none',
+                    fontSize: 11.5, padding: '4px 10px', borderRadius: 6,
+                    border: `1px solid ${sc.color}30`,
                     background: sc.bg, color: sc.color, fontWeight: 600,
                     cursor: 'pointer', outline: 'none', fontFamily: 'DM Sans, sans-serif',
+                    appearance: 'none' as const,
                   }}
                 >
                   {Object.entries(STATUS_CONFIG).map(([k, v]) => (
@@ -233,9 +231,11 @@ export function TaskDetailModal({ taskId, onClose, onStatusChange, onDelete }: P
                   value={merged.priority}
                   onChange={e => { update('priority', e.target.value); setTimeout(save, 100) }}
                   style={{
-                    fontSize: 12, padding: '4px 10px', borderRadius: 7, border: 'none',
+                    fontSize: 11.5, padding: '4px 10px', borderRadius: 6,
+                    border: `1px solid ${ps.color}30`,
                     background: ps.bg, color: ps.color, fontWeight: 600,
                     cursor: 'pointer', outline: 'none', fontFamily: 'DM Sans, sans-serif',
+                    appearance: 'none' as const,
                   }}
                 >
                   {['low', 'medium', 'high', 'urgent'].map(p => (
@@ -265,9 +265,9 @@ export function TaskDetailModal({ taskId, onClose, onStatusChange, onDelete }: P
                 rows={2}
                 style={{
                   width: '100%', border: '1px solid rgba(0,0,0,0.09)', borderRadius: 8,
-                  padding: '9px 11px', fontSize: 13, color: '#444', lineHeight: 1.6,
+                  padding: '8px 10px', fontSize: 12.5, color: '#444', lineHeight: 1.6,
                   fontFamily: 'DM Sans, sans-serif', resize: 'none', outline: 'none',
-                  background: '#fafaf8', boxSizing: 'border-box',
+                  background: '#fafaf8', boxSizing: 'border-box' as const,
                   transition: 'border-color 0.12s',
                 }}
                 onFocus={e => (e.target as HTMLElement).style.borderColor = 'rgba(45,122,79,0.3)'}
@@ -317,7 +317,7 @@ export function TaskDetailModal({ taskId, onClose, onStatusChange, onDelete }: P
 
             {/* Footer */}
             <div style={{
-              padding: '10px 20px 16px',
+              padding: '10px 18px 14px',
               borderTop: '1px solid rgba(0,0,0,0.06)',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             }}>
@@ -365,7 +365,7 @@ export function TaskDetailModal({ taskId, onClose, onStatusChange, onDelete }: P
         )}
       </div>
       <style>{`
-        @keyframes modalIn{from{opacity:0;transform:scale(0.96) translateY(8px)}to{opacity:1;transform:none}}
+        @keyframes modalIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
         @keyframes spin{to{transform:rotate(360deg)}}
       `}</style>
     </div>
