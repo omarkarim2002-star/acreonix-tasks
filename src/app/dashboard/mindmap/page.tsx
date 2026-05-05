@@ -451,12 +451,29 @@ function buildGraph(
     data: { onRefresh: callbacks.onRefresh },
   })
 
-  const spacing = Math.max(270, Math.min(330, 1200 / Math.max(projects.length, 1)))
-  const startX = -((projects.length - 1) * spacing) / 2
+  const count = projects.length
+  if (count === 0) return { nodes, edges }
+
+  // ── Radial layout: projects spread around root in a circle ──────────────
+  // Each project gets a "slice" of the circle, then its tasks fan below it
+  const PROJECT_RADIUS = Math.max(320, Math.min(460, count * 90))
+  const TASK_NODE_W = 175  // approximate task node width
+  const TASK_NODE_H = 48   // approximate task node height
+  const TASK_H_GAP = 14    // horizontal gap between tasks
+  const TASK_V_GAP = 12    // vertical gap between task rows
+  const TASKS_PER_ROW = 3  // max tasks per row
 
   projects.forEach((p, pi) => {
-    const defaultPos = { x: startX + pi * spacing - 74, y: 190 }
-    const pPos = savedPos[`p-${p.id}`] ?? defaultPos
+    // Spread projects evenly around a circle, starting from top
+    // Offset by -PI/2 so first project is at top
+    const angleStep = (2 * Math.PI) / count
+    const angle = -Math.PI / 2 + pi * angleStep
+    const defaultProjPos = {
+      x: Math.round(Math.cos(angle) * PROJECT_RADIUS) - 74,
+      y: Math.round(Math.sin(angle) * PROJECT_RADIUS),
+    }
+    const pPos = savedPos[`p-${p.id}`] ?? defaultProjPos
+
     const accessType = p.access_type ?? 'own'
     const shareColour = SHARE_COLOUR[accessType]
     const edgeColor = shareColour ?? (p.colour ?? '#2d7a4f')
@@ -479,16 +496,51 @@ function buildGraph(
       animated: (p.tasks ?? []).some((t: any) => t.status === 'in_progress'),
     })
 
-    const visible = (p.tasks ?? []).slice(0, 5)
-    const ts = 170, tx = (savedPos[`p-${p.id}`]?.x ?? (startX + pi * spacing - 74)) + 74
+    // ── Tasks: grid layout radiating outward from the project node ───────
+    const visible = (p.tasks ?? []).filter((t: any) => t.status !== 'done').slice(0, 6)
+    if (visible.length === 0) return
+
+    // Direction vector from root → project (outward direction for tasks)
+    const projCenterX = pPos.x + 74  // 74 = half project node width approx
+    const projCenterY = pPos.y + 30  // 30 = half project node height approx
+    const outDX = projCenterX  // from root (0,0) to project centre
+    const outDY = projCenterY
+    const outLen = Math.sqrt(outDX * outDX + outDY * outDY) || 1
+    const outNX = outDX / outLen  // normalised outward direction
+    const outNY = outDY / outLen
+
+    // Perpendicular direction for spreading tasks side-by-side
+    const perpX = -outNY
+    const perpY = outNX
+
+    const rows = Math.ceil(visible.length / TASKS_PER_ROW)
+    const TASK_OUTWARD_DIST = 200  // distance from project node centre to first task row
 
     visible.forEach((task: any, ti: number) => {
       const tId = `t-${task.id}`
-      const defaultTPos = { x: tx + ti * ts - 69 - ((visible.length - 1) * ts / 2), y: 360 + (ti % 2 === 0 ? 0 : 28) }
+      const row = Math.floor(ti / TASKS_PER_ROW)
+      const col = ti % TASKS_PER_ROW
+      const colsInRow = Math.min(TASKS_PER_ROW, visible.length - row * TASKS_PER_ROW)
+      const colOffset = col - (colsInRow - 1) / 2  // centre tasks in their row
+
+      const dist = TASK_OUTWARD_DIST + row * (TASK_NODE_H + TASK_V_GAP)
+      const spread = colOffset * (TASK_NODE_W + TASK_H_GAP)
+
+      const defaultTPos = {
+        x: Math.round(projCenterX + outNX * dist + perpX * spread - TASK_NODE_W / 2),
+        y: Math.round(projCenterY + outNY * dist + perpY * spread - TASK_NODE_H / 2),
+      }
+
       nodes.push({
         id: tId, type: 'taskNode',
         position: savedPos[tId] ?? defaultTPos,
-        data: { label: task.title, status: task.status, taskId: task.id, priority: task.priority, onStatusChange: callbacks.onStatusChange, onRemoveNode: callbacks.onRemoveNode, onOpenModal: callbacks.onOpenModal },
+        data: {
+          label: task.title, status: task.status, taskId: task.id,
+          priority: task.priority,
+          onStatusChange: callbacks.onStatusChange,
+          onRemoveNode: callbacks.onRemoveNode,
+          onOpenModal: callbacks.onOpenModal,
+        },
       })
       edges.push({
         id: `et-${task.id}`, source: `p-${p.id}`, target: tId,
