@@ -351,22 +351,76 @@ function ProjectNode({ data }: NodeProps) {
 
 function TaskNode({ data }: NodeProps) {
   const router = useRouter()
+  const [status, setStatus] = useState(data.status ?? 'todo')
+  const [completing, setCompleting] = useState(false)
+
+  const CYCLE: Record<string, string> = {
+    todo: 'in_progress', in_progress: 'done', done: 'todo', blocked: 'todo',
+  }
+
+  async function cycleStatus(e: React.MouseEvent) {
+    e.stopPropagation()
+    const next = CYCLE[status] ?? 'todo'
+    setCompleting(next === 'done')
+    setStatus(next)
+    await fetch(`/api/tasks/${data.taskId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: next, completed_at: next === 'done' ? new Date().toISOString() : null }),
+    })
+    setTimeout(() => setCompleting(false), 600)
+    data.onStatusChange?.(data.taskId, next)
+  }
+
+  const isDone = status === 'done'
+
   return (
     <div
-      onClick={() => router.push(`/dashboard/tasks/${data.taskId}`)}
       style={{
-        background: '#fff', border: '1px solid #e8edf2', borderRadius: 8,
-        padding: '7px 10px', cursor: 'pointer', minWidth: 138, maxWidth: 185,
+        background: isDone ? '#f0faf4' : '#fff',
+        border: `1px solid ${isDone ? '#c6e6d4' : '#e8edf2'}`,
+        borderRadius: 8, padding: '7px 10px',
+        minWidth: 138, maxWidth: 185,
         fontFamily: 'DM Sans, sans-serif',
+        opacity: isDone ? 0.75 : 1,
+        transition: 'all 0.25s',
       }}
     >
       <Handle type="target" position={Position.Top} style={{ background: '#d1d5db', border: 'none', width: 5, height: 5 }} />
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-        <div style={{ width: 7, height: 7, borderRadius: '50%', background: STATUS_DOT[data.status] ?? '#9ca3af', marginTop: 3, flexShrink: 0 }} />
-        <span style={{ fontSize: 10.5, color: '#2d3748', lineHeight: 1.4 }}>{data.label}</span>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
+        {/* Completion circle */}
+        <button
+          onClick={cycleStatus}
+          title={isDone ? 'Mark as to-do' : status === 'in_progress' ? 'Mark as done' : 'Mark in progress'}
+          style={{
+            width: 16, height: 16, borderRadius: '50%', flexShrink: 0, marginTop: 1,
+            border: `1.5px solid ${isDone ? '#2d7a4f' : status === 'in_progress' ? '#2d7a4f' : '#d1d5db'}`,
+            background: isDone ? '#2d7a4f' : status === 'in_progress' ? 'rgba(45,122,79,0.1)' : 'transparent',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.2s', padding: 0,
+            transform: completing ? 'scale(1.3)' : 'scale(1)',
+          }}
+        >
+          {isDone && (
+            <svg width="8" height="7" viewBox="0 0 10 8" fill="none">
+              <path d="M1 4l2.5 3L9 1" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
+          {status === 'in_progress' && !isDone && (
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#2d7a4f' }} />
+          )}
+        </button>
+        <span style={{
+          fontSize: 10.5, color: isDone ? '#888' : '#2d3748', lineHeight: 1.4, cursor: 'pointer',
+          textDecoration: isDone ? 'line-through' : 'none',
+        }}
+          onClick={() => router.push(`/dashboard/tasks/${data.taskId}`)}
+        >
+          {data.label}
+        </span>
       </div>
-      {data.priority && data.priority !== 'medium' && (
-        <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
+      {data.priority && data.priority !== 'medium' && !isDone && (
+        <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 3, marginLeft: 23 }}>
           <div style={{ width: 5, height: 5, borderRadius: '50%', background: PRIORITY_COLOUR[data.priority] ?? '#9ca3af' }} />
           <span style={{ fontSize: 9, color: '#bbb', textTransform: 'capitalize' }}>{data.priority}</span>
         </div>
@@ -393,7 +447,7 @@ function saveLayout(nodes: Node[]) {
 function buildGraph(
   projects: any[],
   savedPos: Record<string, { x: number; y: number }>,
-  callbacks: { onRefresh: () => void; onRename: (id: string, name: string) => void; onTaskAdded: (t: any) => void }
+  callbacks: { onRefresh: () => void; onRename: (id: string, name: string) => void; onTaskAdded: (t: any) => void; onStatusChange: (taskId: string, status: string) => void }
 ): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = []
   const edges: Edge[] = []
@@ -441,7 +495,7 @@ function buildGraph(
       nodes.push({
         id: tId, type: 'taskNode',
         position: savedPos[tId] ?? defaultTPos,
-        data: { label: task.title, status: task.status, taskId: task.id, priority: task.priority },
+        data: { label: task.title, status: task.status, taskId: task.id, priority: task.priority, onStatusChange: callbacks.onStatusChange },
       })
       edges.push({
         id: `et-${task.id}`, source: `p-${p.id}`, target: tId,
@@ -462,6 +516,12 @@ export default function GlobalMindMapPage() {
   const [nodes, setNodes] = useNodesState([])
   const [edges, setEdges] = useEdgesState([])
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  const handleStatusChange = useCallback((taskId: string, newStatus: string) => {
+    setNodes(ns => ns.map(n =>
+      n.id === `t-${taskId}` ? { ...n, data: { ...n.data, status: newStatus } } : n
+    ))
+  }, [setNodes])
 
   const loadData = useCallback(async () => {
     const [projRes, taskRes] = await Promise.all([
@@ -490,7 +550,7 @@ export default function GlobalMindMapPage() {
     if (task?._refresh) {
       loadData().then(enriched => {
         const saved = loadLayout()
-        const { nodes: n, edges: e } = buildGraph(enriched, saved, { onRefresh: () => loadData(), onRename: handleRename, onTaskAdded: handleTaskAdded })
+        const { nodes: n, edges: e } = buildGraph(enriched, saved, { onRefresh: () => loadData(), onRename: handleRename, onTaskAdded: handleTaskAdded, onStatusChange: handleStatusChange })
         setNodes(n); setEdges(e)
       })
     } else {
@@ -505,7 +565,7 @@ export default function GlobalMindMapPage() {
     setLoading(true)
     loadData().then(enriched => {
       const saved = loadLayout()
-      const { nodes: n, edges: e } = buildGraph(enriched, saved, { onRefresh: () => loadData(), onRename: handleRename, onTaskAdded: handleTaskAdded })
+      const { nodes: n, edges: e } = buildGraph(enriched, saved, { onRefresh: () => loadData(), onRename: handleRename, onTaskAdded: handleTaskAdded, onStatusChange: handleStatusChange })
       setNodes(n); setEdges(e)
       setLoading(false)
     }).catch(() => setLoading(false))

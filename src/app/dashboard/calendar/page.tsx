@@ -1,4 +1,6 @@
 'use client'
+import React from 'react'
+import { WorkHoursModal } from '@/components/ui/WorkHoursModal'
 
 import { useState, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Sparkles, Loader2, Plus, X, Clock, Zap } from 'lucide-react'
@@ -99,6 +101,144 @@ const PRIORITY_COLOURS: Record<string, string> = {
   urgent: '#dc2626', high: '#ea580c', medium: '#2563eb', low: '#6b7280',
 }
 
+
+// ── Day Snapshot Panel ──────────────────────────────────────────────────────
+function DaySnapshot({ events, anchor }: { events: CalEvent[]; anchor: Date }) {
+  const now = new Date()
+  const todayStr = now.toISOString().split('T')[0]
+  const anchorStr = anchor.toISOString().split('T')[0]
+  const displayDate = anchorStr === todayStr ? anchor : now
+  const displayStr = displayDate.toISOString().split('T')[0]
+
+  // Get today's events sorted
+  const todayEvents = events
+    .filter(e => e.start_time.startsWith(displayStr))
+    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+
+  const [tick, setTick] = React.useState(0)
+  React.useEffect(() => {
+    const iv = setInterval(() => setTick(t => t + 1), 60000)
+    return () => clearInterval(iv)
+  }, [])
+
+  const nowMins = now.getHours() * 60 + now.getMinutes()
+
+  // Find current and next event
+  const current = todayEvents.find(e => {
+    const s = new Date(e.start_time), en = new Date(e.end_time)
+    return now >= s && now < en
+  })
+  const upcoming = todayEvents.filter(e => new Date(e.start_time) > now).slice(0, 4)
+
+  function fmtTime(iso: string) {
+    return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  }
+  function minsUntil(iso: string) {
+    const diff = Math.round((new Date(iso).getTime() - now.getTime()) / 60000)
+    if (diff < 1) return 'Now'
+    if (diff < 60) return `${diff}m`
+    return `${Math.floor(diff / 60)}h ${diff % 60}m`
+  }
+
+  const isToday = displayStr === todayStr
+
+  return (
+    <div style={{
+      width: 220, flexShrink: 0, borderLeft: '1px solid rgba(0,0,0,0.07)',
+      background: '#fbfbfa', display: 'flex', flexDirection: 'column',
+      height: '100%', overflow: 'hidden',
+      fontFamily: 'DM Sans, sans-serif',
+    }}>
+      {/* Header */}
+      <div style={{ padding: '12px 14px 10px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>
+          {isToday ? 'Today' : new Date(displayStr).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+        </div>
+        {isToday && (
+          <div style={{ fontSize: 22, fontWeight: 700, color: '#1a1a1a', letterSpacing: '-0.04em', lineHeight: 1 }}>
+            {now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        )}
+      </div>
+
+      {/* Current event */}
+      {current && (
+        <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: '#2d7a4f', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>
+            ● Now
+          </div>
+          <div style={{
+            borderLeft: `3px solid ${current.colour ?? '#2d7a4f'}`,
+            paddingLeft: 8,
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a1a', lineHeight: 1.3, marginBottom: 2 }}>{current.title}</div>
+            <div style={{ fontSize: 10, color: '#aaa' }}>
+              {fmtTime(current.start_time)} – {fmtTime(current.end_time)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upcoming events */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+        {upcoming.length === 0 && !current && (
+          <div style={{ padding: '20px 14px', textAlign: 'center' }}>
+            <p style={{ fontSize: 12, color: '#ccc' }}>
+              {isToday ? 'Nothing scheduled for today' : 'No events'}
+            </p>
+          </div>
+        )}
+        {upcoming.map((ev, i) => {
+          const isBreak = ev.type === 'break' || ev.type === 'lunch'
+          return (
+            <div key={ev.id} style={{
+              padding: '7px 14px',
+              borderBottom: i < upcoming.length - 1 ? '1px solid rgba(0,0,0,0.04)' : 'none',
+              opacity: isBreak ? 0.55 : 1,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ width: 3, height: 32, borderRadius: 2, background: ev.colour ?? '#2d7a4f', flexShrink: 0, marginTop: 2 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 500, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                    {ev.title}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#aaa', marginTop: 2 }}>
+                    {fmtTime(ev.start_time)}
+                  </div>
+                </div>
+                <div style={{ fontSize: 9.5, color: '#bbb', flexShrink: 0, marginTop: 2, fontWeight: 500 }}>
+                  {minsUntil(ev.start_time)}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Free time remaining */}
+      {isToday && (() => {
+        const endOfDay = 18 * 60
+        const scheduledMins = todayEvents
+          .filter(e => e.type === 'ai_generated' || e.type === 'event')
+          .reduce((acc, e) => {
+            const s = Math.max(new Date(e.start_time).getHours() * 60 + new Date(e.start_time).getMinutes(), nowMins)
+            const en = new Date(e.end_time).getHours() * 60 + new Date(e.end_time).getMinutes()
+            return acc + Math.max(0, en - s)
+          }, 0)
+        const free = Math.max(0, endOfDay - Math.max(nowMins, 9 * 60) - scheduledMins)
+        return free > 0 ? (
+          <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 10, color: '#bbb', marginBottom: 2 }}>Free today</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#2d7a4f' }}>
+              {Math.floor(free / 60)}h {free % 60}m
+            </div>
+          </div>
+        ) : null
+      })()}
+    </div>
+  )
+}
+
 export default function CalendarPage() {
   const [view, setView] = useState<ViewMode>('week')
   const [anchor, setAnchor] = useState(new Date())
@@ -107,6 +247,8 @@ export default function CalendarPage() {
   const [scheduling, setScheduling] = useState(false)
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [hasExistingAiEvents, setHasExistingAiEvents] = useState(false)
+  const [showWorkHoursModal, setShowWorkHoursModal] = useState(false)
+  const [workHours, setWorkHours] = useState<{ start: string; end: string } | null>(null)
   const [focusTip, setFocusTip] = useState('')
   const [selectedEvent, setSelectedEvent] = useState<CalEvent | null>(null)
   const [showNewEvent, setShowNewEvent] = useState(false)
@@ -144,7 +286,18 @@ export default function CalendarPage() {
     setAnchor(d)
   }
 
-  function handleScheduleClick() {
+  async function handleScheduleClick() {
+    // Check if work hours are set
+    if (!workHours) {
+      const res = await fetch('/api/preferences')
+      const prefs = await res.json()
+      if (!prefs.work_start || prefs.work_start === '09:00' && !prefs.id) {
+        // No saved prefs — ask
+        setShowWorkHoursModal(true)
+        return
+      }
+      setWorkHours({ start: prefs.work_start, end: prefs.work_end })
+    }
     const aiEvents = events.filter(e => e.type === 'ai_generated')
     if (aiEvents.length > 0) {
       setHasExistingAiEvents(true)
@@ -173,6 +326,8 @@ export default function CalendarPage() {
           date: anchor.toISOString(),
           weekMode: view === 'week',
           preserveExisting: mode === 'around',
+          workStart: workHours?.start,
+          workEnd: workHours?.end,
         }),
       })
       const data = await res.json()
@@ -282,8 +437,9 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {/* Calendar body */}
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      {/* Calendar body + snapshot panel */}
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'row' }}>
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {loading ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 8 }}>
             <Loader2 size={16} style={{ color: '#2d7a4f', animation: 'spin 1s linear infinite' }} />
@@ -306,6 +462,8 @@ export default function CalendarPage() {
             isToday={isToday}
           />
         )}
+        </div>
+        <DaySnapshot events={events} anchor={anchor} />
       </div>
 
       {/* Event detail modal */}
@@ -381,6 +539,19 @@ export default function CalendarPage() {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Work hours modal */}
+      {showWorkHoursModal && (
+        <WorkHoursModal
+          onConfirm={(start, end) => {
+            setWorkHours({ start, end })
+            setShowWorkHoursModal(false)
+            const aiEvents = events.filter(e => e.type === 'ai_generated')
+            if (aiEvents.length > 0) { setShowScheduleModal(true) } else { runSchedule('scratch') }
+          }}
+          onCancel={() => setShowWorkHoursModal(false)}
+        />
       )}
 
       {/* Schedule mode modal */}

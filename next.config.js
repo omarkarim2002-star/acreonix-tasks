@@ -61,9 +61,7 @@ const nextConfig = {
   // Disable powered-by header (don't reveal tech stack)
   poweredByHeader: false,
 
-  experimental: {
-    serverComponentsExternalPackages: ['@anthropic-ai/sdk'],
-  },
-}
+  serverExternalPackages: ['@anthropic-ai/sdk'],
+  }
 
 module.exports = nextConfig
