@@ -418,7 +418,16 @@ export default function CalendarPage() {
     const e = rangeEnd.toISOString().split('T')[0]
     fetch(`/api/calendar-events?start=${s}T00:00:00Z&end=${e}T23:59:59Z`)
       .then(r => r.json())
-      .then(d => { setEvents(Array.isArray(d) ? d : []); setLoading(false) })
+      .then(d => { setEvents((() => {
+          const now = new Date()
+          const arr = Array.isArray(d) ? d : []
+          return arr.filter((e: CalEvent) => {
+            if (e.type === 'ai_generated' && !e.confirmed) {
+              return new Date(e.start_time).toDateString() >= now.toDateString()
+            }
+            return true
+          })
+        })()); setLoading(false) })
       .catch(() => setLoading(false))
   }, [anchor, view]) // eslint-disable-line
 
@@ -580,6 +589,37 @@ export default function CalendarPage() {
       </div>
 
       {/* Focus tip */}
+      {/* Proposed plan banner — shown when unconfirmed AI events exist */}
+      {events.some(e => e.type === 'ai_generated' && !e.confirmed) && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 20px', background: 'linear-gradient(90deg,#f0faf4,#f9fdf9)', borderBottom: '1px solid #c6e6d4', flexShrink: 0 }}>
+          <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#2d7a4f', boxShadow: '0 0 0 3px rgba(45,122,79,0.2)', animation: 'pulseGreen 2s infinite', flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#1f5537' }}>Proposed plan ready</span>
+            <span style={{ fontSize: 11.5, color: '#2d7a4f', marginLeft: 8, opacity: 0.8 }}>
+              {events.filter(e => e.type === 'ai_generated' && !e.confirmed).length} suggested blocks — confirm to commit, ✕ to remove
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              const ids = events.filter(e => e.type === 'ai_generated' && !e.confirmed).map(e => e.id)
+              ids.forEach(id => confirmEvent(id))
+            }}
+            style={{ fontSize: 11.5, fontWeight: 600, padding: '4px 12px', borderRadius: 6, background: '#2d7a4f', color: '#fff', border: 'none', cursor: 'pointer', flexShrink: 0, fontFamily: 'DM Sans, sans-serif' }}
+          >
+            Confirm all
+          </button>
+          <button
+            onClick={() => {
+              const ids = events.filter(e => e.type === 'ai_generated' && !e.confirmed).map(e => e.id)
+              ids.forEach(id => clearSuggestion(id))
+            }}
+            style={{ fontSize: 11.5, color: '#888', padding: '4px 10px', borderRadius: 6, background: 'rgba(0,0,0,0.06)', border: 'none', cursor: 'pointer', flexShrink: 0, fontFamily: 'DM Sans, sans-serif' }}
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+
       {focusTip && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 20px', background: '#fdf8ee', borderBottom: '1px solid #e8d5a0', flexShrink: 0 }}>
           <Zap size={13} style={{ color: '#c9a84c', flexShrink: 0 }} />
@@ -783,6 +823,10 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
   )
 }
 
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+}
+
 function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, focusEventId, conflictIds, onConfirm, onClear }: {
   days: Date[]
   events: CalEvent[]
@@ -886,6 +930,20 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
                   ) : null
                 })()}
 
+                {/* Now indicator — red line at current time */}
+                {isToday(day) && (() => {
+                  const n = new Date()
+                  const nowMins = n.getHours() * 60 + n.getMinutes()
+                  const nowTop = (nowMins - START_HOUR * 60) * (PX_PER_HOUR / 60)
+                  if (nowTop < 0) return null
+                  return (
+                    <div key="now-line" style={{ position: 'absolute', left: 0, right: 0, top: nowTop, zIndex: 20, pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', marginLeft: -4, flexShrink: 0 }} />
+                      <div style={{ flex: 1, height: 1.5, background: '#ef4444', opacity: 0.75 }} />
+                    </div>
+                  )
+                })()}
+
                 {/* Events — non-overlapping */}
                 {laid.map(event => {
                   const startMins = timeToMins(event.start_time) - START_HOUR * 60
@@ -896,11 +954,36 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
                   if (height <= 0) return null
 
                   const isBreak = event.type === 'break' || event.type === 'lunch'
+                  const isPast = new Date(event.end_time) < new Date() && event.confirmed
                   const isProvisional = event.type === 'ai_generated' && !event.confirmed
                   const colWidth = 100 / event.totalCols
                   const leftPct  = event.col * colWidth
                   const priority = event.task?.priority ?? ''
                   const durationMins = timeToMins(event.end_time) - timeToMins(event.start_time)
+
+                  // COMPACT PILL for very short events (< 20px ≈ < 25 min)
+                  if (height < 20 && !isBreak) {
+                    return (
+                      <div
+                        key={event.id}
+                        onClick={() => onEventClick(event)}
+                        title={`${event.title} · ${fmtTime(event.start_time)}–${fmtTime(event.end_time)}`}
+                        style={{
+                          position: 'absolute', top: top + 1, height: Math.max(height, 8),
+                          left: `calc(${leftPct}% + 2px)`, width: `calc(${colWidth}% - 4px)`,
+                          borderRadius: 3, background: event.colour + (isProvisional ? '40' : '99'),
+                          cursor: 'pointer', overflow: 'hidden', boxSizing: 'border-box',
+                          display: 'flex', alignItems: 'center', paddingLeft: 3,
+                          animation: 'fadeSlideIn 0.25s ease both',
+                          zIndex: 10,
+                        }}
+                      >
+                        <span style={{ fontSize: 8, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1 }}>
+                          {event.title}
+                        </span>
+                      </div>
+                    )
+                  }
 
                   return (
                     <div
@@ -928,7 +1011,7 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
                         boxShadow: focusEventId === event.id && !isProvisional
                           ? `0 1px 6px ${event.colour}18`
                           : 'none',
-                        opacity: isProvisional ? 0.82 : 1,
+                        opacity: isProvisional ? 0.85 : isPast ? 0.4 : 1,
                         padding: '3px 5px',
                         cursor: 'pointer',
                         zIndex: focusEventId === event.id ? 11 : 10,
@@ -937,7 +1020,7 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
                         overflow: 'hidden',
                         boxSizing: 'border-box',
                         animation: 'fadeSlideIn 0.3s ease both',
-                        transition: 'box-shadow 0.15s, background 0.15s',
+                        transition: 'box-shadow 0.15s, background 0.15s, opacity 0.2s',
                       }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = isBreak ? '#efefed' : event.colour + '22'; (e.currentTarget as HTMLElement).style.zIndex = '14' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = focusEventId === event.id ? event.colour + '1a' : isBreak ? '#f5f5f3' : event.colour + '0e'; (e.currentTarget as HTMLElement).style.zIndex = focusEventId === event.id ? '11' : '10' }}
