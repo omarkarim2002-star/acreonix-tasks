@@ -15,6 +15,7 @@ type CalEvent = {
   end_time: string
   colour: string
   type: string
+  confirmed: boolean   // false = provisional AI suggestion, true = user confirmed
   all_day: boolean
   task?: { title: string; status: string; priority: string }
 }
@@ -386,6 +387,20 @@ export default function CalendarPage() {
   const [showWorkHoursModal, setShowWorkHoursModal] = useState(false)
   const [workHours, setWorkHours] = useState<{ start: string; end: string } | null>(null)
   const [focusTip, setFocusTip] = useState('')
+
+  async function confirmEvent(id: string) {
+    setEvents(prev => prev.map(e => e.id === id ? { ...e, confirmed: true } : e))
+    await fetch(`/api/calendar-events/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirmed: true }),
+    })
+  }
+
+  async function clearSuggestion(id: string) {
+    setEvents(prev => prev.filter(e => e.id !== id))
+    await fetch(`/api/calendar-events/${id}`, { method: 'DELETE' })
+  }
   const [selectedEvent, setSelectedEvent] = useState<CalEvent | null>(null)
   const [showNewEvent, setShowNewEvent] = useState(false)
   const [newEvent, setNewEvent] = useState({ title: '', date: '', startTime: '09:00', endTime: '10:00', colour: '#2d7a4f' })
@@ -598,6 +613,8 @@ export default function CalendarPage() {
             isToday={isToday}
             focusEventId={findFocusEvent(events, anchor.toISOString().split('T')[0])?.id ?? null}
             conflictIds={detectConflicts(events, anchor.toISOString().split('T')[0])}
+            onConfirm={confirmEvent}
+            onClear={clearSuggestion}
           />
         )}
         </div>
@@ -766,7 +783,7 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
   )
 }
 
-function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, focusEventId, conflictIds }: {
+function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, focusEventId, conflictIds, onConfirm, onClear }: {
   days: Date[]
   events: CalEvent[]
   scrollRef: React.RefObject<HTMLDivElement>
@@ -775,6 +792,8 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
   isToday: (d: Date) => boolean
   focusEventId?: string | null
   conflictIds?: Set<string>
+  onConfirm?: (id: string) => void
+  onClear?: (id: string) => void
 }) {
   const [dragEvent, setDragEvent] = useState<CalEvent | null>(null)
   const TIME_GUTTER = 52
@@ -877,6 +896,7 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
                   if (height <= 0) return null
 
                   const isBreak = event.type === 'break' || event.type === 'lunch'
+                  const isProvisional = event.type === 'ai_generated' && !event.confirmed
                   const colWidth = 100 / event.totalCols
                   const leftPct  = event.col * colWidth
                   const priority = event.task?.priority ?? ''
@@ -895,15 +915,20 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
                         left: `calc(${leftPct}% + 2px)`,
                         width: `calc(${colWidth}% - 4px)`,
                         borderRadius: 6,
-                        borderLeft: focusEventId === event.id
+                        borderLeft: isProvisional
+                          ? `2px dashed ${event.colour}80`
+                          : focusEventId === event.id
                           ? `3px solid ${event.colour}`
                           : `2.5px solid ${isBreak ? '#e0e0dd' : event.colour + 'cc'}`,
-                        background: focusEventId === event.id
+                        background: isProvisional
+                          ? event.colour + '07'
+                          : focusEventId === event.id
                           ? event.colour + '1a'
                           : isBreak ? '#f5f5f3' : event.colour + '0e',
-                        boxShadow: focusEventId === event.id
+                        boxShadow: focusEventId === event.id && !isProvisional
                           ? `0 1px 6px ${event.colour}18`
                           : 'none',
+                        opacity: isProvisional ? 0.82 : 1,
                         padding: '3px 5px',
                         cursor: 'pointer',
                         zIndex: focusEventId === event.id ? 11 : 10,
@@ -917,7 +942,28 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = isBreak ? '#efefed' : event.colour + '22'; (e.currentTarget as HTMLElement).style.zIndex = '14' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = focusEventId === event.id ? event.colour + '1a' : isBreak ? '#f5f5f3' : event.colour + '0e'; (e.currentTarget as HTMLElement).style.zIndex = focusEventId === event.id ? '11' : '10' }}
                     >
-                      {focusEventId === event.id && height >= 40 && (
+                      {isProvisional && height >= 32 && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 1 }}>
+                          <div style={{ fontSize: 8, fontWeight: 700, color: event.colour, letterSpacing: '0.07em', textTransform: 'uppercase', opacity: 0.9 }}>
+                            ✦ Suggested
+                          </div>
+                          {height >= 52 && (
+                            <div style={{ display: 'flex', gap: 2 }} onClick={e => e.stopPropagation()}>
+                              <button
+                                onClick={() => onConfirm?.(event.id)}
+                                title="Confirm this block"
+                                style={{ fontSize: 8, background: event.colour, color: '#fff', border: 'none', borderRadius: 3, padding: '1px 5px', cursor: 'pointer', fontWeight: 700, fontFamily: 'DM Sans, sans-serif' }}
+                              >✓</button>
+                              <button
+                                onClick={() => onClear?.(event.id)}
+                                title="Remove suggestion"
+                                style={{ fontSize: 8, background: 'rgba(0,0,0,0.1)', color: '#666', border: 'none', borderRadius: 3, padding: '1px 5px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+                              >✕</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {!isProvisional && focusEventId === event.id && height >= 40 && (
                         <div style={{ fontSize: 8.5, fontWeight: 700, color: event.colour, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.75, marginBottom: 1 }}>
                           ★ Focus
                         </div>
