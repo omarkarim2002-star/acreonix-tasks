@@ -1,222 +1,437 @@
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import Link from 'next/link'
-import { Sparkles, Clock, AlertCircle, CheckCircle2, GitFork, Calendar, ChevronRight } from 'lucide-react'
+import {
+  Sparkles, ArrowRight, AlertCircle, Clock,
+  TrendingUp, Zap, CheckCircle2, GitFork,
+  Calendar, BarChart2, ChevronRight, AlertTriangle,
+} from 'lucide-react'
 
-function formatDeadline(d: string): string {
-  const diff = Math.ceil((new Date(d).getTime() - Date.now()) / 86400000)
+// ── Types ────────────────────────────────────────────────────────────────────
+type Task = {
+  id: string
+  title: string
+  status: string
+  priority: string
+  deadline: string | null
+  estimated_minutes: number | null
+  project_id: string | null
+  project?: { name: string; colour: string; icon: string } | null
+  updated_at: string
+}
+type Project = {
+  id: string; name: string; colour: string; icon: string
+  description?: string | null; status: string
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fmtDeadline(iso: string | null): string {
+  if (!iso) return ''
+  const diff = Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)
   if (diff < 0) return `${Math.abs(diff)}d overdue`
   if (diff === 0) return 'Today'
   if (diff === 1) return 'Tomorrow'
-  if (diff < 7) return `${diff}d`
-  return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  if (diff <= 6) return `${diff}d`
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
-
-function deadlineColor(d: string) {
-  const diff = Math.ceil((new Date(d).getTime() - Date.now()) / 86400000)
+function deadlineColor(iso: string | null): string {
+  if (!iso) return '#aaa'
+  const diff = Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)
   if (diff < 0) return '#dc2626'
   if (diff <= 1) return '#ea580c'
+  if (diff <= 3) return '#d97706'
   return '#888'
 }
-
-const PRIORITY_DOT: Record<string, string> = {
-  urgent: '#dc2626', high: '#ea580c', medium: '#3b82f6', low: '#aaa',
+function greet(): string {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+function priorityScore(p: string): number {
+  return { urgent: 4, high: 3, medium: 2, low: 1 }[p] ?? 1
+}
+function daysSinceUpdated(iso: string): number {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
 }
 
+// ── Nudge engine ─────────────────────────────────────────────────────────────
+type Nudge = { id: string; type: 'deadline_risk' | 'stale' | 'overdue' | 'overload'; message: string; taskId?: string; projectId?: string; severity: 'high' | 'medium' }
+
+function computeNudges(tasks: Task[], totalScheduledMins: number): Nudge[] {
+  const nudges: Nudge[] = []
+  const now = Date.now()
+
+  // Overload warning — if scheduled work exceeds 7h
+  if (totalScheduledMins > 420) {
+    nudges.push({
+      id: 'overload',
+      type: 'overload',
+      severity: 'high',
+      message: `${Math.round(totalScheduledMins / 60)}h of work estimated today — consider moving lower-priority tasks.`,
+    })
+  }
+
+  for (const task of tasks) {
+    if (task.status === 'done') continue
+
+    // Deadline risk — high priority, deadline in 1–2 days, not started
+    if (task.deadline && task.priority === 'urgent' || task.priority === 'high') {
+      const diff = Math.ceil((new Date(task.deadline!).getTime() - now) / 86400000)
+      if (diff >= 0 && diff <= 2 && task.status === 'todo') {
+        nudges.push({
+          id: `risk-${task.id}`,
+          type: 'deadline_risk',
+          severity: 'high',
+          message: `"${task.title}" is due ${diff === 0 ? 'today' : diff === 1 ? 'tomorrow' : 'in 2 days'} and hasn't been started.`,
+          taskId: task.id,
+        })
+      }
+    }
+
+    // Stale task — not touched in 5+ days, not completed
+    if (task.priority !== 'low' && daysSinceUpdated(task.updated_at) >= 5) {
+      nudges.push({
+        id: `stale-${task.id}`,
+        type: 'stale',
+        severity: 'medium',
+        message: `"${task.title}" hasn't been touched in ${daysSinceUpdated(task.updated_at)} days.`,
+        taskId: task.id,
+      })
+    }
+  }
+
+  // Overdue tasks (separate from risk)
+  const overdue = tasks.filter(t => t.deadline && new Date(t.deadline) < new Date() && t.status !== 'done')
+  if (overdue.length > 0 && !nudges.find(n => n.type === 'overdue')) {
+    nudges.push({
+      id: 'overdue',
+      type: 'overdue',
+      severity: 'high',
+      message: `${overdue.length} task${overdue.length > 1 ? 's are' : ' is'} overdue and need${overdue.length === 1 ? 's' : ''} attention.`,
+    })
+  }
+
+  // Cap at 3 nudges, prioritise high severity
+  return nudges.sort((a, b) => (a.severity === 'high' ? -1 : 1)).slice(0, 3)
+}
+
+// ── Today's best order ────────────────────────────────────────────────────────
+function computeTodayOrder(tasks: Task[]): Task[] {
+  const now = new Date()
+  const todayEnd = new Date(now)
+  todayEnd.setHours(23, 59, 59)
+
+  return [...tasks]
+    .filter(t => t.status !== 'done')
+    .sort((a, b) => {
+      // Score: priority + deadline urgency + estimated fit
+      let sa = priorityScore(a.priority) * 10
+      let sb = priorityScore(b.priority) * 10
+      if (a.deadline) {
+        const da = Math.ceil((new Date(a.deadline).getTime() - Date.now()) / 86400000)
+        sa += da < 0 ? 40 : da === 0 ? 30 : da === 1 ? 20 : da <= 3 ? 10 : 0
+      }
+      if (b.deadline) {
+        const db = Math.ceil((new Date(b.deadline).getTime() - Date.now()) / 86400000)
+        sb += db < 0 ? 40 : db === 0 ? 30 : db === 1 ? 20 : db <= 3 ? 10 : 0
+      }
+      return sb - sa
+    })
+    .slice(0, 5)
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default async function DashboardPage() {
   const { userId } = await auth()
   if (!userId) return null
 
   const now = new Date()
-  const hour = now.getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
-  const dateStr = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const todayStr = now.toDateString()
 
-  // Fetch projects and tasks separately — avoids nested join issues
-  const [projectsRes, tasksRes] = await Promise.all([
+  // Fetch everything in parallel
+  const [projectsRes, allTasksRes, calEventsRes] = await Promise.all([
     supabaseAdmin
       .from('projects')
-      .select('id, name, colour, icon, status')
+      .select('id, name, colour, icon, description, status')
       .eq('user_id', userId)
       .eq('status', 'active')
       .order('created_at', { ascending: false })
-      .limit(6),
+      .limit(8),
     supabaseAdmin
       .from('tasks')
-      .select('id, title, status, priority, deadline, project_id, project:projects(name, colour)')
+      .select('id, title, status, priority, deadline, estimated_minutes, project_id, updated_at, project:projects(name, colour, icon)')
       .eq('user_id', userId)
       .neq('status', 'done')
       .order('deadline', { ascending: true, nullsFirst: false })
-      .limit(8),
+      .limit(40),
+    supabaseAdmin
+      .from('calendar_events')
+      .select('start_time, end_time, type')
+      .eq('user_id', userId)
+      .gte('start_time', new Date(now.setHours(0, 0, 0, 0)).toISOString())
+      .lte('end_time', new Date(now.setHours(23, 59, 59, 999)).toISOString()),
   ])
 
-  const projects = projectsRes.data ?? []
-  const tasks = tasksRes.data ?? []
+  const projects = (projectsRes.data ?? []) as Project[]
+  const tasks = ((allTasksRes.data ?? []) as any[]).map(t => ({
+    ...t,
+    project: Array.isArray(t.project) ? t.project[0] ?? null : t.project ?? null,
+  })) as Task[]
+  const calEvents = calEventsRes.data ?? []
 
-  // Get task counts per project
-  const { data: allTasks } = await supabaseAdmin
-    .from('tasks')
-    .select('id, status, project_id')
-    .eq('user_id', userId)
+  // Compute today's scheduled work minutes
+  const scheduledMins = calEvents
+    .filter(e => e.type !== 'break' && e.type !== 'lunch')
+    .reduce((sum, e) => {
+      const s = new Date(e.start_time), en = new Date(e.end_time)
+      return sum + (en.getTime() - s.getTime()) / 60000
+    }, 0)
 
-  const allTasksArr = allTasks ?? []
+  // Use task estimates if no calendar events
+  const totalWorkLoad = scheduledMins > 0
+    ? scheduledMins
+    : tasks.filter(t => t.deadline && new Date(t.deadline).toDateString() === todayStr)
+        .reduce((s, t) => s + (t.estimated_minutes ?? 30), 0)
 
-  const todayStr = now.toDateString()
-  const todayCount = tasks.filter(t => t.deadline && new Date(t.deadline).toDateString() === todayStr).length
-  const overdueCount = tasks.filter(t => t.deadline && new Date(t.deadline) < now).length
-  const inProgressCount = tasks.filter(t => t.status === 'in_progress').length
+  const todayTasks = tasks.filter(t => t.deadline && new Date(t.deadline).toDateString() === todayStr)
+  const overdueTasks = tasks.filter(t => t.deadline && new Date(t.deadline) < now)
+  const inProgressTasks = tasks.filter(t => t.status === 'in_progress')
+  const isOverloaded = totalWorkLoad > 420 // 7h+
 
-  const projectsWithStats = projects.map(p => ({
-    ...p,
-    total: allTasksArr.filter(t => t.project_id === p.id).length,
-    done:  allTasksArr.filter(t => t.project_id === p.id && t.status === 'done').length,
-  }))
-
+  const nudges = computeNudges(tasks, totalWorkLoad)
+  const todayOrder = computeTodayOrder(tasks)
   const isEmpty = tasks.length === 0 && projects.length === 0
 
+  const S = { fontFamily: 'DM Sans, sans-serif' }
+
   return (
-    <div style={{ padding: '32px 40px 48px', maxWidth: 1100, margin: '0 auto', fontFamily: 'DM Sans, sans-serif' }}>
+    <div style={{ padding: '28px 32px 60px', maxWidth: 1060, margin: '0 auto', ...S }}>
 
-      {/* Header */}
-      <div className="fade-up-1" style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.03em', lineHeight: 1.2 }} className="gold-line">
-          {greeting}
+      {/* ── Greeting ── */}
+      <div style={{ marginBottom: 22 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.03em', marginBottom: 4 }}>
+          {greet()} 👋
         </h1>
-        <p style={{ fontSize: 13, color: '#aaa', marginTop: 10 }}>{dateStr}</p>
+        <p style={{ fontSize: 13, color: '#aaa' }}>
+          {now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+          {isOverloaded && <span style={{ color: '#ea580c', fontWeight: 500, marginLeft: 12 }}>⚠ Heavy day ahead</span>}
+        </p>
       </div>
 
-      {/* Quick actions */}
-      <div className="fade-up-2" style={{ display: 'flex', gap: 8, marginBottom: 28, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Link href="/dashboard/calendar" className="btn btn-secondary" style={{ fontSize: 13, color: '#1f5537', background: '#f0faf4', borderColor: 'rgba(45,122,79,0.2)' }}>
-          <Calendar size={14} />Schedule my day
-        </Link>
-        <Link href="/dashboard/mindmap" className="btn btn-secondary" style={{ fontSize: 13 }}>
-          <GitFork size={14} />All projects map
-        </Link>
-        <Link href="/dashboard/extract" className="btn btn-primary" style={{ marginLeft: 'auto', fontSize: 13 }}>
-          <Sparkles size={14} />Add tasks with AI
-        </Link>
-      </div>
+      {/* ── Smart nudges ── */}
+      {nudges.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 22 }}>
+          {nudges.map(nudge => (
+            <div key={nudge.id} style={{
+              display: 'flex', alignItems: 'flex-start', gap: 10,
+              padding: '10px 14px', borderRadius: 9,
+              background: nudge.severity === 'high' ? '#fff5f5' : '#fdf8ee',
+              border: `1px solid ${nudge.severity === 'high' ? '#fecaca' : '#e8d5a0'}`,
+            }}>
+              <AlertTriangle size={13} style={{ color: nudge.severity === 'high' ? '#dc2626' : '#c9a84c', flexShrink: 0, marginTop: 1 }} />
+              <p style={{ fontSize: 12.5, color: nudge.severity === 'high' ? '#7f1d1d' : '#7a5e1a', flex: 1, lineHeight: 1.5 }}>
+                {nudge.message}
+              </p>
+              {nudge.taskId && (
+                <Link href={`/dashboard/tasks/${nudge.taskId}`} style={{ fontSize: 11, color: '#2d7a4f', textDecoration: 'none', flexShrink: 0, fontWeight: 500 }}>
+                  View →
+                </Link>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
-      {/* Stats */}
-      <div className="fade-up-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 32 }}>
+      {/* ── Stats ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 24 }}>
         {[
-          { label: 'Due today',    value: todayCount,      bg: '#fdf8ee', border: '#e8d5a0', icon: Clock,         iconColor: '#c9a84c', numColor: '#7a5e1a' },
-          { label: 'Overdue',      value: overdueCount,    bg: '#fff5f5', border: '#fecaca', icon: AlertCircle,   iconColor: '#ef4444', numColor: '#b91c1c' },
-          { label: 'In progress',  value: inProgressCount, bg: '#f0faf4', border: '#c6e6d4', icon: CheckCircle2,  iconColor: '#2d7a4f', numColor: '#1f5537' },
-        ].map(({ label, value, bg, border, icon: Icon, iconColor, numColor }) => (
-          <div key={label} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10, padding: '16px 20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-              <Icon size={13} style={{ color: iconColor }} />
-              <span style={{ fontSize: 12, color: '#888', fontWeight: 500 }}>{label}</span>
-            </div>
-            <div style={{ fontSize: 28, fontWeight: 600, color: numColor, letterSpacing: '-0.04em', lineHeight: 1 }}>
-              {value}
-            </div>
+          { label: 'Due today', value: todayTasks.length, color: '#c9a84c', bg: '#fdf8ee', border: '#e8d5a0' },
+          { label: 'Overdue', value: overdueTasks.length, color: '#dc2626', bg: '#fff5f5', border: '#fecaca' },
+          { label: 'In progress', value: inProgressTasks.length, color: '#2d7a4f', bg: '#f0faf4', border: '#c6e6d4' },
+          { label: 'Projects', value: projects.length, color: '#2d7a4f', bg: '#f0faf4', border: '#c6e6d4' },
+        ].map(({ label, value, color, bg, border }) => (
+          <div key={label} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10, padding: '13px 16px' }}>
+            <p style={{ fontSize: 11, color: '#aaa', fontWeight: 500, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
+            <p style={{ fontSize: 26, fontWeight: 700, color, letterSpacing: '-0.04em', lineHeight: 1 }}>{value}</p>
           </div>
         ))}
       </div>
 
-      {/* Empty state */}
+      {/* ── Empty state ── */}
       {isEmpty && (
-        <div className="fade-up-3" style={{
-          background: 'linear-gradient(135deg, #f0faf4, #fdf8ee)',
-          border: '1px solid rgba(45,122,79,0.12)',
-          borderRadius: 12, padding: '28px',
-          display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 28,
-        }}>
+        <div style={{ background: 'linear-gradient(135deg, #f0faf4, #fdf8ee)', border: '1px solid rgba(45,122,79,.12)', borderRadius: 12, padding: '24px 22px', display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 24 }}>
           <div style={{ width: 40, height: 40, borderRadius: 10, background: '#2d7a4f', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Sparkles size={18} color="#fff" />
           </div>
           <div>
-            <h3 style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 5 }}>Start by adding your tasks</h3>
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: '#1a1a1a', marginBottom: 4 }}>Start by adding your tasks</h3>
             <p style={{ fontSize: 13, color: '#888', lineHeight: 1.6, marginBottom: 14 }}>
-              Paste a brain dump, email, or notes — AI extracts tasks, groups them into projects, and sets priorities in seconds.
+              Paste a brain dump, email, or notes. AI extracts everything into projects in seconds.
             </p>
-            <Link href="/dashboard/extract" className="btn btn-primary" style={{ fontSize: 13 }}>
+            <Link href="/dashboard/extract" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#2d7a4f', color: '#fff', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, textDecoration: 'none' }}>
               <Sparkles size={13} />Add tasks with AI
             </Link>
           </div>
         </div>
       )}
 
-      {/* Main grid */}
+      {/* ── Main grid ── */}
       {!isEmpty && (
-        <div className="fade-up-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
 
-          {/* Tasks */}
+          {/* TODAY'S FOCUS — Sprint 1 hero */}
+          <div style={{ gridColumn: '1 / -1' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#2d7a4f' }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                  Today's focus
+                </span>
+                {isOverloaded && (
+                  <span style={{ fontSize: 10, fontWeight: 600, background: '#fff4ee', color: '#ea580c', border: '1px solid #fed7aa', borderRadius: 5, padding: '2px 7px' }}>
+                    {Math.round(totalWorkLoad / 60)}h estimated — heavy day
+                  </span>
+                )}
+              </div>
+              <Link href="/dashboard/calendar" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#2d7a4f', textDecoration: 'none', fontWeight: 500 }}>
+                <Calendar size={12} />Schedule week
+              </Link>
+            </div>
+
+            {todayOrder.length === 0 ? (
+              <div style={{ padding: '20px', background: '#f9f9f7', borderRadius: 10, border: '1px solid rgba(0,0,0,0.06)', textAlign: 'center' }}>
+                <p style={{ fontSize: 13, color: '#bbb' }}>No tasks prioritised for today.</p>
+                <Link href="/dashboard/extract" style={{ fontSize: 12, color: '#2d7a4f', textDecoration: 'none', marginTop: 8, display: 'inline-block' }}>Add tasks with AI →</Link>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {todayOrder.map((task, idx) => {
+                  const isFirst = idx === 0
+                  const PRIORITY_DOT: Record<string, string> = { urgent: '#dc2626', high: '#ea580c', medium: '#3b82f6', low: '#9ca3af' }
+                  return (
+                    <Link
+                      key={task.id}
+                      href={`/dashboard/tasks/${task.id}`}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: isFirst ? '11px 14px' : '9px 14px',
+                        borderRadius: 9, textDecoration: 'none',
+                        background: isFirst ? '#f0faf4' : '#fff',
+                        border: isFirst ? '1px solid #c6e6d4' : '1px solid rgba(0,0,0,0.07)',
+                        transition: 'border-color 0.12s',
+                      }}
+                    >
+                      {/* Rank */}
+                      <span style={{ fontSize: 11, fontWeight: 700, color: isFirst ? '#2d7a4f' : '#ccc', width: 16, flexShrink: 0, textAlign: 'center' }}>
+                        {isFirst ? '→' : idx + 1}
+                      </span>
+
+                      {/* Priority dot */}
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: PRIORITY_DOT[task.priority] ?? '#aaa', flexShrink: 0 }} />
+
+                      {/* Title */}
+                      <span style={{ flex: 1, fontSize: isFirst ? 14 : 13, fontWeight: isFirst ? 600 : 400, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {task.title}
+                      </span>
+
+                      {/* Project */}
+                      {task.project && (
+                        <span style={{ fontSize: 11, color: '#bbb', flexShrink: 0, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {(task.project as any).name}
+                        </span>
+                      )}
+
+                      {/* Deadline */}
+                      {task.deadline && (
+                        <span style={{ fontSize: 11, color: deadlineColor(task.deadline), flexShrink: 0, fontWeight: 500 }}>
+                          {fmtDeadline(task.deadline)}
+                        </span>
+                      )}
+
+                      {/* Estimate */}
+                      {task.estimated_minutes && (
+                        <span style={{ fontSize: 10, color: '#ccc', flexShrink: 0 }}>
+                          {task.estimated_minutes}m
+                        </span>
+                      )}
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* All tasks column */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Upcoming tasks</span>
-              <Link href="/dashboard/tasks" style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 12, color: '#2d7a4f', textDecoration: 'none', fontWeight: 500 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.07em' }}>All upcoming</span>
+              <Link href="/dashboard/tasks" style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: '#2d7a4f', textDecoration: 'none', fontWeight: 500 }}>
                 View all <ChevronRight size={12} />
               </Link>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {tasks.slice(0, 6).map((task: any) => (
-                <Link key={task.id} href={`/dashboard/tasks/${task.id}`} className="task-row" style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '10px 12px', textDecoration: 'none',
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {tasks.slice(0, 7).map(task => (
+                <Link key={task.id} href={`/dashboard/tasks/${task.id}`} style={{
+                  display: 'flex', alignItems: 'center', gap: 9, padding: '8px 12px',
+                  borderRadius: 8, textDecoration: 'none',
+                  background: '#fff', border: '1px solid rgba(0,0,0,0.07)',
                 }}>
-                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: PRIORITY_DOT[task.priority] ?? '#aaa', flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, color: '#1a1a1a', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {task.title}
-                  </span>
-                  {task.deadline && (
-                    <span style={{ fontSize: 11, color: deadlineColor(task.deadline), flexShrink: 0, fontWeight: 500 }}>
-                      {formatDeadline(task.deadline)}
-                    </span>
-                  )}
+                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: (task.project as any)?.colour ?? '#2d7a4f', flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontSize: 12.5, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</span>
+                  {task.deadline && <span style={{ fontSize: 10.5, color: deadlineColor(task.deadline), flexShrink: 0 }}>{fmtDeadline(task.deadline)}</span>}
                 </Link>
               ))}
-              {tasks.length === 0 && (
-                <p style={{ fontSize: 13, color: '#bbb', padding: '20px 0', textAlign: 'center' }}>No pending tasks</p>
-              )}
             </div>
           </div>
 
-          {/* Projects */}
+          {/* Projects column */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Projects</span>
-              <Link href="/dashboard/projects" style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 12, color: '#2d7a4f', textDecoration: 'none', fontWeight: 500 }}>
-                View all <ChevronRight size={12} />
-              </Link>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Projects</span>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <Link href="/dashboard/mindmap" style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: '#888', textDecoration: 'none' }}>
+                  <GitFork size={11} />Map
+                </Link>
+                <Link href="/dashboard/projects" style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: '#2d7a4f', textDecoration: 'none', fontWeight: 500 }}>
+                  View all <ChevronRight size={12} />
+                </Link>
+              </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {projectsWithStats.map(p => {
-                const pct = p.total > 0 ? Math.round((p.done / p.total) * 100) : 0
-                return (
-                  <div key={p.id} className="task-row" style={{ padding: '10px 12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                      <Link href={`/dashboard/projects/${p.id}`} style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0, textDecoration: 'none' }}>
-                        <div style={{ width: 30, height: 30, borderRadius: 7, flexShrink: 0, background: (p.colour ?? '#2d7a4f') + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
-                          {p.icon}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 500, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                            <div style={{ flex: 1, height: 3, background: 'rgba(0,0,0,0.07)', borderRadius: 2, overflow: 'hidden' }}>
-                              <div style={{ height: '100%', width: `${pct}%`, background: p.colour ?? '#2d7a4f', borderRadius: 2 }} />
-                            </div>
-                            <span style={{ fontSize: 11, color: '#bbb', flexShrink: 0 }}>{pct}%</span>
-                          </div>
-                        </div>
-                      </Link>
-                      <Link href={`/dashboard/projects/${p.id}/mindmap`} style={{ fontSize: 11, color: '#bbb', padding: '4px 8px', borderRadius: 5, textDecoration: 'none', flexShrink: 0 }}>
-                        <GitFork size={11} />
-                      </Link>
-                    </div>
-                  </div>
-                )
-              })}
-              {projects.length === 0 && (
-                <p style={{ fontSize: 13, color: '#bbb', padding: '20px 0', textAlign: 'center' }}>No projects yet</p>
-              )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {projects.slice(0, 6).map(p => (
+                <Link key={p.id} href={`/dashboard/projects/${p.id}`} style={{
+                  display: 'flex', alignItems: 'center', gap: 9, padding: '9px 12px',
+                  borderRadius: 8, textDecoration: 'none',
+                  background: '#fff', border: '1px solid rgba(0,0,0,0.07)',
+                }}>
+                  <span style={{ fontSize: 16, flexShrink: 0 }}>{p.icon}</span>
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: p.colour, flexShrink: 0 }} />
+                </Link>
+              ))}
             </div>
           </div>
+
         </div>
       )}
+
+      {/* ── Quick actions ── */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 28, flexWrap: 'wrap' }}>
+        <Link href="/dashboard/extract" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: '#2d7a4f', color: '#fff', textDecoration: 'none' }}>
+          <Sparkles size={13} />AI Extract
+        </Link>
+        <Link href="/dashboard/calendar" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: '#f0faf4', color: '#1f5537', border: '1px solid rgba(45,122,79,.2)', textDecoration: 'none' }}>
+          <Calendar size={13} />Calendar
+        </Link>
+        <Link href="/dashboard/mindmap" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: '#f3f3f1', color: '#555', border: '1px solid rgba(0,0,0,.1)', textDecoration: 'none' }}>
+          <GitFork size={13} />Mind map
+        </Link>
+        <Link href="/dashboard/insights" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: '#f3f3f1', color: '#555', border: '1px solid rgba(0,0,0,.1)', textDecoration: 'none' }}>
+          <BarChart2 size={13} />Insights
+        </Link>
+      </div>
+
     </div>
   )
 }
