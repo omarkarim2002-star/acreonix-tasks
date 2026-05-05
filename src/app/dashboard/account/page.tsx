@@ -20,6 +20,8 @@ type Prefs = {
   work_end: string
   work_days: string[]
   timezone: string
+  lunch_start: string
+  lunch_end: string
 }
 
 export default function AccountPage() {
@@ -41,6 +43,8 @@ export default function AccountPage() {
     work_end: '18:00',
     work_days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    lunch_start: '12:30',
+    lunch_end: '13:00',
   })
   const [prefsSaving, setPrefsSaving] = useState(false)
   const [prefsSaved, setPrefsSaved] = useState(false)
@@ -213,6 +217,23 @@ export default function AccountPage() {
               </select>
             </div>
           ))}
+        </div>
+
+        {/* Lunch break */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 11, fontWeight: 600, color: '#aaa', display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Lunch break (optional)</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {[{ label: 'Start', key: 'lunch_start' as const }, { label: 'End', key: 'lunch_end' as const }].map(({ label, key }) => (
+              <div key={key}>
+                <label style={{ fontSize: 11, color: '#bbb', display: 'block', marginBottom: 4 }}>{label}</label>
+                <select value={prefs[key]} onChange={e => setPrefs(prev => ({ ...prev, [key]: e.target.value }))}
+                  style={{ width: '100%', padding: '9px 11px', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 8, fontSize: 14, color: '#1a1a1a', outline: 'none', fontFamily: 'DM Sans, sans-serif', background: '#fff', cursor: 'pointer', appearance: 'none' as const }}>
+                  {HOURS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 11, color: '#bbb', marginTop: 5 }}>AI scheduling blocks this time for lunch every working day.</p>
         </div>
 
         {/* Timezone (read-only, auto-detected) */}

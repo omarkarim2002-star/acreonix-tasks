@@ -67,13 +67,15 @@ export async function POST(req: NextRequest) {
   // Fetch user work hours prefs
   const { data: prefs } = await supabaseAdmin
     .from('user_preferences')
-    .select('work_start, work_end, work_days')
+    .select('work_start, work_end, work_days, lunch_start, lunch_end')
     .eq('user_id', userId)
     .single()
 
-  const workStart = prefs?.work_start ?? '09:00'
-  const workEnd   = prefs?.work_end   ?? '18:00'
-  const workDays  = prefs?.work_days  ?? ['monday','tuesday','wednesday','thursday','friday']
+  const workStart  = prefs?.work_start  ?? '09:00'
+  const workEnd    = prefs?.work_end    ?? '18:00'
+  const workDays   = prefs?.work_days   ?? ['monday','tuesday','wednesday','thursday','friday']
+  const lunchStart = (prefs as any)?.lunch_start ?? '12:30'
+  const lunchEnd   = (prefs as any)?.lunch_end   ?? '13:00'
 
   // Fetch already-confirmed events in this period (imports, manual events)
   // so AI can schedule AROUND them
@@ -111,49 +113,50 @@ export async function POST(req: NextRequest) {
     max_tokens: 3000,
     messages: [{
       role: 'user',
-      content: `You are a smart calendar scheduler. Create an optimal schedule.
+      content: `You are a precision calendar scheduler. Create a REALISTIC, ACHIEVABLE schedule.
 
-TODAY IS: ${todayStr} ${now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-SCHEDULING FOR: ${weekMode ? `the week of ${weekStart} to ${weekEnd}` : dateStr}
+TODAY: ${todayStr} ${now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+SCHEDULING: ${weekMode ? `week of ${weekStart} to ${weekEnd}` : dateStr}
 
-CRITICAL RULES — DO NOT BREAK THESE:
-- NEVER schedule any event before RIGHT NOW (${nowStr})
-- ${isToday ? `Today's earliest slot is ${earliestToday} — nothing before this time today` : ''}
-- Work hours per day: ${workStart} to ${workEnd}
-- Only schedule on these days: ${workDays.join(', ')}
-- Skip any dates before today (${todayStr})
+═══ HARD CONSTRAINTS (NEVER violate) ═══
+1. NO events before ${nowStr} (right now)
+${isToday ? `2. Today starts at ${earliestToday} — nothing before this` : '2. All days start at work start time'}
+3. Work hours: ${workStart}–${workEnd} ONLY
+4. Only schedule on: ${workDays.join(', ')}
+5. Lunch RESERVED: ${lunchStart}–${lunchEnd} every day — skip if already past
+6. Do NOT overlap these confirmed events: ${blockedSlots.length > 0 ? JSON.stringify(blockedSlots) : 'none'}
 
-SCHEDULING RULES:
-- Group tasks from the SAME project on the SAME day to minimise context switching
-- Urgent/high priority tasks go earliest
-- Add a 30-min lunch break at 12:30 on each day
-- Add 10-min breaks every 90 minutes of focused work
-- Do NOT schedule over these existing confirmed events:
-${blockedSlots.length > 0 ? JSON.stringify(blockedSlots) : '  (none — full day available)'}
-- If task has no estimate, assume 30 minutes
-- Spread tasks so no day exceeds 7 hours of work
+═══ SCHEDULING INTELLIGENCE ═══
+- SAME PROJECT = SAME DAY: Group all tasks from the same project on the same day. Never split a project across multiple days unless it doesn't fit.
+- PRIORITY ORDER: urgent → high → medium → low. Urgent tasks go on the earliest day.
+- REALISTIC ESTIMATES: If no estimate given, use 45min for high/urgent, 30min for medium, 20min for low.
+- CAPACITY: Max 5.5 hours of focused task time per day (rest is overhead/breaks). Do NOT overload.
+- BREAKS: Add ONE 10-min break after every 90min of consecutive work. No more.
+- SPREAD: If week mode, use ALL available days — don't pile everything on Monday.
+- GAPS: Leave at least 5 min between consecutive tasks for context switching.
+- DEADLINES FIRST: Tasks due soonest must be scheduled on the earliest possible day.
 
-Available dates: ${dates.join(', ')}
+Available dates (future only): ${dates.join(', ')}
 
-Tasks to schedule:
+Tasks to schedule (schedule ALL of them across the week if possible):
 ${JSON.stringify(taskSummary, null, 2)}
 
-Return ONLY valid JSON:
+Return ONLY valid JSON — no markdown, no explanation:
 {
   "events": [
     {
-      "taskId": "uuid or null for breaks",
-      "title": "Task or break title",
+      "taskId": "uuid — MUST match a real task id from the list above, or null for breaks/lunch",
+      "title": "Exact task title from the list, or 'Lunch break' or 'Break'",
       "date": "YYYY-MM-DD",
       "startTime": "HH:MM",
       "endTime": "HH:MM",
-      "project": "Project name or null",
-      "colour": "#2d7a4f",
-      "type": "task or break or lunch",
-      "priority": "low|medium|high|urgent or null"
+      "project": "project name or null",
+      "colour": "#hexcolour matching the task's project colour",
+      "type": "task | break | lunch",
+      "priority": "urgent | high | medium | low | null"
     }
   ],
-  "focusScore": "One encouraging sentence about this schedule"
+  "focusScore": "One specific, encouraging sentence about this week's plan"
 }`,
     }],
   })

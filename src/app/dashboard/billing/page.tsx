@@ -166,7 +166,7 @@ export default function BillingPage() {
         </div>
 
         {/* Feature grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: 16, marginTop: 16 }}>
+        <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: 14, marginTop: 14 }}>
           {[
             { label: 'Projects', value: limits.projects === Infinity ? 'Unlimited' : `Up to ${limits.projects}` },
             { label: 'Tasks per project', value: (limits as any).tasksPerProject === Infinity ? 'Unlimited' : `Up to ${(limits as any).tasksPerProject}` },
@@ -175,9 +175,9 @@ export default function BillingPage() {
             { label: 'Calendar views', value: Array.isArray((limits as any).calendarViews) ? (limits as any).calendarViews.join(', ') : 'Included' },
             { label: 'Task history', value: (limits as any).completedHistoryDays === Infinity ? 'Unlimited' : `${(limits as any).completedHistoryDays} days` },
           ].map(({ label, value }) => (
-            <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, padding: '6px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-              <span style={{ color: '#888' }}>{label}</span>
-              <span style={{ fontWeight: 500, color: '#1a1a1a' }}>{value}</span>
+            <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12.5, padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+              <span style={{ color: '#888', flex: '0 0 48%' }}>{label}</span>
+              <span style={{ fontWeight: 600, color: '#1a1a1a', textAlign: 'right', flex: '0 0 48%' }}>{value}</span>
             </div>
           ))}
         </div>

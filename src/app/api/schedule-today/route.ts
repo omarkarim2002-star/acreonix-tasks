@@ -25,12 +25,14 @@ export async function POST(req: NextRequest) {
   // Get user work hours
   const { data: prefs } = await supabaseAdmin
     .from('user_preferences')
-    .select('work_start, work_end')
+    .select('work_start, work_end, lunch_start, lunch_end')
     .eq('user_id', userId)
     .single()
 
-  const workStart = prefs?.work_start ?? '09:00'
-  const workEnd   = prefs?.work_end   ?? '18:00'
+  const workStart  = prefs?.work_start  ?? '09:00'
+  const workEnd    = prefs?.work_end    ?? '18:00'
+  const lunchStart = (prefs as any)?.lunch_start ?? '12:30'
+  const lunchEnd   = (prefs as any)?.lunch_end   ?? '13:00'
   const startMins = toMins(workStart)
   const endMins   = toMins(workEnd)
 
@@ -108,35 +110,36 @@ export async function POST(req: NextRequest) {
     max_tokens: 1500,
     messages: [{
       role: 'user',
-      content: `You are a smart daily scheduler. Build an optimal schedule for TODAY (${dateStr}).
+      content: `You are a precision daily scheduler. Build today's plan.
 
-CURRENT TIME: ${nowTimeStr}
-SCHEDULE FROM: ${scheduleFrom} — DO NOT schedule anything before this time
-WORK HOURS: ${workStart} – ${workEnd}
+TODAY: ${dateStr} — CURRENT TIME: ${nowTimeStr}
+EARLIEST SLOT: ${scheduleFrom} (round up from now + buffer)
+WORK HOURS: ${workStart}–${workEnd}
+LUNCH: ${lunchStart}–${lunchEnd} (skip if already past ${nowTimeStr})
 
-CRITICAL: Every event must start at ${scheduleFrom} or later. Nothing in the past.
+═══ HARD RULES ═══
+- NOTHING before ${scheduleFrom} — absolutely zero events in the past
+- Stay within ${workStart}–${workEnd}
+- Do NOT overlap confirmed events: ${JSON.stringify(existingSummary)}
+- Lunch at ${lunchStart}–${lunchEnd} only if not yet passed
 
-Already confirmed today (do not overlap):
-${existingSummary.length > 0 ? JSON.stringify(existingSummary) : 'Nothing confirmed yet'}
+═══ SMART SCHEDULING ═══
+- Group tasks from the SAME project back-to-back — no context switching
+- Urgent/overdue tasks go FIRST
+- Add one 10-min break per 90min of work — no more
+- If only 2-3 hours left, pick 2-3 most important tasks max
+- Realistic estimates: urgent=45min, high=40min, medium=30min, low=20min if not specified
+- Leave 5min gap between tasks
 
-Tasks to schedule (most important that fit before ${workEnd}):
+Tasks:
 ${JSON.stringify(taskSummary, null, 2)}
-
-Rules:
-1. Urgent/deadline tasks go first
-2. One lunch break at 13:00-13:30 ONLY if it hasn't passed yet (current time is ${nowTimeStr})
-3. Group tasks from same project consecutively
-4. No overlaps with existing confirmed events
-5. If schedule starts after 15:00, max 2-3 tasks
-6. Stay within ${workStart}–${workEnd}
-7. All start times must be >= ${scheduleFrom}
 
 Return ONLY valid JSON:
 {
   "blocks": [
     {
-      "taskId": "uuid or null",
-      "title": "Task title",
+      "taskId": "uuid matching task id above, or null for breaks",
+      "title": "Task title or 'Lunch break' or 'Break'",
       "startTime": "HH:MM",
       "endTime": "HH:MM",
       "colour": "#hex",
@@ -144,8 +147,8 @@ Return ONLY valid JSON:
       "priority": "urgent|high|medium|low|null"
     }
   ],
-  "summary": "One sentence — what you'll accomplish today"
-}`,
+  "summary": "One specific sentence about what you'll accomplish today"
+}`
     }],
   })
 

@@ -1112,7 +1112,6 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
                       <div
                         key={event.id}
                         onClick={() => onEventClick(event)}
-                        title={`${event.title} · ${fmtTime(event.start_time)}–${fmtTime(event.end_time)}`}
                         style={{
                           position: 'absolute', top: top + 1, height: Math.max(height, 6),
                           left: `calc(${leftPct}% + 2px)`, width: `calc(${colWidth}% - 4px)`,
@@ -1136,19 +1135,21 @@ function WeekDayView({ days, events, scrollRef, onEventClick, onDrop, isToday, f
                       <div
                         key={event.id}
                         style={{
-                          position: 'absolute', top: top + 1, height: Math.max(height - 2, 4),
-                          left: '2px', width: 'calc(100% - 4px)',
-                          borderRadius: 4,
-                          background: 'rgba(0,0,0,0.04)',
-                          borderLeft: '2px solid rgba(0,0,0,0.1)',
+                          position: 'absolute', top: top, height: Math.max(height, 4),
+                          left: '0', width: '100%',
+                          background: event.type === 'lunch'
+                            ? 'repeating-linear-gradient(45deg,rgba(0,0,0,0.02) 0,rgba(0,0,0,0.02) 2px,transparent 2px,transparent 6px)'
+                            : 'rgba(0,0,0,0.025)',
+                          borderTop: event.type === 'lunch' ? '1px dashed rgba(0,0,0,0.08)' : '1px dashed rgba(0,0,0,0.06)',
+                          borderBottom: event.type === 'lunch' ? '1px dashed rgba(0,0,0,0.08)' : 'none',
                           boxSizing: 'border-box',
-                          display: 'flex', alignItems: 'center', paddingLeft: 6,
-                          zIndex: 5, pointerEvents: height > 16 ? 'auto' : 'none',
+                          display: 'flex', alignItems: 'center', paddingLeft: 8,
+                          zIndex: 1, pointerEvents: 'none',
                         }}
                       >
-                        {height > 16 && (
-                          <span style={{ fontSize: 9, color: '#bbb', fontWeight: 500, fontFamily: 'DM Sans, sans-serif' }}>
-                            {event.type === 'lunch' ? '🍽 Lunch' : '☕ Break'}
+                        {height > 20 && (
+                          <span style={{ fontSize: 9, color: 'rgba(0,0,0,0.2)', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                            {event.type === 'lunch' ? '· lunch ·' : '· break ·'}
                           </span>
                         )}
                       </div>
