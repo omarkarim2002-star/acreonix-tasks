@@ -492,7 +492,7 @@ function buildGraph(
 
     edges.push({
       id: `ep-${p.id}`, source: 'root', target: `p-${p.id}`,
-      style: { stroke: edgeColor + '70', strokeWidth: shareColour ? 2 : 1.5 },
+      style: { stroke: edgeColor + '90', strokeWidth: shareColour ? 2 : 1.8 },
       animated: (p.tasks ?? []).some((t: any) => t.status === 'in_progress'),
     })
 
@@ -544,7 +544,7 @@ function buildGraph(
       })
       edges.push({
         id: `et-${task.id}`, source: `p-${p.id}`, target: tId,
-        style: { stroke: shareColour ? shareColour + '40' : '#e8edf2', strokeWidth: 1.2 },
+        style: { stroke: shareColour ? shareColour + '60' : '#c4cdd8', strokeWidth: 1.5 },
       })
     })
   })
