@@ -448,6 +448,7 @@ function buildGraph(
   nodes.push({
     id: 'root', type: 'rootNode',
     position: savedPos['root'] ?? { x: 0, y: 0 },
+    zIndex: 10,
     data: { onRefresh: callbacks.onRefresh },
   })
 
@@ -481,6 +482,7 @@ function buildGraph(
     nodes.push({
       id: `p-${p.id}`, type: 'projectNode',
       position: pPos,
+      zIndex: 10,
       data: {
         label: p.name, colour: p.colour, icon: p.icon,
         taskCount: p.tasks?.length ?? 0, projectId: p.id,
@@ -535,6 +537,7 @@ function buildGraph(
       nodes.push({
         id: tId, type: 'taskNode',
         position: savedPos[tId] ?? defaultTPos,
+        zIndex: 10,
         data: {
           label: task.title, status: task.status, taskId: task.id,
           priority: task.priority,
@@ -652,10 +655,9 @@ export default function GlobalMindMapPage() {
       <p style={{ color: '#9aa3b4', fontSize: 13, fontFamily: 'DM Sans, sans-serif' }}>Loading mind map…</p>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
-        .react-flow__edge-path { pointer-events: none; }
-        .react-flow__edges { z-index: 0 !important; }
-        .react-flow__nodes { z-index: 1 !important; }
         .react-flow__edge { z-index: 0 !important; }
+        .react-flow__node { z-index: 10 !important; }
+        .react-flow__edge .react-flow__edge-path { pointer-events: none; }
       `}</style>
 
       {/* Task detail modal — rendered at page level, outside ReactFlow transform */}
@@ -731,6 +733,7 @@ export default function GlobalMindMapPage() {
             proOptions={{ hideAttribution: true }}
             elevateEdgesOnSelect={false}
             elevateNodesOnSelect={false}
+            defaultEdgeOptions={{ zIndex: 0 }}
           >
             <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="rgba(0,0,0,.07)" />
             <Controls showInteractive={false} />
@@ -749,10 +752,9 @@ export default function GlobalMindMapPage() {
       </div>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
-        .react-flow__edge-path { pointer-events: none; }
-        .react-flow__edges { z-index: 0 !important; }
-        .react-flow__nodes { z-index: 1 !important; }
         .react-flow__edge { z-index: 0 !important; }
+        .react-flow__node { z-index: 10 !important; }
+        .react-flow__edge .react-flow__edge-path { pointer-events: none; }
       `}</style>
 
       {/* Task detail modal — rendered at page level, outside ReactFlow transform */}
