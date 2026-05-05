@@ -1,16 +1,4 @@
 'use client'
-
-import { useState, useEffect } from 'react'
-import { OnboardingFlow } from './OnboardingFlow'
-
-export function OnboardingWrapper() {
-  const [show, setShow] = useState(false)
-
-  useEffect(() => {
-    const done = localStorage.getItem('acreonix_onboarded')
-    if (!done) setShow(true)
-  }, [])
-
-  if (!show) return null
-  return <OnboardingFlow onComplete={() => setShow(false)} />
-}
+// OnboardingFlow is now self-contained — this wrapper is no longer needed
+// Kept as empty export to avoid import errors in any files that reference it
+export function OnboardingWrapper() { return null }

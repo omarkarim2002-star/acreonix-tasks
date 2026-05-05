@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
+import { OnboardingEmailTrigger } from '@/components/ui/OnboardingEmailTrigger'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -22,7 +23,10 @@ export default function RootLayout({
       signUpFallbackRedirectUrl="/dashboard"
     >
       <html lang="en">
-        <body className="antialiased">{children}</body>
+        <body className="antialiased">
+          <OnboardingEmailTrigger />
+          {children}
+        </body>
       </html>
     </ClerkProvider>
   )
