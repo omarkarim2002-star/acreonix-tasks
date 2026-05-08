@@ -2,6 +2,12 @@ import type { Metadata } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
+
 export const metadata: Metadata = {
   title: 'Acreonix Tasks',
   description: 'Smart task management and calendar organiser by Acreonix',
