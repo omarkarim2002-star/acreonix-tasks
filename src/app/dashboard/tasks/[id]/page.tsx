@@ -207,7 +207,7 @@ export default function TaskDetailPage() {
                     <Square size={13} fill="white" /> Stop & log
                   </button>
                 ) : (
-                  <button onClick={() => task && timer.start(task.id, task.title)}
+                  <button onClick={() => task && timer.start(task.id, task.title, task.estimated_minutes ?? undefined)}
                     className="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl transition-all"
                     style={{ background:'#0D3D2E', color:'#fff' }}>
                     <Play size={13} fill="white" /> Start timer

@@ -11,11 +11,11 @@ type TimerState = {
 }
 
 type TimerCtx = TimerState & {
-  start:   (taskId: string, taskTitle: string) => void
+  start:   (taskId: string, taskTitle: string, estimatedMinutes?: number) => void
   pause:   () => void
   resume:  () => void
   stop:    () => Promise<{ minsLogged: number }>
-  toggle:  (taskId: string, taskTitle: string) => Promise<void>
+  toggle:  (taskId: string, taskTitle: string, estimatedMinutes?: number) => Promise<void>
 }
 
 const Ctx = createContext<TimerCtx | null>(null)
@@ -30,7 +30,8 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<TimerState>({
     taskId: null, taskTitle: null, startedAt: null, elapsed: 0, running: false,
   })
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const intervalRef       = useRef<NodeJS.Timeout | null>(null)
+  const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     if (state.running) {
@@ -43,8 +44,22 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [state.running])
 
-  function start(taskId: string, taskTitle: string) {
+  function start(taskId: string, taskTitle: string, estimatedMinutes?: number) {
     setState({ taskId, taskTitle, startedAt: Date.now(), elapsed: 0, running: true })
+    if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current)
+    if (estimatedMinutes && estimatedMinutes > 0) {
+      if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        Notification.requestPermission().catch(() => {})
+      }
+      warningTimeoutRef.current = setTimeout(() => {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          new Notification('Estimated time reached', {
+            body: `Still working on "${taskTitle}"? Tap to confirm or stop.`,
+            tag: `timer-overtime-${taskId}`,
+          })
+        }
+      }, estimatedMinutes * 60 * 1000)
+    }
   }
 
   function pause() {
@@ -57,6 +72,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
 
   async function stop() {
     const { taskId, elapsed } = state
+    if (warningTimeoutRef.current) { clearTimeout(warningTimeoutRef.current); warningTimeoutRef.current = null }
     let minsLogged = 0
     if (taskId && elapsed >= 30) {
       minsLogged = Math.round(elapsed / 60)
@@ -76,7 +92,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     return { minsLogged }
   }
 
-  async function toggle(taskId: string, taskTitle: string) {
+  async function toggle(taskId: string, taskTitle: string, estimatedMinutes?: number) {
     if (state.running && state.taskId === taskId) {
       await stop()
     } else if (state.taskId === taskId) {
@@ -85,9 +101,9 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     } else if (state.running || state.taskId) {
       // Different task running/paused → stop current, start new
       await stop()
-      setTimeout(() => start(taskId, taskTitle), 100)
+      setTimeout(() => start(taskId, taskTitle, estimatedMinutes), 100)
     } else {
-      start(taskId, taskTitle)
+      start(taskId, taskTitle, estimatedMinutes)
     }
   }
 
