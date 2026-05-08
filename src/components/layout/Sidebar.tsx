@@ -2,127 +2,93 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { UserButton, useUser } from '@clerk/nextjs'
-import { usePlan } from '@/lib/plan-context'
+import { UserButton } from '@clerk/nextjs'
 import { Logo } from './Logo'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, FolderKanban, CheckSquare,
-  Calendar, BarChart2, Sparkles, Clock,
-  GitFork, Users, CreditCard,
+  Calendar, BarChart2, Sparkles, Users, Settings,
 } from 'lucide-react'
 
-const PRIMARY_NAV = [
-  { href: '/dashboard',           label: 'Dashboard',    icon: LayoutDashboard },
-  { href: '/dashboard/projects',  label: 'Projects',     icon: FolderKanban },
-  { href: '/dashboard/tasks',     label: 'Tasks',        icon: CheckSquare },
-  { href: '/dashboard/calendar',  label: 'Calendar',     icon: Calendar },
-  { href: '/dashboard/mindmap',   label: 'Mind map',     icon: GitFork },
-  { href: '/dashboard/insights',  label: 'Insights',     icon: BarChart2 },
-]
-
-const SECONDARY_NAV = [
-  { href: '/dashboard/tracker',   label: 'Time tracker', icon: Clock },
-  { href: '/dashboard/team',      label: 'Team',         icon: Users },
-  { href: '/dashboard/billing',   label: 'Plan',         icon: CreditCard },
+const nav = [
+  { href:'/dashboard',            label:'Dashboard',  icon:LayoutDashboard },
+  { href:'/dashboard/projects',   label:'Projects',   icon:FolderKanban    },
+  { href:'/dashboard/tasks',      label:'Tasks',      icon:CheckSquare     },
+  { href:'/dashboard/calendar',   label:'Calendar',   icon:Calendar        },
+  { href:'/dashboard/insights',   label:'Insights',   icon:BarChart2       },
 ]
 
 export function Sidebar() {
-  const { user } = useUser()
   const path = usePathname()
-  const { plan, loading: planLoading } = usePlan()
-
-  function active(href: string) {
-    return href === '/dashboard' ? path === href : path.startsWith(href)
-  }
 
   return (
-    <aside className="w-60 h-screen flex flex-col bg-white border-r border-gray-100 shrink-0">
+    <aside className="w-58 h-screen flex flex-col shrink-0" style={{ background:'#0D3D2E' }}>
 
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-gray-100">
+      <div className="px-5 py-5 border-b" style={{ borderColor:'rgba(255,255,255,0.08)' }}>
         <Logo />
       </div>
 
-      {/* AI Extract CTA */}
+      {/* AI Extract — lime accent CTA */}
       <div className="px-4 pt-4 pb-2">
         <Link
           href="/dashboard/extract"
-          className="flex items-center gap-2 w-full bg-[#2d7a4f] text-white text-sm font-medium px-3 py-2.5 rounded-xl hover:bg-[#1f5537] transition-colors"
+          className="flex items-center gap-2.5 w-full text-sm font-bold px-4 py-3 rounded-xl transition-all"
+          style={{
+            background: '#D7F36A',
+            color: '#071F17',
+          }}
         >
           <Sparkles size={15} />
-          Add tasks with AI
+          ✦  AI Extract
         </Link>
       </div>
 
-      {/* Primary nav */}
-      <nav className="flex-1 px-3 py-2 overflow-y-auto">
-        {PRIMARY_NAV.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm mb-0.5 transition-all',
-              active(href)
-                ? 'bg-[#e8f5ee] text-[#2d7a4f] font-medium'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-            )}
-          >
-            <Icon size={16} />
-            <span>{label}</span>
-          </Link>
-        ))}
-
-        {/* Divider */}
-        <div className="my-2 mx-2 border-t border-gray-100" />
-
-        {/* Secondary nav */}
-        {SECONDARY_NAV.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm mb-0.5 transition-all',
-              active(href)
-                ? 'bg-[#e8f5ee] text-[#2d7a4f] font-medium'
-                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
-            )}
-          >
-            <Icon size={16} />
-            <span className="flex-1">{label}</span>
-            {href === '/dashboard/billing' && !planLoading && (
-              <span style={{
-                fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
-                textTransform: 'uppercase', padding: '2px 6px', borderRadius: 4,
-                background: plan === 'team' ? 'rgba(37,99,235,0.1)' : plan === 'pro' ? 'rgba(45,122,79,0.1)' : 'rgba(0,0,0,0.06)',
-                color: plan === 'team' ? '#1d4ed8' : plan === 'pro' ? '#2d7a4f' : '#888',
-              }}>
-                {plan}
-              </span>
-            )}
-          </Link>
-        ))}
+      {/* Nav items */}
+      <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-0.5">
+        {nav.map(({ href, label, icon: Icon }) => {
+          const active = href === '/dashboard' ? path === href : path.startsWith(href)
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all font-medium',
+                active
+                  ? 'text-white'
+                  : 'text-white/50 hover:text-white/80 hover:bg-white/5'
+              )}
+              style={active ? { background:'rgba(255,255,255,0.12)' } : {}}
+            >
+              <Icon size={16} className={active ? 'text-white' : 'text-white/40'} />
+              <span className="flex-1">{label}</span>
+              {active && (
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background:'#D7F36A' }} />
+              )}
+            </Link>
+          )
+        })}
       </nav>
 
-      {/* User — links to account settings */}
-      <Link
-        href="/dashboard/account"
-        className={cn(
-          'px-4 py-4 border-t border-gray-100 flex items-center gap-3 hover:bg-gray-50 transition-colors',
-          path === '/dashboard/account' && 'bg-[#f0faf4]'
-        )}
+      {/* Teams link */}
+      <div className="px-3 pb-2">
+        <Link
+          href="/dashboard/teams"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/40 hover:text-white/70 hover:bg-white/5 transition-all font-medium"
+        >
+          <Users size={16} />
+          Teams
+        </Link>
+      </div>
+
+      {/* User */}
+      <div
+        className="px-4 py-4 flex items-center gap-3"
+        style={{ borderTop:'1px solid rgba(255,255,255,0.08)' }}
       >
         <UserButton afterSignOutUrl="/" />
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-gray-700 truncate">
-            {user
-              ? [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Account'
-              : 'Account'}
-          </p>
-          <p className="text-[10px] text-gray-400">Settings</p>
-        </div>
-      </Link>
-
+        <span className="text-xs text-white/40 truncate">Account</span>
+      </div>
     </aside>
   )
 }

@@ -2,236 +2,202 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Plus, Sparkles, Download, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, Search, ChevronRight, Check } from 'lucide-react'
+import { cn, formatDeadline } from '@/lib/utils'
 import type { Task } from '@/types'
 
-const STATUSES = ['all', 'todo', 'in_progress', 'done', 'blocked'] as const
-const STATUS_LABELS: Record<string, string> = {
-  todo: 'To do', in_progress: 'In progress', done: 'Done', blocked: 'Blocked'
-}
-const PRIORITY_DOT: Record<string, string> = {
-  urgent: '#dc2626', high: '#ea580c', medium: '#3b82f6', low: '#9ca3af'
+const FILTERS = [
+  { key:'all',         label:'All' },
+  { key:'todo',        label:'To do' },
+  { key:'in_progress', label:'Active' },
+  { key:'blocked',     label:'Blocked' },
+]
+
+const STATUS_LABEL: Record<string,string> = {
+  todo:'To do', in_progress:'In progress', blocked:'Blocked', done:'Done'
 }
 
-function fmtDeadline(iso: string): string {
-  const diff = Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)
-  if (diff < 0) return `${Math.abs(diff)}d overdue`
-  if (diff === 0) return 'Today'
-  if (diff === 1) return 'Tomorrow'
-  if (diff <= 6) return `${diff}d`
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+const PRIORITY_COLOR: Record<string,string> = {
+  urgent:'#DC2626', high:'#EA580C', medium:'#2563EB', low:'#9BA5A0'
 }
-function deadlineColor(iso: string): string {
-  const diff = Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)
-  return diff < 0 ? '#dc2626' : diff <= 1 ? '#ea580c' : '#aaa'
-}
-
-type TaskWithProject = Task & { project?: { name: string; colour: string; icon: string } }
 
 export default function TasksPage() {
-  const [tasks, setTasks] = useState<TaskWithProject[]>([])
-  const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'todo' | 'in_progress' | 'done' | 'blocked'>('all')
-  const [showDone, setShowDone] = useState(false)
+  const [tasks,     setTasks]     = useState<Task[]>([])
+  const [loading,   setLoading]   = useState(true)
+  const [filter,    setFilter]    = useState('all')
+  const [search,    setSearch]    = useState('')
+  const [completing,setCompleting]= useState<string|null>(null)
 
-  const fetchTasks = useCallback(async () => {
-    setLoading(true)
-    const res = await fetch('/api/tasks')
-    const data = await res.json()
-    setTasks(Array.isArray(data) ? data : [])
+  const load = useCallback(async () => {
+    const url = filter === 'all' ? '/api/tasks' : `/api/tasks?status=${filter}`
+    const res  = await fetch(url)
+    setTasks(await res.json())
     setLoading(false)
-  }, [])
+  }, [filter])
 
-  useEffect(() => { fetchTasks() }, [fetchTasks])
+  useEffect(() => { load() }, [load])
 
-  async function toggleDone(task: TaskWithProject) {
-    const next = task.status === 'done' ? 'todo' : 'done'
-    setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: next } : t))
+  async function complete(task: Task) {
+    setCompleting(task.id)
+    setTasks(prev => prev.filter(t => t.id !== task.id))
     await fetch(`/api/tasks/${task.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: next, completed_at: next === 'done' ? new Date().toISOString() : null }),
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ status:'done' }),
     })
+    setCompleting(null)
   }
-
-  function exportCSV() {
-    const a = document.createElement('a')
-    a.href = '/api/export-tasks'
-    a.download = ''
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-  }
-
-  const active = tasks.filter(t => t.status !== 'done')
-  const done = tasks.filter(t => t.status === 'done')
-
-  const filtered = filter === 'all'
-    ? active
-    : filter === 'done'
-    ? done
-    : active.filter(t => t.status === filter)
 
   // Group by project
-  const grouped = filtered.reduce<Record<string, TaskWithProject[]>>((acc, t) => {
-    const key = t.project?.name ?? 'No project'
-    if (!acc[key]) acc[key] = []
-    acc[key].push(t)
+  const filtered = tasks.filter(t => !search || t.title.toLowerCase().includes(search.toLowerCase()))
+  const groups   = filtered.reduce<Record<string, { colour:string; tasks:Task[] }>>((acc, task) => {
+    const proj   = (task as any).project
+    const key    = proj?.name ?? 'No project'
+    const colour = proj?.colour ?? '#0D3D2E'
+    if (!acc[key]) acc[key] = { colour, tasks:[] }
+    acc[key].tasks.push(task)
     return acc
   }, {})
 
-  const S = { fontFamily: 'DM Sans, sans-serif' }
-
   return (
-    <div style={{ padding: '28px 32px 60px', maxWidth: 760, margin: '0 auto', ...S }}>
+    <div className="px-8 py-8 max-w-4xl mx-auto">
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+      <div className="flex items-end justify-between mb-8">
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.02em', marginBottom: 4 }}>Tasks</h1>
-          <div style={{ width: 24, height: 2, background: '#c9a84c', borderRadius: 2 }} />
+          <h1 className="text-4xl font-black tracking-tight" style={{ color:'#101312', letterSpacing:'-0.5px' }}>Tasks</h1>
+          {!loading && <p className="text-sm mt-1" style={{ color:'#9BA5A0' }}>{tasks.length} active</p>}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={exportCSV} style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'8px 12px', borderRadius:8, fontSize:12.5, fontWeight:500, background:'#f3f3f1', color:'#555', border:'1px solid rgba(0,0,0,0.1)', cursor:'pointer', fontFamily:'DM Sans,sans-serif' }}>
-            <Download size={13} />Export
-          </button>
-          <Link href="/dashboard/extract" style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'8px 13px', borderRadius:8, fontSize:12.5, fontWeight:500, background:'#f0faf4', color:'#1f5537', border:'1px solid rgba(45,122,79,.2)', textDecoration:'none' }}>
-            <Sparkles size={13} />AI add
-          </Link>
-          <Link href="/dashboard/tasks/new" style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'8px 14px', borderRadius:8, fontSize:12.5, fontWeight:600, background:'#2d7a4f', color:'#fff', textDecoration:'none', boxShadow:'0 2px 6px rgba(45,122,79,0.2)' }}>
-            <Plus size={13} />New task
-          </Link>
+        <Link
+          href="/dashboard/tasks/new"
+          className="flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-full transition-all"
+          style={{ background:'#0D3D2E', color:'#fff', boxShadow:'0 4px 12px rgba(13,61,46,0.22)' }}
+        >
+          <Plus size={15} /> New task
+        </Link>
+      </div>
+
+      {/* Search + filters */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-2 flex-1 px-3 py-2.5 rounded-xl" style={{ background:'#fff', boxShadow:'0 1px 4px rgba(16,19,18,0.06)' }}>
+          <Search size={15} style={{ color:'#9BA5A0' }} />
+          <input
+            className="flex-1 text-sm outline-none bg-transparent"
+            style={{ color:'#101312' }}
+            placeholder="Search tasks…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-1">
+          {FILTERS.map(f => (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+              style={{
+                background: filter===f.key ? '#EAF4EF' : '#fff',
+                color:      filter===f.key ? '#0D3D2E' : '#9BA5A0',
+                boxShadow:  '0 1px 3px rgba(16,19,18,0.05)',
+              }}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Filter tabs */}
-      <div style={{ display:'flex', gap:4, background:'#f3f3f1', borderRadius:10, padding:3, marginBottom:20, overflowX:'auto' }}>
-        {STATUSES.map(s => (
-          <button key={s} onClick={() => setFilter(s)} style={{
-            padding:'6px 14px', borderRadius:8, fontSize:12, fontWeight:500, border:'none',
-            cursor:'pointer', fontFamily:'DM Sans,sans-serif', whiteSpace:'nowrap',
-            background: filter === s ? '#fff' : 'transparent',
-            color: filter === s ? '#2d7a4f' : '#888',
-            boxShadow: filter === s ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-          }}>
-            {s === 'all' ? 'All active' : STATUS_LABELS[s]}
-          </button>
-        ))}
-      </div>
+      {/* Hint */}
+      <p className="text-xs mb-4" style={{ color:'#C8D0CC' }}>Hover task to complete or edit</p>
 
-      {/* Loading */}
-      {loading && (
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:200, gap:10 }}>
-          <Loader2 size={18} style={{ color:'#2d7a4f', animation:'spin 1s linear infinite' }} />
-          <span style={{ fontSize:13, color:'#aaa' }}>Loading tasks…</span>
+      {/* Grouped task list */}
+      {loading ? (
+        <div className="space-y-2">
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className="h-14 rounded-xl animate-pulse" style={{ background:'#EEEEE8' }} />
+          ))}
         </div>
-      )}
-
-      {/* Empty */}
-      {!loading && tasks.length === 0 && (
-        <div style={{ textAlign:'center', padding:'60px 0' }}>
-          <p style={{ fontSize:14, color:'#bbb', marginBottom:16 }}>No tasks yet</p>
-          <Link href="/dashboard/extract" style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'10px 20px', borderRadius:9, background:'#2d7a4f', color:'#fff', textDecoration:'none', fontSize:13, fontWeight:600 }}>
-            <Sparkles size={13} />Add tasks with AI
-          </Link>
+      ) : Object.keys(groups).length === 0 ? (
+        <div className="py-20 text-center">
+          <p className="text-lg font-semibold mb-2" style={{ color:'#66706B' }}>
+            {search ? `No results for "${search}"` : 'All caught up'}
+          </p>
+          <p className="text-sm" style={{ color:'#9BA5A0' }}>
+            {search ? 'Try a different search' : 'Add tasks from the AI Extract tab'}
+          </p>
         </div>
-      )}
-
-      {/* Task groups */}
-      {!loading && (
-        <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
-          {Object.entries(grouped).map(([projectName, projectTasks]) => (
-            <div key={projectName}>
-              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-                <span style={{ fontSize:10, fontWeight:700, color:'#aaa', textTransform:'uppercase', letterSpacing:'0.08em' }}>{projectName}</span>
-                <div style={{ flex:1, height:1, background:'rgba(0,0,0,0.06)' }} />
-                <span style={{ fontSize:10, color:'#ccc' }}>{projectTasks.length}</span>
+      ) : (
+        <div className="space-y-6">
+          {Object.entries(groups).map(([groupName, group]) => (
+            <div key={groupName}>
+              {/* Section header */}
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 rounded-full" style={{ background:group.colour }} />
+                <span className="text-xs font-bold uppercase tracking-wider" style={{ color:group.colour }}>
+                  {groupName}
+                </span>
+                <span className="text-xs" style={{ color:'#C8D0CC' }}>{group.tasks.length}</span>
               </div>
-              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-                {projectTasks.map(task => (
-                  <TaskRow key={task.id} task={task} onToggle={toggleDone} />
-                ))}
+
+              {/* Task rows */}
+              <div className="rounded-2xl overflow-hidden" style={{ background:'#fff', boxShadow:'0 2px 8px rgba(16,19,18,0.06)' }}>
+                {group.tasks.map((task, i) => {
+                  const isOverdue = task.deadline && new Date(task.deadline) < new Date()
+                  return (
+                    <div
+                      key={task.id}
+                      className="group flex items-center gap-3 px-4 py-3.5 task-row transition-colors relative"
+                      style={{
+                        borderLeft: `3px solid ${group.colour}`,
+                        borderBottom: i < group.tasks.length-1 ? '1px solid #F7F8F5' : 'none',
+                      }}
+                    >
+                      {/* Complete button */}
+                      <button
+                        onClick={() => complete(task)}
+                        className="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center opacity-0 group-hover:opacity-100 hover:opacity-100 transition-all"
+                        style={{ borderColor:group.colour }}
+                        title="Complete task"
+                      >
+                        {completing === task.id && (
+                          <Check size={10} style={{ color:group.colour }} />
+                        )}
+                      </button>
+
+                      {/* Priority dot — visible when not hovering */}
+                      <div
+                        className="w-2 h-2 rounded-full shrink-0 group-hover:hidden"
+                        style={{ background: PRIORITY_COLOR[task.priority] ?? '#9BA5A0' }}
+                      />
+
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/dashboard/tasks/${task.id}`} className="block">
+                          <p className="text-sm font-medium truncate" style={{ color: isOverdue ? '#DC2626' : '#101312' }}>
+                            {task.title}
+                          </p>
+                          {task.deadline && (
+                            <p className="text-xs mt-0.5" style={{ color: isOverdue ? '#DC2626' : '#9BA5A0' }}>
+                              {isOverdue ? '⚠ ' : ''}{formatDeadline(task.deadline)}
+                            </p>
+                          )}
+                        </Link>
+                      </div>
+
+                      {/* Status badge */}
+                      <span className="text-xs px-2 py-0.5 rounded-full hidden group-hover:block"
+                        style={{ background:group.colour+'18', color:group.colour }}>
+                        {STATUS_LABEL[task.status]}
+                      </span>
+
+                      <Link href={`/dashboard/tasks/${task.id}`} className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ChevronRight size={15} style={{ color:'#C8D0CC' }} />
+                      </Link>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           ))}
-
-          {/* Completed accordion */}
-          {done.length > 0 && filter !== 'done' && (
-            <div>
-              <button onClick={() => setShowDone(d => !d)} style={{
-                display:'flex', alignItems:'center', gap:8, width:'100%',
-                background:'rgba(0,0,0,0.03)', border:'1px solid rgba(0,0,0,0.06)',
-                borderRadius:10, padding:'10px 14px', cursor:'pointer',
-                fontFamily:'DM Sans,sans-serif',
-              }}>
-                {showDone ? <ChevronDown size={14} style={{ color:'#aaa' }} /> : <ChevronRight size={14} style={{ color:'#aaa' }} />}
-                <span style={{ fontSize:12.5, fontWeight:500, color:'#888' }}>Completed ({done.length})</span>
-              </button>
-              {showDone && (
-                <div style={{ display:'flex', flexDirection:'column', gap:3, marginTop:6 }}>
-                  {done.map(task => <TaskRow key={task.id} task={task} onToggle={toggleDone} />)}
-                </div>
-              )}
-            </div>
-          )}
-
-          {filter === 'done' && done.map(task => <TaskRow key={task.id} task={task} onToggle={toggleDone} />)}
         </div>
-      )}
-
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-    </div>
-  )
-}
-
-function TaskRow({ task, onToggle }: { task: TaskWithProject; onToggle: (t: TaskWithProject) => void }) {
-  return (
-    <div style={{
-      display:'flex', alignItems:'center', gap:10,
-      padding:'10px 14px', borderRadius:10,
-      background:'#fff', border:'1px solid rgba(0,0,0,0.07)',
-      transition:'border-color 0.12s',
-    }}
-      onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'rgba(45,122,79,0.2)'}
-      onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,0,0,0.07)'}
-    >
-      {/* Status circle */}
-      <button onClick={() => onToggle(task)} style={{
-        width:20, height:20, borderRadius:'50%', flexShrink:0, padding:0,
-        background: task.status === 'done' ? '#2d7a4f' : 'transparent',
-        border: task.status === 'done' ? '1.5px solid #2d7a4f' : '1.5px solid #ddd' as any,
-        cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
-        transition:'all 0.15s',
-      }}>
-        {task.status === 'done' && (
-          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-            <path d="M1 4l2.5 3L9 1" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        )}
-      </button>
-
-      {/* Priority dot */}
-      <div style={{ width:6, height:6, borderRadius:'50%', background: PRIORITY_DOT[task.priority] ?? '#aaa', flexShrink:0 }} />
-
-      {/* Title */}
-      <Link href={`/dashboard/tasks/${task.id}`} style={{
-        flex:1, fontSize:13.5, color: task.status === 'done' ? '#aaa' : '#1a1a1a',
-        textDecoration: task.status === 'done' ? 'line-through' : 'none',
-        overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
-      }}>
-        {task.title}
-      </Link>
-
-      {/* Deadline */}
-      {task.deadline && (
-        <span style={{ fontSize:11, color: deadlineColor(task.deadline), flexShrink:0, fontWeight:500 }}>
-          {fmtDeadline(task.deadline)}
-        </span>
-      )}
-
-      {/* Estimate */}
-      {task.estimated_minutes && (
-        <span style={{ fontSize:10, color:'#ccc', flexShrink:0 }}>{task.estimated_minutes}m</span>
       )}
     </div>
   )
