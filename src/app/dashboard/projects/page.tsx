@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, FolderKanban, GitMerge, Loader2, Check, X } from 'lucide-react'
+import { Plus, FolderKanban, GitMerge, Loader2, Check, X, Trash2 } from 'lucide-react'
 import { ProjectMergeModal } from '@/components/ui/ProjectMergeModal'
 import type { Project, Task } from '@/types'
 
@@ -27,6 +27,28 @@ export default function ProjectsPage() {
   }
 
   useEffect(() => { loadProjects() }, [])
+
+  async function handleDelete(id: string, name: string) {
+
+    if (!confirm(`Delete project "${name}"? Tasks in this project will be unassigned.`)) return
+
+    try {
+
+      const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' })
+
+      if (!res.ok) throw new Error('Delete failed')
+
+      setProjects(prev => prev.filter(p => p.id !== id))
+
+    } catch {
+
+      alert('Failed to delete project')
+
+    }
+
+  }
+
+  
 
   async function createProject() {
     if (!newName.trim()) return
@@ -145,12 +167,30 @@ export default function ProjectsPage() {
                     padding: '18px 18px 14px',
                     transition: 'transform 0.1s, box-shadow 0.1s',
                     cursor: 'pointer',
+                    position: 'relative',
                   }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(0,0,0,0.08)' }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '' }}
                   >
+                    {/* Delete button — top right */}
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(project.id, project.name) }}
+                      style={{
+                        position: 'absolute', top: 12, right: 12,
+                        width: 26, height: 26, borderRadius: 6,
+                        background: 'transparent', border: 'none', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        opacity: 0.5, transition: 'opacity 0.15s, background 0.15s',
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; (e.currentTarget as HTMLElement).style.background = 'rgba(220,38,38,0.1)' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.5'; (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                      title="Delete project"
+                    >
+                      <Trash2 size={14} style={{ color: '#dc2626' }} />
+                    </button>
+
                     {/* Icon + name */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, paddingRight: 28 }}>
                       <span style={{ fontSize: 24 }}>{project.icon}</span>
                       <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{project.name}</span>
                     </div>
