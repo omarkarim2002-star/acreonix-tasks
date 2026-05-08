@@ -1,27 +1,57 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Trash2, Save, Loader2, RefreshCw } from 'lucide-react'
-import { TaskComments } from '@/components/ui/TaskComments'
-import { cn, PRIORITY_COLOURS, STATUS_LABELS, STATUS_COLOURS } from '@/lib/utils'
+import { ArrowLeft, Trash2, Save, Loader2, Clock, Play, Square, Timer } from 'lucide-react'
+import { cn, PRIORITY_COLOURS, STATUS_LABELS } from '@/lib/utils'
 import type { Task, Project } from '@/types'
 
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const
-const STATUSES = ['todo', 'in_progress', 'done', 'blocked'] as const
+const STATUSES   = ['todo', 'in_progress', 'done', 'blocked'] as const
+
+function fmtTime(secs: number) {
+  const h = Math.floor(secs / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  const s = secs % 60
+  return h > 0
+    ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+    : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+}
 
 export default function TaskDetailPage() {
-  const { id } = useParams()
-  const router = useRouter()
-  const [task, setTask] = useState<Task & { project?: Project } | null>(null)
+  const { id }    = useParams()
+  const router    = useRouter()
+  const [task,     setTask]     = useState<Task & { project?: Project } | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
-  const [saving, setSaving] = useState(false)
+  const [saving,   setSaving]   = useState(false)
   const [deleting, setDeleting] = useState(false)
 
+  // Timer state
+  const [running,   setRunning]   = useState(false)
+  const [elapsed,   setElapsed]   = useState(0)   // seconds this session
+  const [logged,    setLogged]    = useState(0)    // minutes already logged
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+
   useEffect(() => {
-    fetch(`/api/tasks/${id}`).then((r) => r.json()).then(setTask)
-    fetch('/api/projects').then((r) => r.json()).then(setProjects)
+    fetch(`/api/tasks/${id}`).then(r => r.json()).then((t: Task) => {
+      setTask(t)
+      setLogged((t as any).logged_minutes ?? 0)
+    })
+    fetch('/api/projects').then(r => r.json()).then(setProjects)
   }, [id])
+
+  useEffect(() => {
+    if (running) {
+      timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000)
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [running])
+
+  function update(field: string, value: any) {
+    setTask(prev => prev ? { ...prev, [field]: value } : prev)
+  }
 
   async function save() {
     if (!task) return
@@ -30,16 +60,29 @@ export default function TaskDetailPage() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title: task.title,
-        description: task.description,
-        status: task.status,
-        priority: task.priority,
+        title: task.title, description: task.description,
+        status: task.status, priority: task.priority,
         deadline: task.deadline || null,
         estimated_minutes: task.estimated_minutes || null,
         project_id: task.project_id || null,
       }),
     })
     setSaving(false)
+  }
+
+  async function stopAndLog() {
+    setRunning(false)
+    const mins = Math.round(elapsed / 60)
+    if (mins < 1) { setElapsed(0); return }
+    const newLogged = logged + mins
+    setLogged(newLogged)
+    setElapsed(0)
+    // Save to API
+    await fetch(`/api/tasks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ logged_minutes: newLogged }),
+    })
   }
 
   async function deleteTask() {
@@ -49,79 +92,65 @@ export default function TaskDetailPage() {
     router.push('/dashboard/tasks')
   }
 
-  function update(field: string, value: unknown) {
-    setTask((prev) => prev ? { ...prev, [field]: value } : prev)
-  }
+  if (!task) return (
+    <div className="flex items-center justify-center h-64">
+      <Loader2 size={20} className="animate-spin" style={{ color:'#9BA5A0' }} />
+    </div>
+  )
 
-  if (!task) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 size={20} className="animate-spin text-gray-300" />
-      </div>
-    )
-  }
+  const estMins    = task.estimated_minutes ?? 0
+  const totalMins  = logged + Math.round(elapsed / 60)
+  const pct        = estMins > 0 ? Math.min(100, Math.round(totalMins / estMins * 100)) : 0
+  const overTime   = estMins > 0 && totalMins > estMins
 
   return (
-    <div className="px-6 py-8 max-w-2xl mx-auto">
-      {/* Back */}
-      <button
-        onClick={() => router.back()}
-        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 mb-6 transition-colors"
-      >
-        <ArrowLeft size={14} />
-        Back
+    <div className="px-8 py-8 max-w-2xl mx-auto">
+      <button onClick={() => router.back()} className="flex items-center gap-1.5 text-sm mb-6 transition-colors" style={{ color:'#9BA5A0' }}>
+        <ArrowLeft size={14} /> Tasks
       </button>
 
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="rounded-2xl overflow-hidden" style={{ background:'#fff', boxShadow:'0 4px 16px rgba(16,19,18,0.08)' }}>
+
         {/* Title */}
-        <div className="px-6 pt-6 pb-4 border-b border-gray-100">
-          <textarea
+        <div className="px-6 pt-6 pb-4" style={{ borderBottom:'1px solid #F7F8F5' }}>
+          <input
+            className="w-full text-2xl font-black outline-none bg-transparent"
+            style={{ color:'#101312', letterSpacing:'-0.3px' }}
             value={task.title}
-            onChange={(e) => update('title', e.target.value)}
-            className="w-full text-xl font-semibold text-gray-900 resize-none focus:outline-none leading-snug"
-            rows={1}
+            onChange={e => update('title', e.target.value)}
+            placeholder="Task title"
           />
-          {task.ai_extracted && (
-            <span className="inline-flex items-center gap-1 text-[10px] text-[#2d7a4f] bg-[#e8f5ee] px-2 py-0.5 rounded-full mt-2">
-              ✨ AI extracted
-            </span>
-          )}
         </div>
 
-        {/* Fields */}
         <div className="px-6 py-5 space-y-5">
 
           {/* Status + Priority */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-5">
             <div>
-              <label className="text-xs font-medium text-gray-500 block mb-2">Status</label>
+              <label className="text-xs font-bold mb-2 block" style={{ color:'#9BA5A0', letterSpacing:'0.8px' }}>STATUS</label>
               <div className="flex flex-wrap gap-1.5">
-                {STATUSES.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => update('status', s)}
-                    className={cn(
-                      'text-xs px-2.5 py-1 rounded-full font-medium transition-all',
-                      task.status === s ? STATUS_COLOURS[s] : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                    )}
-                  >
+                {STATUSES.map(s => (
+                  <button key={s} onClick={() => update('status', s)}
+                    className="text-xs px-2.5 py-1.5 rounded-full font-medium capitalize transition-all"
+                    style={{
+                      background: task.status === s ? '#0D3D2E' : '#F7F8F5',
+                      color:      task.status === s ? '#fff' : '#9BA5A0',
+                    }}>
                     {STATUS_LABELS[s]}
                   </button>
                 ))}
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 block mb-2">Priority</label>
+              <label className="text-xs font-bold mb-2 block" style={{ color:'#9BA5A0', letterSpacing:'0.8px' }}>PRIORITY</label>
               <div className="flex flex-wrap gap-1.5">
-                {PRIORITIES.map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => update('priority', p)}
-                    className={cn(
-                      'text-xs px-2.5 py-1 rounded-full font-medium capitalize transition-all',
-                      task.priority === p ? PRIORITY_COLOURS[p] : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                    )}
-                  >
+                {PRIORITIES.map(p => (
+                  <button key={p} onClick={() => update('priority', p)}
+                    className="text-xs px-2.5 py-1.5 rounded-full font-medium capitalize transition-all"
+                    style={{
+                      background: task.priority === p ? '#0D3D2E' : '#F7F8F5',
+                      color:      task.priority === p ? '#fff' : '#9BA5A0',
+                    }}>
                     {p}
                   </button>
                 ))}
@@ -131,79 +160,116 @@ export default function TaskDetailPage() {
 
           {/* Project */}
           <div>
-            <label className="text-xs font-medium text-gray-500 block mb-2">Project</label>
-            <select
-              value={task.project_id ?? ''}
-              onChange={(e) => update('project_id', e.target.value || null)}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-[#2d7a4f] transition-colors"
-            >
+            <label className="text-xs font-bold mb-2 block" style={{ color:'#9BA5A0', letterSpacing:'0.8px' }}>PROJECT</label>
+            <select value={task.project_id ?? ''}
+              onChange={e => update('project_id', e.target.value || null)}
+              className="w-full text-sm px-3 py-2.5 rounded-xl outline-none"
+              style={{ background:'#F7F8F5', color:'#101312', border:'1px solid #EEEEE8' }}>
               <option value="">No project</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.icon} {p.name}</option>
-              ))}
+              {projects.map(p => <option key={p.id} value={p.id}>{p.icon} {p.name}</option>)}
             </select>
           </div>
 
           {/* Deadline + Estimate */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-medium text-gray-500 block mb-2">Deadline</label>
-              <input
-                type="date"
+              <label className="text-xs font-bold mb-2 block" style={{ color:'#9BA5A0', letterSpacing:'0.8px' }}>DEADLINE</label>
+              <input type="date"
                 value={task.deadline ? task.deadline.split('T')[0] : ''}
-                onChange={(e) => update('deadline', e.target.value ? `${e.target.value}T00:00:00Z` : null)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-[#2d7a4f] transition-colors"
+                onChange={e => update('deadline', e.target.value ? `${e.target.value}T00:00:00Z` : null)}
+                className="w-full text-sm px-3 py-2.5 rounded-xl outline-none"
+                style={{ background:'#F7F8F5', color:'#101312', border:'1px solid #EEEEE8' }}
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 block mb-2">Estimate (mins)</label>
-              <input
-                type="number"
+              <label className="text-xs font-bold mb-2 block" style={{ color:'#9BA5A0', letterSpacing:'0.8px' }}>ESTIMATE (mins)</label>
+              <input type="number"
                 value={task.estimated_minutes ?? ''}
-                onChange={(e) => update('estimated_minutes', e.target.value ? parseInt(e.target.value) : null)}
+                onChange={e => update('estimated_minutes', e.target.value ? parseInt(e.target.value) : null)}
                 placeholder="e.g. 30"
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-[#2d7a4f] transition-colors"
+                className="w-full text-sm px-3 py-2.5 rounded-xl outline-none"
+                style={{ background:'#F7F8F5', color:'#101312', border:'1px solid #EEEEE8' }}
               />
             </div>
           </div>
 
-          {/* Description */}
+          {/* ── TIME TRACKER ── */}
+          <div className="rounded-xl p-4" style={{ background:'#F7F8F5', border:'1px solid #EEEEE8' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Timer size={14} style={{ color:'#0D3D2E' }} />
+              <span className="text-xs font-bold" style={{ color:'#9BA5A0', letterSpacing:'0.8px' }}>TIME TRACKER</span>
+            </div>
+
+            <div className="flex items-center gap-4">
+              {/* Timer display */}
+              <div className="flex-1">
+                <div className="text-3xl font-black tabular-nums" style={{ color: overTime ? '#DC2626' : '#101312', letterSpacing:'-1px' }}>
+                  {fmtTime(elapsed)}
+                </div>
+                <div className="text-xs mt-0.5" style={{ color:'#9BA5A0' }}>
+                  {logged > 0 && <span>{logged}m logged · </span>}
+                  {estMins > 0 && <span>{pct}% of {estMins}m estimate</span>}
+                </div>
+              </div>
+
+              {/* Controls */}
+              <div className="flex items-center gap-2">
+                {running ? (
+                  <button onClick={stopAndLog}
+                    className="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl transition-all"
+                    style={{ background:'#DC2626', color:'#fff' }}>
+                    <Square size={13} fill="white" /> Stop & log
+                  </button>
+                ) : (
+                  <button onClick={() => setRunning(true)}
+                    className="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl transition-all"
+                    style={{ background:'#0D3D2E', color:'#fff' }}>
+                    <Play size={13} fill="white" /> Start timer
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            {estMins > 0 && (
+              <div className="mt-3 h-1.5 rounded-full overflow-hidden" style={{ background:'#EEEEE8' }}>
+                <div className="h-full rounded-full transition-all" style={{
+                  width: `${pct}%`,
+                  background: overTime ? '#DC2626' : '#0D3D2E',
+                }} />
+              </div>
+            )}
+          </div>
+
+          {/* Notes */}
           <div>
-            <label className="text-xs font-medium text-gray-500 block mb-2">Notes</label>
-            <textarea
-              value={task.description ?? ''}
-              onChange={(e) => update('description', e.target.value)}
-              placeholder="Add any extra notes..."
+            <label className="text-xs font-bold mb-2 block" style={{ color:'#9BA5A0', letterSpacing:'0.8px' }}>NOTES</label>
+            <textarea value={task.description ?? ''}
+              onChange={e => update('description', e.target.value)}
+              placeholder="Add any extra notes…"
               rows={3}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-[#2d7a4f] transition-colors resize-none"
+              className="w-full text-sm px-3 py-2.5 rounded-xl outline-none resize-none"
+              style={{ background:'#F7F8F5', color:'#101312', border:'1px solid #EEEEE8', lineHeight:'1.6' }}
             />
           </div>
         </div>
 
         {/* Actions */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-          <button
-            onClick={deleteTask}
-            disabled={deleting}
-            className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700 transition-colors disabled:opacity-50"
-          >
+        <div className="px-6 py-4 flex items-center justify-between" style={{ borderTop:'1px solid #F7F8F5' }}>
+          <button onClick={deleteTask} disabled={deleting}
+            className="flex items-center gap-1.5 text-sm transition-colors"
+            style={{ color:'#DC2626', opacity: deleting ? 0.5 : 1 }}>
             <Trash2 size={14} />
             {deleting ? 'Deleting…' : 'Delete task'}
           </button>
-          <button
-            onClick={save}
-            disabled={saving}
-            className="flex items-center gap-2 bg-[#2d7a4f] text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-[#1f5537] transition-colors disabled:opacity-70"
-          >
+          <button onClick={save} disabled={saving}
+            className="flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-xl transition-all"
+            style={{ background:'#0D3D2E', color:'#fff', opacity: saving ? 0.7 : 1 }}>
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             {saving ? 'Saving…' : 'Save changes'}
           </button>
         </div>
       </div>
-    {/* Comments */}
-    <div style={{ marginTop: 8, padding: '0 0 40px' }}>
-      <TaskComments taskId={id as string} />
-    </div>
     </div>
   )
 }
