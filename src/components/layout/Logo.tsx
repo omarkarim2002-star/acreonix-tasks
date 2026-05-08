@@ -1,76 +1,61 @@
-'use client'
-
 import Link from 'next/link'
-import { useState } from 'react'
 
-export function Logo({
-  size = 'default',
-  light = false,
-}: {
-  size?: 'default' | 'small' | 'large'
-  light?: boolean
-}) {
-  const iconSize = size === 'small' ? 22 : size === 'large' ? 40 : 30
-  const textSize = size === 'small' ? '13px' : size === 'large' ? '22px' : '15px'
-  const [imgFailed, setImgFailed] = useState(false)
+export function Logo({ size = 'default', light = false }: { size?: 'default' | 'small' | 'large'; light?: boolean }) {
+  const textSize = size === 'small' ? 'text-sm' : size === 'large' ? 'text-2xl' : 'text-base'
+  const iconSize = size === 'small' ? 20 : size === 'large' ? 36 : 26
 
   return (
-    <Link href="/" className="flex items-center gap-3 hover:opacity-85 transition-opacity">
-      {/* Logo mark */}
-      <div
-        style={{
-          width: iconSize,
-          height: iconSize,
-          borderRadius: 6,
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: imgFailed
-            ? (light ? '#D7F36A' : '#0D3D2E')
-            : 'transparent',
-          overflow: 'hidden',
-        }}
+    <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+      <svg
+        width={iconSize}
+        height={iconSize}
+        viewBox="0 0 100 120"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        {imgFailed ? (
-          <span style={{
-            color: light ? '#071F17' : '#fff',
-            fontWeight: 800,
-            fontSize: Math.round(iconSize * 0.55),
-            fontFamily: 'Georgia, serif',
-          }}>A</span>
-        ) : (
-          <img
-            src="/logo.png"
-            alt="Acreonix"
-            width={iconSize}
-            height={iconSize}
-            style={{ objectFit: 'contain', display: 'block' }}
-            onError={() => setImgFailed(true)}
-          />
-        )}
-      </div>
-
-      {/* Wordmark */}
-      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-        <span style={{
-          fontSize: textSize,
-          fontWeight: 700,
-          color: light ? '#ffffff' : '#0D3D2E',
-          fontFamily: 'Georgia, serif',
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase' as const,
-        }}>
+        {/* Outer ring top arc: green */}
+        <path
+          d="M50 4C74.3 4 94 23.7 94 48 L94 52 C90 28 72 10 50 10 C28 10 10 28 6 52 L6 48 C6 23.7 25.7 4 50 4Z"
+          fill="#2d7a4f"
+        />
+        {/* Outer ring left arc: gold */}
+        <path
+          d="M4 50 C4 27 18 8 38 4 L38 10 C22 14 10 30 10 50 C10 62 15 73 24 80 L18 86 C9 78 4 65 4 50Z"
+          fill="#c9a84c"
+        />
+        {/* Outer ring right + bottom: green */}
+        <path
+          d="M96 50 C96 73 82 92 62 96 L62 90 C78 86 90 70 90 50 C90 38 85 27 76 20 L82 14 C91 22 96 35 96 50Z"
+          fill="#2d7a4f"
+        />
+        {/* Bottom left quarter + stem left: gold */}
+        <path
+          d="M18 86 C26 96 38 103 50 104 L50 116 L44 116 L44 104 C32 103 21 96 13 87 Z"
+          fill="#c9a84c"
+        />
+        {/* Bottom right + stem right: green */}
+        <path
+          d="M82 14 L76 20 C85 30 90 39 90 50 C90 70 78 86 62 96 L62 104 C74 103 86 96 94 87 Z"
+          fill="#2d7a4f"
+        />
+        {/* Stem right half: green */}
+        <path d="M50 104 L50 116 L56 116 L56 104 Z" fill="#2d7a4f"/>
+        {/* Pin tip: gold */}
+        <path d="M44 116 L50 128 L56 116 Z" fill="#c9a84c"/>
+        {/* Centre white cutout (diamond) */}
+        <rect x="28" y="28" width="44" height="44" rx="6" fill="white" transform="rotate(45 50 50)"/>
+        {/* Inner circle: green */}
+        <circle cx="50" cy="50" r="12" fill="#2d7a4f"/>
+      </svg>
+      <div className="flex flex-col leading-none">
+        <span
+          className={`font-bold tracking-widest uppercase ${textSize}`} style={{ color: light ? '#ffffff' : '#0D3D2E', fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif', fontWeight: 800, letterSpacing: '0.18em' }}
+        >
           Acreonix
         </span>
-        <span style={{
-          fontSize: '10px',
-          color: light ? 'rgba(215,243,106,0.85)' : '#c9a84c',
-          fontFamily: 'Georgia, serif',
-          letterSpacing: '0.18em',
-          textTransform: 'uppercase' as const,
-          marginTop: 2,
-        }}>
+        <span
+          className="text-[10px] tracking-[0.2em] uppercase" style={{ color: light ? 'rgba(215,243,106,0.85)' : '#c9a84c', fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif', fontWeight: 700, letterSpacing: '0.3em' }}
+        >
           Tasks
         </span>
       </div>
