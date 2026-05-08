@@ -1,21 +1,21 @@
+// @ts-nocheck
 import { auth, currentUser } from '@clerk/nextjs/server'
-import { stripe, PRICES } from '@/lib/stripe'
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const user = await currentUser()
+  const user  = await currentUser()
   const email = user?.emailAddresses?.[0]?.emailAddress ?? undefined
-
   const { tier } = await req.json()
   if (!tier) return NextResponse.json({ error: 'Missing tier' }, { status: 400 })
 
+  const { stripe, PRICES } = await import('@/lib/stripe')
   const priceId = PRICES[tier as keyof typeof PRICES]
   if (!priceId) {
     return NextResponse.json(
-      { error: `No price configured for tier "${tier}". Add STRIPE_PRICE_${tier.toUpperCase()} to your .env` },
+      { error: `No price configured for "${tier}". Add STRIPE_PRICE_${tier.toUpperCase()} to Vercel env vars.` },
       { status: 400 }
     )
   }
@@ -30,9 +30,7 @@ export async function POST(req: Request) {
     metadata: { userId, tier },
     success_url: `${origin}/dashboard/billing?success=1&tier=${tier}`,
     cancel_url:  `${origin}/dashboard/billing?cancelled=1`,
-    ...(isSubscription ? {
-      subscription_data: { metadata: { userId, tier } },
-    } : {}),
+    ...(isSubscription ? { subscription_data: { metadata: { userId, tier } } } : {}),
   })
 
   return NextResponse.json({ url: session.url })

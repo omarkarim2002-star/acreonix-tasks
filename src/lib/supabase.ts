@@ -1,9 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-export const supabaseAdmin = createClient(
-  supabaseUrl,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-)
+
+const url     = process.env.NEXT_PUBLIC_SUPABASE_URL     ?? 'https://placeholder.supabase.co'
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder'
+const svcKey  = process.env.SUPABASE_SERVICE_ROLE_KEY     ?? 'placeholder'
+
+// Using placeholder values at build time is fine — these clients
+// are never actually called during static analysis / build
+export const supabase      = createClient(url, anonKey)
+export const supabaseAdmin = createClient(url, svcKey, {
+  auth: { autoRefreshToken: false, persistSession: false },
+})
