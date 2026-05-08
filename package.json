@@ -24,7 +24,7 @@
     "react-dom": "^18",
     "reactflow": "^11.11.4",
     "resend": "^6.12.2",
-    "stripe": "^22.1.0",
+    "stripe": "^22.1.1",
     "tailwind-merge": "^2.3.0",
     "web-push": "^3.6.7"
   },
