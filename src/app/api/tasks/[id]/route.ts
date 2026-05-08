@@ -42,7 +42,7 @@ export async function PATCH(
   const allowed = [
     'title', 'description', 'status', 'priority', 'deadline',
     'estimated_minutes', 'tags', 'project_id', 'position',
-    'completed_at', 'recur_type',
+    'completed_at', 'recur_type', 'logged_minutes',
   ]
   const updates: Record<string, unknown> = {}
   for (const key of allowed) {
