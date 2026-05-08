@@ -26,8 +26,17 @@ export default function ExtractPage() {
   const chunksRef = useRef<Blob[]>([])
 
   async function startRecording() {
+    // getUserMedia requires HTTPS or localhost
+    const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+    if (!isSecure) {
+      setError('Microphone requires a secure connection (HTTPS). Please use the deployed site at tasks.acreonix.co.uk.')
+      return
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError('Your browser does not support microphone access. Try Chrome or Safari.')
+      return
+    }
     try {
-      // Must be HTTPS or localhost — getUserMedia will throw if neither
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       chunksRef.current = []
       const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' })
@@ -94,9 +103,7 @@ export default function ExtractPage() {
           <div className="w-8 h-8 bg-[#2d7a4f] rounded-lg flex items-center justify-center">
             <Sparkles size={16} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'Georgia, serif' }}>
-            Add tasks with AI
-          </h1>
+          <h1 className="text-4xl font-black tracking-tight" style={{ color:'#101312', letterSpacing:'-0.5px' }}>Add tasks with AI</h1>
         </div>
         <p className="text-gray-500 text-sm">
           Paste anything — a brain dump, email, notes, random thoughts. AI will extract and organise everything for you.
@@ -116,23 +123,23 @@ export default function ExtractPage() {
         <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50">
           <span className="text-xs text-gray-400">{text.length} characters</span>
           <div className="flex items-center gap-2">
-            {/* Mic button */}
+            {/* Mic button — icon only */}
             <button
               onClick={recording ? stopRecording : startRecording}
               disabled={loading || transcribing}
-              title={recording ? 'Stop recording' : 'Dictate tasks'}
-              className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-lg border transition-colors disabled:opacity-50"
+              title={recording ? 'Stop recording' : 'Speak your tasks'}
+              className="w-10 h-10 rounded-full flex items-center justify-center transition-all disabled:opacity-50 shrink-0"
               style={{
-                background: recording ? '#fee2e2' : '#f0faf4',
-                color: recording ? '#dc2626' : '#2d7a4f',
-                borderColor: recording ? '#fca5a5' : '#86efac',
+                background: recording ? '#DC2626' : '#EAF4EF',
+                color: recording ? '#fff' : '#0D3D2E',
+                boxShadow: recording ? '0 0 0 4px rgba(220,38,38,0.15)' : 'none',
               }}
             >
               {transcribing
-                ? <Loader2 size={14} className="animate-spin" />
+                ? <Loader2 size={16} className="animate-spin" />
                 : recording
-                ? <><Square size={13} fill="currentColor" /> Stop</>
-                : <><Mic size={13} /> Dictate</>
+                ? <Square size={14} fill="currentColor" />
+                : <Mic size={16} />
               }
             </button>
 
