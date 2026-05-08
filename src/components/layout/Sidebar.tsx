@@ -7,7 +7,7 @@ import { Logo } from './Logo'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, FolderKanban, CheckSquare,
-  Calendar, BarChart2, Sparkles, Users, Settings,
+  Calendar, BarChart2, Sparkles, Users, Settings, Network,
 } from 'lucide-react'
 
 const nav = [
@@ -16,6 +16,7 @@ const nav = [
   { href:'/dashboard/tasks',      label:'Tasks',      icon:CheckSquare     },
   { href:'/dashboard/calendar',   label:'Calendar',   icon:Calendar        },
   { href:'/dashboard/insights',   label:'Insights',   icon:BarChart2       },
+  { href:'/dashboard/mindmap',    label:'Mind map',   icon:Network         },
 ]
 
 export function Sidebar() {
