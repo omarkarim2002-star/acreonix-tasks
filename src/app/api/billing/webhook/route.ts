@@ -38,7 +38,7 @@ export async function POST(req: Request) {
           stripe_customer_id: custId,
           stripe_sub_id:      sub.id,
           credits_used:       0,
-          period_start:       new Date(sub.current_period_start * 1000).toISOString(),
+          period_start:       new Date(((sub as any).current_period_start ?? Date.now() / 1000) * 1000).toISOString(),
           updated_at:         new Date().toISOString(),
         }, { onConflict: 'user_id' })
       }
