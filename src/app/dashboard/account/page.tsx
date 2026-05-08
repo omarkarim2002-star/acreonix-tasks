@@ -1,4 +1,5 @@
 'use client'
+import { usePlan } from '@/lib/usePlan'
 
 import { useState, useEffect } from 'react'
 import { useUser, useClerk } from '@clerk/nextjs'
@@ -18,6 +19,7 @@ const BREAK_OPTS = [
 ]
 
 export default function AccountPage() {
+  const plan = usePlan()
   const { user, isLoaded } = useUser()
   const { signOut, openUserProfile } = useClerk()
   const router = useRouter()
@@ -166,7 +168,7 @@ export default function AccountPage() {
             <p className="text-sm font-medium" style={{ color:'#101312' }}>Plan & billing</p>
             <p className="text-xs" style={{ color:'#9BA5A0' }}>Manage your subscription</p>
           </div>
-          <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background:'#EAF4EF', color:'#0D3D2E' }}>FREE</span>
+          <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background:'#EAF4EF', color:'#0D3D2E' }}>{plan.label.toUpperCase()}</span>
           <ChevronRight size={14} style={{ color:'#C8D0CC' }} />
         </a>
         <button onClick={() => signOut(() => router.push('/'))}

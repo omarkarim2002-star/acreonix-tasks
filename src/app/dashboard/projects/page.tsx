@@ -53,7 +53,7 @@ export default function ProjectsPage() {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 600, color: '#1a1a1a', letterSpacing: '-0.02em', marginBottom: 4 }}>Projects</h1>
+            <h1 className="text-4xl font-black tracking-tight mb-2" style={{ color: '#101312', letterSpacing: '-0.5px' }}>Projects</h1>
             <div style={{ width: 24, height: 2, background: '#c9a84c', borderRadius: 2 }} />
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
