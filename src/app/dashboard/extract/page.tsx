@@ -38,25 +38,25 @@ export default function ExtractPage() {
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      chunksRef.current = []
+      // Live transcribe: emit a chunk every 5 seconds → POST → append
       const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' })
-      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
-      mr.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop())
-        setTranscribing(true)
+      mr.ondataavailable = async (e) => {
+        if (e.data.size === 0) return
         try {
-          const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
           const fd = new FormData()
-          fd.append('audio', blob, 'recording.webm')
+          fd.append('file', e.data, 'chunk.webm')
           const res = await fetch('/api/transcribe', { method: 'POST', body: fd })
           const data = await res.json()
-          if (data.text) setText(prev => prev ? prev + ' ' + data.text : data.text)
-          else if (data.error) setError(data.error)
-        } catch { setError('Transcription failed') }
-        finally { setTranscribing(false) }
+          if (data.text?.trim()) setText(prev => prev ? prev + ' ' + data.text.trim() : data.text.trim())
+        } catch {}
+      }
+      mr.onstop = () => {
+        stream.getTracks().forEach(t => t.stop())
+        setTranscribing(false)
       }
       mediaRecorderRef.current = mr
-      mr.start()
+      // 5000ms timeslice → ondataavailable fires every 5 seconds
+      mr.start(5000)
       setRecording(true)
     } catch (e: any) {
       if (e.name === 'NotAllowedError') {
