@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { usePlan } from '@/lib/usePlan'
 import { Check, Zap, ExternalLink, RefreshCw } from 'lucide-react'
@@ -29,7 +29,7 @@ const TOPUPS = [
   { label: '100 extracts', price: '£19.99', tier: 'pack_100' },
 ]
 
-export default function BillingPage() {
+function BillingContent() {
   const plan           = usePlan()
   const searchParams   = useSearchParams()
   const success        = searchParams.get('success')
@@ -219,5 +219,13 @@ export default function BillingPage() {
         <a href="mailto:hello@acreonix.co.uk" style={{ color: '#9BA5A0' }}>Contact support</a>
       </p>
     </div>
+  )
+}
+
+export default function BillingPage() {
+  return (
+    <Suspense fallback={<div className="px-8 py-8 text-sm" style={{ color: '#9BA5A0' }}>Loading…</div>}>
+      <BillingContent />
+    </Suspense>
   )
 }
