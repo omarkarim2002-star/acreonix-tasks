@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { useTimer } from '@/lib/TimerContext'
 import { ArrowLeft, Trash2, Save, Loader2, Clock, Play, Square, Timer } from 'lucide-react'
 import { cn, PRIORITY_COLOURS, STATUS_LABELS } from '@/lib/utils'
 import type { Task, Project } from '@/types'
@@ -26,11 +27,13 @@ export default function TaskDetailPage() {
   const [saving,   setSaving]   = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  // Timer state
-  const [running,   setRunning]   = useState(false)
-  const [elapsed,   setElapsed]   = useState(0)   // seconds this session
-  const [logged,    setLogged]    = useState(0)    // minutes already logged
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  // Timer — use global context so it persists across pages
+  const timer = useTimer()
+  const [logged, setLogged] = useState(0)
+  // For this task only — sync local "running"/"elapsed" with global state
+  const isThisTask = timer.taskId === id
+  const running    = isThisTask && timer.running
+  const elapsed    = isThisTask ? timer.elapsed : 0
 
   useEffect(() => {
     fetch(`/api/tasks/${id}`).then(r => r.json()).then((t: Task) => {
@@ -40,14 +43,7 @@ export default function TaskDetailPage() {
     fetch('/api/projects').then(r => r.json()).then(setProjects)
   }, [id])
 
-  useEffect(() => {
-    if (running) {
-      timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000)
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
-    return () => { if (timerRef.current) clearInterval(timerRef.current) }
-  }, [running])
+
 
   function update(field: string, value: any) {
     setTask(prev => prev ? { ...prev, [field]: value } : prev)
@@ -71,18 +67,8 @@ export default function TaskDetailPage() {
   }
 
   async function stopAndLog() {
-    setRunning(false)
-    const mins = Math.round(elapsed / 60)
-    if (mins < 1) { setElapsed(0); return }
-    const newLogged = logged + mins
-    setLogged(newLogged)
-    setElapsed(0)
-    // Save to API
-    await fetch(`/api/tasks/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ logged_minutes: newLogged }),
-    })
+    const { minsLogged } = await timer.stop()
+    if (minsLogged > 0) setLogged(prev => prev + minsLogged)
   }
 
   async function deleteTask() {
@@ -221,7 +207,7 @@ export default function TaskDetailPage() {
                     <Square size={13} fill="white" /> Stop & log
                   </button>
                 ) : (
-                  <button onClick={() => setRunning(true)}
+                  <button onClick={() => task && timer.start(task.id, task.title)}
                     className="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl transition-all"
                     style={{ background:'#0D3D2E', color:'#fff' }}>
                     <Play size={13} fill="white" /> Start timer

@@ -3,12 +3,15 @@ import { MobileNav } from '@/components/layout/MobileNav'
 import { DailyCheckInModal } from '@/components/ui/DailyCheckInModal'
 import { OnboardingFlow } from '@/components/ui/OnboardingFlow'
 import { PlanProvider } from '@/lib/plan-context'
+import { TimerProvider } from '@/lib/TimerContext'
 import { PostHogIdentify } from '@/components/ui/PostHogProvider'
 import { PWAInstallPrompt } from '@/components/ui/PWAInstallPrompt'
+import { FloatingTimer } from '@/components/ui/FloatingTimer'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <PlanProvider>
+      <TimerProvider>
       <div className="flex h-screen overflow-hidden bg-[#f8faf9]">
 
         {/* Desktop sidebar */}
@@ -34,6 +37,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         </div>
       </div>
+      <FloatingTimer />
+      </TimerProvider>
     </PlanProvider>
   )
 }
