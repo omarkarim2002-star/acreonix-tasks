@@ -43,6 +43,20 @@ export default function TaskDetailPage() {
     fetch('/api/projects').then(r => r.json()).then(setProjects)
   }, [id])
 
+  // Re-fetch task when global timer stops on this task — picks up newly logged minutes
+  const wasRunningRef = useRef(false)
+  useEffect(() => {
+    if (timer.taskId === id && timer.running) wasRunningRef.current = true
+    if (wasRunningRef.current && timer.taskId !== id && !timer.running) {
+      // Timer just stopped for this task → refresh
+      wasRunningRef.current = false
+      fetch(`/api/tasks/${id}`).then(r => r.json()).then((t: Task) => {
+        setTask(t)
+        setLogged((t as any).logged_minutes ?? 0)
+      })
+    }
+  }, [timer.taskId, timer.running, id])
+
 
 
   function update(field: string, value: any) {

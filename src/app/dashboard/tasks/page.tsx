@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Plus, Search, ChevronRight, Check } from 'lucide-react'
+import { Plus, Search, ChevronRight, Check, Clock } from 'lucide-react'
 import { cn, formatDeadline } from '@/lib/utils'
 import type { Task } from '@/types'
 
@@ -181,6 +181,18 @@ export default function TasksPage() {
                           )}
                         </Link>
                       </div>
+
+                      {/* Logged time pill */}
+                      {(task as any).logged_minutes > 0 && (
+                        <div className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full shrink-0" style={{ background: '#EAF4EF', color: '#0D3D2E' }}>
+                          <Clock size={11} />
+                          <span className="font-bold tabular-nums">
+                            {(task as any).logged_minutes >= 60
+                              ? `${Math.floor((task as any).logged_minutes / 60)}h ${(task as any).logged_minutes % 60}m`
+                              : `${(task as any).logged_minutes}m`}
+                          </span>
+                        </div>
+                      )}
 
                       {/* Status badge */}
                       <span className="text-xs px-2 py-0.5 rounded-full hidden group-hover:block"
