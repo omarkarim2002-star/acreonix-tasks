@@ -59,7 +59,7 @@ export async function POST(req: Request) {
 
     // One-time payment (top-up packs)
     case 'checkout.session.completed': {
-      const session = event.data.object as Stripe.Session
+      const session = event.data.object as Stripe.Checkout.Session
       if (session.mode !== 'payment') break
 
       const userId  = session.metadata?.userId
