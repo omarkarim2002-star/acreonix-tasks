@@ -93,10 +93,13 @@ export function Sidebar() {
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/8 transition-all group"
             style={{}}
           >
-            {/* Avatar */}
-            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+            {/* Avatar — shows profile picture if set */}
+            <div className="w-7 h-7 rounded-full shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold"
               style={{ background:'rgba(215,243,106,0.2)', color:'#D7F36A' }}>
-              {initials}
+              {user?.imageUrl
+                ? <img src={user.imageUrl} alt={fullName} className="w-full h-full object-cover" />
+                : initials
+              }
             </div>
 
             <div className="flex-1 min-w-0">
