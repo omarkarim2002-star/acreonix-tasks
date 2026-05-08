@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
 import { Logo } from './Logo'
 import { cn } from '@/lib/utils'
+import { usePlan } from '@/lib/usePlan'
 import {
   LayoutDashboard, FolderKanban, CheckSquare,
   Calendar, BarChart2, Users, Network,
@@ -20,13 +21,22 @@ const nav = [
 ]
 
 export function Sidebar() {
-  const path    = usePathname()
-  const { user } = useUser()
+  const path          = usePathname()
+  const { user }      = useUser()
+  const plan          = usePlan()
 
   const firstName = user?.firstName ?? ''
   const lastName  = user?.lastName  ?? ''
   const fullName  = [firstName, lastName].filter(Boolean).join(' ')
   const initials  = [firstName, lastName].filter(Boolean).map(n => n[0].toUpperCase()).join('') || '?'
+
+  // Pill colour by plan
+  const pillColour = plan.plan === 'team' ? '#60a5fa'
+    : plan.plan === 'pro' ? '#D7F36A'
+    : 'rgba(215,243,106,0.85)'
+  const pillBg = plan.plan === 'team' ? 'rgba(96,165,250,0.15)'
+    : plan.plan === 'pro' ? 'rgba(215,243,106,0.15)'
+    : 'rgba(215,243,106,0.12)'
 
   return (
     <aside className="h-screen flex flex-col shrink-0 relative overflow-hidden" style={{ width: '232px' }}>
@@ -38,8 +48,6 @@ export function Sidebar() {
           linear-gradient(160deg, #0F4535 0%, #0A2E1F 40%, #071F17 100%)
         `,
       }} />
-
-      {/* Top highlight line */}
       <div className="absolute top-0 left-0 right-0 h-px pointer-events-none"
         style={{ background: 'linear-gradient(90deg, transparent, rgba(215,243,106,0.3), transparent)' }} />
 
@@ -51,8 +59,7 @@ export function Sidebar() {
 
         {/* AI Extract CTA */}
         <div className="px-4 pt-4 pb-2">
-          <Link
-            href="/dashboard/extract"
+          <Link href="/dashboard/extract"
             className="flex items-center gap-2 w-full text-sm font-bold px-4 py-3 rounded-xl transition-all hover:opacity-90"
             style={{ background: 'linear-gradient(135deg, #D7F36A 0%, #C8E85A 100%)', color: '#071F17', boxShadow: '0 4px 14px rgba(215,243,106,0.25)' }}
           >
@@ -88,20 +95,17 @@ export function Sidebar() {
           </Link>
         </div>
 
-        {/* User — clickable, shows name + plan pill */}
+        {/* User row — dynamic plan pill */}
         <div className="px-3 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
           <Link href="/dashboard/account"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/8 transition-all"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all hover:bg-white/8"
           >
-            {/* Avatar — shows profile picture if set */}
             <div className="w-7 h-7 rounded-full shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold"
               style={{ background: 'rgba(215,243,106,0.2)', color: '#D7F36A' }}>
               {user?.imageUrl
                 ? <img src={user.imageUrl} alt={fullName} className="w-full h-full object-cover" />
-                : initials
-              }
+                : initials}
             </div>
-
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold truncate" style={{ color: 'rgba(255,255,255,0.85)' }}>
                 {fullName || 'Account'}
@@ -110,12 +114,13 @@ export function Sidebar() {
                 {user?.primaryEmailAddress?.emailAddress}
               </p>
             </div>
-
-            {/* Plan pill */}
-            <span className="text-xs font-bold px-1.5 py-0.5 rounded shrink-0"
-              style={{ background: 'rgba(215,243,106,0.15)', color: '#D7F36A', fontSize: '9px', letterSpacing: '0.5px' }}>
-              FREE
-            </span>
+            {/* Dynamic plan pill */}
+            {!plan.loading && (
+              <span className="font-bold px-1.5 py-0.5 rounded shrink-0 uppercase"
+                style={{ background: pillBg, color: pillColour, fontSize: '9px', letterSpacing: '0.5px' }}>
+                {plan.label}
+              </span>
+            )}
           </Link>
         </div>
       </div>

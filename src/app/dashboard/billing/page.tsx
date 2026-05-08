@@ -1,15 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useUser } from '@clerk/nextjs'
-import { Check, Zap, RefreshCw, Plus } from 'lucide-react'
+import { usePlan } from '@/lib/usePlan'
+import { Check, Zap, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
-
-type BillingData = {
-  plan: string
-  credits: number
-  periodStart: string
-}
 
 const PLANS = [
   {
@@ -29,7 +24,6 @@ const PLANS = [
   },
 ]
 
-// Top-up packs for free users
 const TOPUPS = [
   { label: '10 extracts', price: '£2.99', tier: 'pack_10' },
   { label: '30 extracts', price: '£7.99', tier: 'pack_30', popular: true },
@@ -37,16 +31,9 @@ const TOPUPS = [
 ]
 
 export default function BillingPage() {
-  const { user } = useUser()
-  const [billing, setBilling]   = useState<BillingData | null>(null)
-  const [loading, setLoading]   = useState(true)
-  const [topping, setTopping]   = useState<string | null>(null)
-
-  useEffect(() => {
-    fetch('/api/billing/plan').then(r => r.ok ? r.json() : null).then(data => {
-      setBilling(data)
-    }).catch(() => {}).finally(() => setLoading(false))
-  }, [])
+  const { user }          = useUser()
+  const plan              = usePlan()
+  const [topping, setTopping] = useState<string | null>(null)
 
   async function handleTopup(tier: string) {
     setTopping(tier)
@@ -61,62 +48,66 @@ export default function BillingPage() {
     } catch { setTopping(null) }
   }
 
-  const plan    = billing?.plan ?? 'free'
-  const credits = billing?.credits ?? 0
-  const isFree  = plan === 'free'
+  const creditsDisplay = plan.unlimited ? '∞' : String(plan.creditsLeft)
+  const creditsLow     = !plan.unlimited && plan.creditsLeft < 3
+
+  const resetDate = plan.periodStart
+    ? new Date(new Date(plan.periodStart).setMonth(new Date(plan.periodStart).getMonth() + 1))
+        .toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+    : null
 
   return (
     <div className="px-8 py-8 max-w-3xl mx-auto">
       <div className="mb-2">
-        <Link href="/dashboard/account" className="text-sm" style={{ color:'#9BA5A0' }}>← Account</Link>
+        <Link href="/dashboard/account" className="text-sm" style={{ color: '#9BA5A0' }}>← Account</Link>
       </div>
-      <h1 className="text-4xl font-black tracking-tight mb-2" style={{ color:'#101312', letterSpacing:'-0.5px' }}>Plan & billing</h1>
+      <h1 className="text-4xl font-black tracking-tight mb-2" style={{ color: '#101312', letterSpacing: '-0.5px' }}>
+        Plan & billing
+      </h1>
 
-      {/* Current usage card */}
-      {!loading && (
-        <div className="rounded-2xl p-5 mb-8 flex items-center gap-6" style={{ background:'#EAF4EF' }}>
+      {/* Current plan card */}
+      {!plan.loading && (
+        <div className="rounded-2xl p-5 mb-8 flex items-center gap-6" style={{ background: '#EAF4EF' }}>
           <div className="flex-1">
-            <p className="text-xs font-bold mb-1" style={{ color:'#0D3D2E', letterSpacing:'0.8px' }}>CURRENT PLAN</p>
-            <p className="text-2xl font-black" style={{ color:'#0D3D2E' }}>{plan.charAt(0).toUpperCase() + plan.slice(1)}</p>
+            <p className="text-xs font-bold mb-1" style={{ color: '#0D3D2E', letterSpacing: '0.8px' }}>CURRENT PLAN</p>
+            <p className="text-2xl font-black" style={{ color: '#0D3D2E' }}>{plan.label}</p>
           </div>
-          <div className="text-center px-6 border-l" style={{ borderColor:'rgba(13,61,46,0.15)' }}>
-            <p className="text-xs font-bold mb-1" style={{ color:'#0D3D2E', letterSpacing:'0.8px' }}>AI EXTRACTS</p>
-            <p className="text-3xl font-black" style={{ color: credits < 3 ? '#DC2626' : '#0D3D2E' }}>{credits}</p>
-            <p className="text-xs" style={{ color:'rgba(13,61,46,0.6)' }}>remaining</p>
+          <div className="text-center px-6 border-l" style={{ borderColor: 'rgba(13,61,46,0.15)' }}>
+            <p className="text-xs font-bold mb-1" style={{ color: '#0D3D2E', letterSpacing: '0.8px' }}>AI EXTRACTS</p>
+            <p className="text-3xl font-black" style={{ color: creditsLow ? '#DC2626' : '#0D3D2E' }}>
+              {creditsDisplay}
+            </p>
+            <p className="text-xs" style={{ color: 'rgba(13,61,46,0.6)' }}>
+              {plan.unlimited ? 'unlimited' : 'remaining'}
+            </p>
           </div>
-          {billing?.periodStart && (
-            <div className="text-center px-6 border-l" style={{ borderColor:'rgba(13,61,46,0.15)' }}>
-              <p className="text-xs font-bold mb-1" style={{ color:'#0D3D2E', letterSpacing:'0.8px' }}>RESETS</p>
-              <p className="text-sm font-semibold" style={{ color:'#0D3D2E' }}>
-                {new Date(new Date(billing.periodStart).setMonth(new Date(billing.periodStart).getMonth() + 1))
-                  .toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-              </p>
+          {resetDate && !plan.unlimited && (
+            <div className="text-center px-6 border-l" style={{ borderColor: 'rgba(13,61,46,0.15)' }}>
+              <p className="text-xs font-bold mb-1" style={{ color: '#0D3D2E', letterSpacing: '0.8px' }}>RESETS</p>
+              <p className="text-sm font-semibold" style={{ color: '#0D3D2E' }}>{resetDate}</p>
             </div>
           )}
         </div>
       )}
 
-      {/* Top-up packs — only shown for free users with low credits */}
-      {isFree && (
+      {/* Top-up packs — free users only */}
+      {!plan.loading && plan.plan === 'free' && (
         <div className="mb-8">
-          <h2 className="text-base font-bold mb-1" style={{ color:'#101312' }}>Buy more extracts</h2>
-          <p className="text-sm mb-4" style={{ color:'#9BA5A0' }}>One-time purchase, no subscription needed</p>
+          <h2 className="text-base font-bold mb-1" style={{ color: '#101312' }}>Buy more extracts</h2>
+          <p className="text-sm mb-4" style={{ color: '#9BA5A0' }}>One-time purchase — no subscription needed</p>
           <div className="grid grid-cols-3 gap-3">
             {TOPUPS.map(t => (
-              <button
-                key={t.tier}
-                onClick={() => handleTopup(t.tier)}
+              <button key={t.tier} onClick={() => handleTopup(t.tier)}
                 disabled={topping === t.tier}
                 className="rounded-2xl p-4 text-left transition-all hover:shadow-md relative"
                 style={{
                   background: t.popular ? '#0D3D2E' : '#fff',
                   boxShadow: '0 2px 8px rgba(16,19,18,0.06)',
                   border: t.popular ? 'none' : '1px solid #EEEEE8',
-                }}
-              >
+                }}>
                 {t.popular && (
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full absolute -top-2 left-4"
-                    style={{ background:'#D7F36A', color:'#071F17' }}>Best value</span>
+                    style={{ background: '#D7F36A', color: '#071F17' }}>Best value</span>
                 )}
                 <p className="text-sm font-bold mb-1" style={{ color: t.popular ? '#fff' : '#101312' }}>{t.label}</p>
                 <p className="text-xl font-black" style={{ color: t.popular ? '#D7F36A' : '#0D3D2E' }}>{t.price}</p>
@@ -131,20 +122,24 @@ export default function BillingPage() {
       )}
 
       {/* Plan comparison */}
-      <h2 className="text-base font-bold mb-4" style={{ color:'#101312' }}>Plans</h2>
+      <h2 className="text-base font-bold mb-4" style={{ color: '#101312' }}>Plans</h2>
       <div className="grid grid-cols-3 gap-4">
         {PLANS.map(p => {
-          const isCurrent = plan === p.id
+          const isCurrent = plan.plan === p.id
           return (
             <div key={p.id} className="rounded-2xl p-5 flex flex-col"
               style={{
                 background: p.popular ? '#0D3D2E' : '#fff',
-                boxShadow:  p.popular ? '0 8px 24px rgba(13,61,46,0.25)' : '0 2px 8px rgba(16,19,18,0.06)',
-                border:     isCurrent ? '2px solid #0D3D2E' : '2px solid transparent',
+                boxShadow: p.popular ? '0 8px 24px rgba(13,61,46,0.25)' : '0 2px 8px rgba(16,19,18,0.06)',
+                border: isCurrent ? '2px solid #0D3D2E' : '2px solid transparent',
               }}>
               {p.popular && (
                 <div className="text-xs font-bold mb-3 px-2 py-0.5 rounded-full self-start"
-                  style={{ background:'#D7F36A', color:'#071F17' }}>MOST POPULAR</div>
+                  style={{ background: '#D7F36A', color: '#071F17' }}>MOST POPULAR</div>
+              )}
+              {isCurrent && !p.popular && (
+                <div className="text-xs font-bold mb-3 px-2 py-0.5 rounded-full self-start"
+                  style={{ background: '#EAF4EF', color: '#0D3D2E' }}>YOUR PLAN</div>
               )}
               <h3 className="text-lg font-black mb-1" style={{ color: p.popular ? '#fff' : '#101312' }}>{p.name}</h3>
               <div className="flex items-baseline gap-1 mb-4">
@@ -154,7 +149,7 @@ export default function BillingPage() {
               <div className="flex-1 space-y-2 mb-5">
                 {p.features.map((f, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <Check size={12} style={{ color: p.popular ? '#D7F36A' : '#0D3D2E', flexShrink:0 }} />
+                    <Check size={12} style={{ color: p.popular ? '#D7F36A' : '#0D3D2E', flexShrink: 0 }} />
                     <span className="text-xs" style={{ color: p.popular ? 'rgba(255,255,255,0.75)' : '#66706B' }}>{f}</span>
                   </div>
                 ))}
@@ -169,16 +164,16 @@ export default function BillingPage() {
                 }}
                 disabled={isCurrent}
               >
-                {isCurrent ? 'Current plan' : <span className="flex items-center justify-center gap-1.5"><Zap size={13} />{p.cta}</span>}
+                {isCurrent ? 'Current plan'
+                  : <span className="flex items-center justify-center gap-1.5"><Zap size={13} />{p.cta}</span>}
               </button>
             </div>
           )
         })}
       </div>
-
-      <p className="text-xs text-center mt-6" style={{ color:'#C8D0CC' }}>
+      <p className="text-xs text-center mt-6" style={{ color: '#C8D0CC' }}>
         Billing powered by Stripe · Cancel anytime ·{' '}
-        <a href="mailto:hello@acreonix.co.uk" style={{ color:'#9BA5A0' }}>Contact support</a>
+        <a href="mailto:hello@acreonix.co.uk" style={{ color: '#9BA5A0' }}>Contact support</a>
       </p>
     </div>
   )
