@@ -1,4 +1,5 @@
 'use client'
+import { useUser } from '@clerk/nextjs'
 
 import { Users, Plus, Mail, Crown, Shield } from 'lucide-react'
 import { usePlan } from '@/lib/usePlan'
@@ -6,6 +7,9 @@ import Link from 'next/link'
 
 export default function TeamsPage() {
   const plan = usePlan()
+  const { user } = useUser()
+  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'You'
+  const initials = [user?.firstName, user?.lastName].filter(Boolean).map(n => n![0].toUpperCase()).join('') || 'Y'
   const canUseTeams = plan.plan === 'team'
 
   if (!plan.loading && !canUseTeams) {
@@ -51,11 +55,13 @@ export default function TeamsPage() {
           <h2 className="font-bold text-sm" style={{ color: '#101312' }}>Members</h2>
         </div>
         {[
-          { name: 'You', role: 'Owner', badge: Crown },
+          { name: fullName, role: 'Owner', badge: Crown, image: user?.imageUrl, initials },
         ].map((m, i) => (
           <div key={i} className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid #F7F8F5' }}>
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-              style={{ background: '#EAF4EF', color: '#0D3D2E' }}>Y</div>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold overflow-hidden"
+              style={{ background: '#EAF4EF', color: '#0D3D2E' }}>
+              {m.image ? <img src={m.image} alt={m.name} className="w-full h-full object-cover" /> : m.initials}
+            </div>
             <div className="flex-1">
               <p className="text-sm font-medium" style={{ color: '#101312' }}>{m.name}</p>
             </div>
